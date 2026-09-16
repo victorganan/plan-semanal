@@ -1,0 +1,60 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --color-bg: 250 250 249;
+  --color-surface: 255 255 255;
+  --color-border: 228 228 224;
+  --color-text: 28 28 26;
+  --color-muted: 115 115 110;
+
+  --color-servilia: 79 70 229; /* indigo */
+  --color-gestiona: 13 148 136; /* teal */
+  --color-personal: 217 119 6; /* amber */
+
+  --color-priority-low: 100 116 139; /* slate */
+  --color-priority-medium: 217 119 6; /* amber */
+  --color-priority-high: 220 38 38; /* red */
+
+  --color-accent: 79 70 229;
+}
+
+.dark {
+  --color-bg: 15 15 17;
+  --color-surface: 26 26 29;
+  --color-border: 51 51 56;
+  --color-text: 237 237 235;
+  --color-muted: 161 161 158;
+
+  --color-servilia: 129 140 248;
+  --color-gestiona: 45 212 191;
+  --color-personal: 251 146 60;
+
+  --color-priority-low: 148 163 184;
+  --color-priority-medium: 251 191 36;
+  --color-priority-high: 248 113 113;
+
+  --color-accent: 129 140 248;
+}
+
+* {
+  border-color: rgb(var(--color-border));
+}
+
+html {
+  color-scheme: light;
+}
+
+html.dark {
+  color-scheme: dark;
+}
+
+body {
+  background-color: rgb(var(--color-bg));
+  color: rgb(var(--color-text));
+}
+
+::selection {
+  background-color: rgb(var(--color-accent) / 0.3);
+}

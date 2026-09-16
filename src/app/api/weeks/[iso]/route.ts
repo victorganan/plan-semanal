@@ -1,0 +1,74 @@
+import { NextRequest, NextResponse } from 'next/server';
+import { z } from 'zod';
+import { prisma } from '@/lib/prisma';
+import { logActivity } from '@/lib/audit';
+import { requireUserId, isResponse } from '@/lib/api-auth';
+import { getOrCreateWeek } from '@/lib/recurring';
+
+export async function GET(_req: NextRequest, { params }: { params: Promise<{ iso: string }> }) {
+  const userId = await requireUserId();
+  if (isResponse(userId)) return userId;
+
+  const { iso } = await params;
+  const week = await getOrCreateWeek(userId, iso);
+
+  const full = await prisma.week.findUnique({
+    where: { id: week.id },
+    include: {
+      days: { orderBy: { dayOfWeek: 'asc' } },
+      tasks: { orderBy: [{ order: 'asc' }, { createdAt: 'asc' }], include: { project: true } },
+      habitCompletions: true,
+      projectFocus: { include: { project: true } },
+    },
+  });
+
+  return NextResponse.json(full);
+}
+
+const patchSchema = z.object({
+  mentalState: z.number().int().min(1).max(5).nullable().optional(),
+  physicalState: z.number().int().min(1).max(5).nullable().optional(),
+  objective1: z.string().max(500).nullable().optional(),
+  objective2: z.string().max(500).nullable().optional(),
+  objective3: z.string().max(500).nullable().optional(),
+  mindDump: z.string().max(10000).nullable().optional(),
+  evalNextWeekFocus: z.string().max(10000).nullable().optional(),
+  evalPostponed: z.string().max(10000).nullable().optional(),
+  evalToImprove: z.string().max(10000).nullable().optional(),
+  evalDelegate: z.string().max(10000).nullable().optional(),
+  days: z
+    .array(z.object({ dayOfWeek: z.number().int().min(0).max(6), starRating: z.number().int().min(0).max(5).nullable() }))
+    .optional(),
+});
+
+export async function PATCH(req: NextRequest, { params }: { params: Promise<{ iso: string }> }) {
+  const userId = await requireUserId();
+  if (isResponse(userId)) return userId;
+
+  const { iso } = await params;
+  const body = patchSchema.parse(await req.json());
+  const { days, ...weekFields } = body;
+
+  const week = await getOrCreateWeek(userId, iso);
+
+  await prisma.week.update({ where: { id: week.id }, data: weekFields });
+
+  if (days) {
+    for (const d of days) {
+      await prisma.day.updateMany({
+        where: { weekId: week.id, dayOfWeek: d.dayOfWeek },
+        data: { starRating: d.starRating },
+      });
+    }
+  }
+
+  await logActivity(prisma, {
+    userId,
+    entityType: 'Week',
+    entityId: week.id,
+    action: 'UPDATED',
+    summary: `Semana ${iso} actualizada`,
+  });
+
+  return NextResponse.json({ ok: true });
+}

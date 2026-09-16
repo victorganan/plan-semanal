@@ -1,0 +1,304 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ---------- Auth.js (NextAuth) ----------
+
+model User {
+  id            String    @id @default(cuid())
+  name          String?
+  email         String    @unique
+  emailVerified DateTime?
+  image         String?
+
+  accounts Account[]
+  sessions Session[]
+
+  weeks             Week[]
+  projects          Project[]
+  habits            Habit[]
+  recurringTemplates RecurringTaskTemplate[]
+  activityLogs      ActivityLog[]
+  integrationTokens IntegrationToken[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+// ---------- Dominio: Plan Semanal ----------
+
+enum Area {
+  SERVILIA
+  GESTIONA
+  PERSONAL
+}
+
+enum Priority {
+  LOW
+  MEDIUM
+  HIGH
+}
+
+enum Duration {
+  LT_HALF // <0,5h
+  HALF_TO_ONE // 0,5-1h
+  ONE_TO_TWO // 1-2h
+  GT_TWO // >2h
+}
+
+enum Recurrence {
+  NONE
+  WEEKLY
+  BIWEEKLY
+  FOUR_WEEKLY
+}
+
+enum TaskKind {
+  DAY_AREA
+  PRIORITY_ACTION
+  CALL
+}
+
+enum ProjectStatus {
+  ACTIVE
+  ARCHIVED
+}
+
+enum ActivityAction {
+  CREATED
+  UPDATED
+  COMPLETED
+  UNCOMPLETED
+  DELETED
+}
+
+enum IntegrationProvider {
+  TODOIST
+}
+
+model Week {
+  id      String @id @default(cuid())
+  userId  String
+  isoWeek String // formato AAAA-Wnn, p.ej. 2026-W38
+
+  mentalState   Int? // 1-5
+  physicalState Int? // 1-5
+
+  objective1 String?
+  objective2 String?
+  objective3 String?
+
+  mindDump String? @db.Text
+
+  evalNextWeekFocus String? @db.Text
+  evalPostponed     String? @db.Text
+  evalToImprove     String? @db.Text
+  evalDelegate      String? @db.Text
+
+  user  User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  days  Day[]
+  tasks Task[]
+  habitCompletions HabitCompletion[]
+  projectFocus     WeekProjectFocus[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([userId, isoWeek])
+}
+
+model Day {
+  id         String @id @default(cuid())
+  weekId     String
+  dayOfWeek  Int // 0=lunes ... 6=domingo
+  starRating Int? // 0-5
+
+  week  Week   @relation(fields: [weekId], references: [id], onDelete: Cascade)
+  tasks Task[]
+
+  @@unique([weekId, dayOfWeek])
+}
+
+model Task {
+  id     String   @id @default(cuid())
+  weekId String
+  dayId  String? // solo para kind = DAY_AREA
+  kind   TaskKind
+  area   Area? // solo para kind = DAY_AREA
+
+  text     String
+  done     Boolean  @default(false)
+  priority Priority @default(MEDIUM)
+  duration Duration?
+
+  projectId   String?
+  scheduledAt DateTime?
+
+  recurrence          Recurrence @default(NONE)
+  recurringTemplateId String?
+
+  order Int @default(0)
+
+  week    Week     @relation(fields: [weekId], references: [id], onDelete: Cascade)
+  day     Day?     @relation(fields: [dayId], references: [id], onDelete: Cascade)
+  project Project? @relation(fields: [projectId], references: [id], onDelete: SetNull)
+  recurringTemplate RecurringTaskTemplate? @relation(fields: [recurringTemplateId], references: [id], onDelete: SetNull)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([weekId])
+  @@index([dayId])
+  @@index([projectId])
+}
+
+model Habit {
+  id     String  @id @default(cuid())
+  userId String
+  name   String
+  active Boolean @default(true)
+  order  Int     @default(0)
+
+  user        User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  completions HabitCompletion[]
+
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+}
+
+model HabitCompletion {
+  id        String  @id @default(cuid())
+  habitId   String
+  weekId    String
+  dayOfWeek Int // 0=lunes .. 4=viernes
+  done      Boolean @default(false)
+
+  habit Habit @relation(fields: [habitId], references: [id], onDelete: Cascade)
+  week  Week  @relation(fields: [weekId], references: [id], onDelete: Cascade)
+
+  @@unique([habitId, weekId, dayOfWeek])
+  @@index([weekId])
+}
+
+model Project {
+  id     String        @id @default(cuid())
+  userId String
+  name   String
+  area   Area
+  status ProjectStatus @default(ACTIVE)
+
+  user  User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tasks Task[]
+  focus WeekProjectFocus[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+}
+
+model WeekProjectFocus {
+  id        String @id @default(cuid())
+  weekId    String
+  projectId String
+
+  week    Week    @relation(fields: [weekId], references: [id], onDelete: Cascade)
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@unique([weekId, projectId])
+}
+
+model RecurringTaskTemplate {
+  id     String @id @default(cuid())
+  userId String
+
+  dayOfWeek Int // 0-6
+  area      Area
+  text      String
+  priority  Priority   @default(MEDIUM)
+  duration  Duration?
+  recurrence Recurrence @default(WEEKLY) // WEEKLY | BIWEEKLY | FOUR_WEEKLY
+  startIsoWeek String
+  active    Boolean    @default(true)
+
+  user  User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tasks Task[]
+
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+}
+
+model ActivityLog {
+  id         String         @id @default(cuid())
+  userId     String
+  entityType String // Task | Habit | Week | Project | ...
+  entityId   String
+  action     ActivityAction
+  summary    String
+  metadata   Json?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@index([userId, createdAt])
+  @@index([entityType, entityId])
+}
+
+model IntegrationToken {
+  id           String              @id @default(cuid())
+  userId       String
+  provider     IntegrationProvider
+  accessToken  String              @db.Text
+  refreshToken String?             @db.Text
+  expiresAt    DateTime?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([userId, provider])
+}
