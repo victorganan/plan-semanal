@@ -84,7 +84,7 @@ Ver `.env.example`. Resumen:
 |---|---|---|
 | `DATABASE_URL` | Sí | Conexión PostgreSQL |
 | `AUTH_SECRET` | Sí | Firma de sesión — genera con `openssl rand -base64 32` |
-| `AUTH_TRUST_HOST` | Solo self-host (VPS) | Necesario detrás de tu propio proxy (Nginx). No hace falta en Vercel |
+| `AUTH_TRUST_HOST` | **Sí, siempre** | Ponlo a `true` también en Vercel — con esta versión de Auth.js, sin esto el login falla con "UntrustedHost" / "problem with the server configuration" incluso en Vercel |
 | `AUTH_URL` | Solo self-host | URL pública de la app en producción |
 | `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` | Sí | Login y Calendar |
 | `ALLOWED_EMAILS` | Recomendada | Emails con permiso de acceso |
@@ -102,11 +102,12 @@ suele bastar).
    (`victorganan/plan-semanal`).
 3. **Vercel**: [vercel.com/new](https://vercel.com/new) → importa el
    repositorio → framework Next.js (detectado automáticamente).
-4. **Variables de entorno** en el proyecto de Vercel (Settings →
-   Environment Variables): `DATABASE_URL`, `AUTH_SECRET`,
+4. **Variables de entorno** en el proyecto de Vercel (Settings → tu
+   Environment → Environment Variables): `DATABASE_URL`, `AUTH_SECRET`,
+   **`AUTH_TRUST_HOST="true"`** (imprescindible, ver tabla de abajo),
    `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `ALLOWED_EMAILS`, y
-   opcionalmente `TODOIST_CLIENT_ID`/`SECRET`. No hace falta `AUTH_URL` ni
-   `AUTH_TRUST_HOST` en Vercel.
+   opcionalmente `TODOIST_CLIENT_ID`/`SECRET`. No hace falta `AUTH_URL` en
+   Vercel (solo en self-host).
 5. **Deploy**. El script `build` (`prisma migrate deploy && next build`) ya
    aplica las migraciones pendientes en cada despliegue automáticamente.
 6. Actualiza en Google Cloud Console el origen y el URI de redirección con
