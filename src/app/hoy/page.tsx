@@ -11,6 +11,7 @@ export default async function HoyPage() {
   return (
     <PlanWeekClient
       initialWeek={data.week}
+      initialInbox={data.inbox}
       habits={data.habits}
       projects={data.projects}
       isoWeek={isoWeek}

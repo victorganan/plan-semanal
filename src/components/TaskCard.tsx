@@ -3,7 +3,9 @@
 import { useState } from 'react';
 import clsx from 'clsx';
 import { PriorityDot } from '@/components/PriorityDot';
-import { DURATION_LABELS, PRIORITY_LABELS, RECURRENCE_LABELS } from '@/types';
+import { TimeSelect } from '@/components/TimeSelect';
+import { DURATION_LABELS, PRIORITY_LABELS, RECURRENCE_LABELS, AREA_LABELS } from '@/types';
+import { DAY_NAMES, isoWeekOf, mondayBasedDayOfWeek } from '@/lib/week';
 import type { Project, TaskWithProject } from '@/types';
 
 interface Props {
@@ -14,12 +16,37 @@ interface Props {
   onExportTodoist?: (id: string) => Promise<void>;
   onCreateCalendarEvent?: (id: string) => Promise<void>;
   showRecurrence?: boolean;
+  currentIsoWeek?: string;
 }
 
-export function TaskCard({ task, projects, onUpdate, onDelete, onExportTodoist, onCreateCalendarEvent, showRecurrence }: Props) {
+function splitScheduled(scheduledAt: Date | string | null) {
+  if (!scheduledAt) return { date: '', time: '' };
+  const d = new Date(scheduledAt);
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return {
+    date: `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`,
+    time: `${pad(d.getHours())}:${pad(d.getMinutes())}`,
+  };
+}
+
+export function TaskCard({
+  task,
+  projects,
+  onUpdate,
+  onDelete,
+  onExportTodoist,
+  onCreateCalendarEvent,
+  showRecurrence,
+  currentIsoWeek,
+}: Props) {
   const [open, setOpen] = useState(false);
   const [text, setText] = useState(task.text);
   const [busy, setBusy] = useState(false);
+  const initialSplit = splitScheduled(task.scheduledAt);
+  const [date, setDate] = useState(initialSplit.date);
+  const [time, setTime] = useState(initialSplit.time);
+  const [moveDay, setMoveDay] = useState(0);
+  const [moveArea, setMoveArea] = useState('SERVILIA');
 
   async function saveText() {
     if (text.trim() && text !== task.text) await onUpdate(task.id, { text: text.trim() });
@@ -31,12 +58,39 @@ export function TaskCard({ task, projects, onUpdate, onDelete, onExportTodoist, 
     setBusy(false);
   }
 
+  async function saveSchedule(nextDate: string, nextTime: string) {
+    if (nextDate && nextTime) {
+      const dt = new Date(`${nextDate}T${nextTime}`);
+      const patch: Record<string, unknown> = { scheduledAt: dt.toISOString() };
+      // Si la tarea es de día y la nueva fecha cae en la semana que se está viendo,
+      // la tarea se mueve automáticamente al día correspondiente.
+      if (task.kind === 'DAY_AREA' && currentIsoWeek && isoWeekOf(dt) === currentIsoWeek) {
+        patch.isoWeek = currentIsoWeek;
+        patch.dayOfWeek = mondayBasedDayOfWeek(dt);
+      }
+      await onUpdate(task.id, patch);
+    } else if (!nextDate && !nextTime && task.scheduledAt) {
+      await onUpdate(task.id, { scheduledAt: null });
+    }
+  }
+
   const scheduledLabel = task.scheduledAt
     ? new Date(task.scheduledAt).toLocaleString('es-ES', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })
     : null;
 
   return (
-    <div className={clsx('rounded-card border border-base-border bg-base-surface transition', task.done && 'opacity-60')}>
+    <div
+      draggable={task.kind === 'DAY_AREA'}
+      onDragStart={(e) => {
+        e.dataTransfer.setData('text/plain', task.id);
+        e.dataTransfer.effectAllowed = 'move';
+      }}
+      className={clsx(
+        'rounded-card border border-base-border bg-base-surface transition',
+        task.done && 'opacity-60',
+        task.kind === 'DAY_AREA' && 'cursor-grab active:cursor-grabbing'
+      )}
+    >
       <div className="flex items-start gap-2 px-3 py-2.5">
         <button
           onClick={toggleDone}
@@ -71,6 +125,41 @@ export function TaskCard({ task, projects, onUpdate, onDelete, onExportTodoist, 
             {scheduledLabel ? <span>📅 {scheduledLabel}</span> : null}
             {showRecurrence && task.recurrence !== 'NONE' ? <span>🔁 {RECURRENCE_LABELS[task.recurrence]}</span> : null}
           </div>
+
+          {task.kind === 'BACKLOG' && currentIsoWeek ? (
+            <div className="mt-2 flex flex-wrap items-center gap-1.5">
+              <select
+                value={moveDay}
+                onChange={(e) => setMoveDay(Number(e.target.value))}
+                className="rounded-lg border border-base-border bg-base-bg px-2 py-1 text-xs"
+              >
+                {DAY_NAMES.map((d, i) => (
+                  <option key={d} value={i}>
+                    {d}
+                  </option>
+                ))}
+              </select>
+              <select
+                value={moveArea}
+                onChange={(e) => setMoveArea(e.target.value)}
+                className="rounded-lg border border-base-border bg-base-bg px-2 py-1 text-xs"
+              >
+                {Object.entries(AREA_LABELS).map(([v, l]) => (
+                  <option key={v} value={v}>
+                    {l}
+                  </option>
+                ))}
+              </select>
+              <button
+                onClick={() =>
+                  onUpdate(task.id, { kind: 'DAY_AREA', isoWeek: currentIsoWeek, dayOfWeek: moveDay, area: moveArea })
+                }
+                className="rounded-full bg-accent px-3 py-1 text-xs font-medium text-white"
+              >
+                Mover a esta semana →
+              </button>
+            </div>
+          ) : null}
         </div>
 
         <button
@@ -129,17 +218,28 @@ export function TaskCard({ task, projects, onUpdate, onDelete, onExportTodoist, 
                 ))}
               </select>
             </label>
-            <label className="space-y-1">
+            <div className="space-y-1">
               <span className="block text-xs text-base-muted">Fecha y hora</span>
-              <input
-                type="datetime-local"
-                defaultValue={task.scheduledAt ? new Date(task.scheduledAt).toISOString().slice(0, 16) : ''}
-                onBlur={(e) =>
-                  onUpdate(task.id, { scheduledAt: e.target.value ? new Date(e.target.value).toISOString() : null })
-                }
-                className="w-full rounded-lg border border-base-border bg-base-bg px-2 py-1.5 text-sm"
-              />
-            </label>
+              <div className="flex gap-1">
+                <input
+                  type="date"
+                  value={date}
+                  onChange={(e) => {
+                    setDate(e.target.value);
+                    saveSchedule(e.target.value, time);
+                  }}
+                  className="w-full min-w-0 rounded-lg border border-base-border bg-base-bg px-2 py-1.5 text-sm"
+                />
+                <TimeSelect
+                  value={time}
+                  onChange={(v) => {
+                    setTime(v);
+                    saveSchedule(date, v);
+                  }}
+                  className="rounded-lg border border-base-border bg-base-bg px-2 py-1.5 text-sm"
+                />
+              </div>
+            </div>
             {task.kind === 'DAY_AREA' ? (
               <label className="col-span-2 space-y-1">
                 <span className="block text-xs text-base-muted">Recurrencia</span>
@@ -177,9 +277,15 @@ export function TaskCard({ task, projects, onUpdate, onDelete, onExportTodoist, 
             ) : null}
             <button
               onClick={() => onDelete(task.id)}
-              className="ml-auto rounded-full px-3 py-1 text-xs font-medium text-priority-high hover:bg-priority-high/10"
+              className="rounded-full px-3 py-1 text-xs font-medium text-priority-high hover:bg-priority-high/10"
             >
               Eliminar
+            </button>
+            <button
+              onClick={() => setOpen(false)}
+              className="ml-auto rounded-full bg-accent px-4 py-1.5 text-xs font-semibold text-white"
+            >
+              Guardar
             </button>
           </div>
         </div>

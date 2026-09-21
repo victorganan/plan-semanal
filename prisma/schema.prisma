@@ -25,6 +25,11 @@ model User {
   recurringTemplates RecurringTaskTemplate[]
   activityLogs      ActivityLog[]
   integrationTokens IntegrationToken[]
+  tasks             Task[]
+  pushSubscriptions PushSubscription[]
+
+  weeklyReminderDayOfWeek Int? // 0=lunes .. 6=domingo
+  weeklyReminderTime      String? // "HH:MM"
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -97,6 +102,7 @@ enum TaskKind {
   DAY_AREA
   PRIORITY_ACTION
   CALL
+  BACKLOG
 }
 
 enum ProjectStatus {
@@ -135,6 +141,10 @@ model Week {
   evalToImprove     String? @db.Text
   evalDelegate      String? @db.Text
 
+  evalNextWeekFocusProjectIds String[] @default([])
+  evalPostponedTaskIds        String[] @default([])
+  evalDelegateTaskIds         String[] @default([])
+
   user  User   @relation(fields: [userId], references: [id], onDelete: Cascade)
   days  Day[]
   tasks Task[]
@@ -161,7 +171,8 @@ model Day {
 
 model Task {
   id     String   @id @default(cuid())
-  weekId String
+  userId String // dueño directo: necesario porque las tareas BACKLOG no tienen semana
+  weekId String? // ausente para kind = BACKLOG sin asignar todavía
   dayId  String? // solo para kind = DAY_AREA
   kind   TaskKind
   area   Area? // solo para kind = DAY_AREA
@@ -179,7 +190,8 @@ model Task {
 
   order Int @default(0)
 
-  week    Week     @relation(fields: [weekId], references: [id], onDelete: Cascade)
+  user    User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  week    Week?    @relation(fields: [weekId], references: [id], onDelete: Cascade)
   day     Day?     @relation(fields: [dayId], references: [id], onDelete: Cascade)
   project Project? @relation(fields: [projectId], references: [id], onDelete: SetNull)
   recurringTemplate RecurringTaskTemplate? @relation(fields: [recurringTemplateId], references: [id], onDelete: SetNull)
@@ -187,6 +199,7 @@ model Task {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  @@index([userId])
   @@index([weekId])
   @@index([dayId])
   @@index([projectId])
@@ -301,4 +314,18 @@ model IntegrationToken {
   updatedAt DateTime @updatedAt
 
   @@unique([userId, provider])
+}
+
+model PushSubscription {
+  id        String @id @default(cuid())
+  userId    String
+  endpoint  String @db.Text
+  p256dh    String @db.Text
+  auth      String @db.Text
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@unique([userId, endpoint])
 }

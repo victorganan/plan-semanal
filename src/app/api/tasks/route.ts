@@ -6,8 +6,8 @@ import { requireUserId, isResponse } from '@/lib/api-auth';
 import { getOrCreateWeek } from '@/lib/recurring';
 
 const createSchema = z.object({
-  isoWeek: z.string().regex(/^\d{4}-W\d{2}$/),
-  kind: z.enum(['DAY_AREA', 'PRIORITY_ACTION', 'CALL']),
+  isoWeek: z.string().regex(/^\d{4}-W\d{2}$/).optional(),
+  kind: z.enum(['DAY_AREA', 'PRIORITY_ACTION', 'CALL', 'BACKLOG']),
   dayOfWeek: z.number().int().min(0).max(6).optional(),
   area: z.enum(['SERVILIA', 'GESTIONA', 'PERSONAL']).optional(),
   text: z.string().min(1).max(500),
@@ -27,25 +27,38 @@ export async function POST(req: NextRequest) {
   if (body.kind === 'DAY_AREA' && (body.dayOfWeek === undefined || !body.area)) {
     return NextResponse.json({ error: 'dayOfWeek y area son obligatorios para tareas de día' }, { status: 400 });
   }
+  if (body.kind !== 'BACKLOG' && !body.isoWeek) {
+    return NextResponse.json({ error: 'isoWeek es obligatorio salvo para la bandeja de entrada' }, { status: 400 });
+  }
 
-  const week = await getOrCreateWeek(userId, body.isoWeek);
-
+  let weekId: string | undefined;
   let dayId: string | undefined;
-  if (body.kind === 'DAY_AREA') {
-    const day = await prisma.day.findUnique({
-      where: { weekId_dayOfWeek: { weekId: week.id, dayOfWeek: body.dayOfWeek! } },
-    });
-    dayId = day?.id;
+
+  if (body.kind !== 'BACKLOG') {
+    const week = await getOrCreateWeek(userId, body.isoWeek!);
+    weekId = week.id;
+    if (body.kind === 'DAY_AREA') {
+      const day = await prisma.day.findUnique({
+        where: { weekId_dayOfWeek: { weekId: week.id, dayOfWeek: body.dayOfWeek! } },
+      });
+      dayId = day?.id;
+    }
   }
 
   const maxOrder = await prisma.task.aggregate({
-    where: body.kind === 'DAY_AREA' ? { dayId, area: body.area } : { weekId: week.id, kind: body.kind },
+    where:
+      body.kind === 'DAY_AREA'
+        ? { dayId, area: body.area }
+        : body.kind === 'BACKLOG'
+          ? { userId, kind: 'BACKLOG' }
+          : { weekId, kind: body.kind },
     _max: { order: true },
   });
 
   const task = await prisma.task.create({
     data: {
-      weekId: week.id,
+      userId,
+      weekId,
       dayId,
       kind: body.kind,
       area: body.kind === 'DAY_AREA' ? body.area : undefined,

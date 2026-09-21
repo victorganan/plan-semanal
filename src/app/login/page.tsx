@@ -8,9 +8,9 @@ export default async function LoginPage() {
   return (
     <div className="flex min-h-[80vh] items-center justify-center px-4">
       <div className="w-full max-w-sm rounded-card border border-base-border bg-base-surface p-8 text-center shadow-sm">
-        <h1 className="text-2xl font-semibold">Plan Semanal</h1>
+        <h1 className="text-2xl font-semibold">Nortvira</h1>
         <p className="mt-2 text-sm text-base-muted">
-          Tu planificación semanal: hoy, la semana, proyectos y hábitos en un solo sitio.
+          Tu asistente de productividad semanal: hoy, la semana, proyectos y hábitos en un solo sitio.
         </p>
         <form
           className="mt-8"

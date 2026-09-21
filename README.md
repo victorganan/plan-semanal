@@ -1,4 +1,4 @@
-# Plan Semanal
+# Nortvira
 
 Aplicación real de planificación semanal personal: vista de **Hoy**, vista de
 **Semana** completa, registro de **Proyectos**, **Dashboard** de
@@ -89,6 +89,26 @@ Ver `.env.example`. Resumen:
 | `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` | Sí | Login y Calendar |
 | `ALLOWED_EMAILS` | Recomendada | Emails con permiso de acceso |
 | `TODOIST_CLIENT_ID` / `TODOIST_CLIENT_SECRET` | No | Integración Todoist |
+| `VAPID_PUBLIC_KEY` / `VAPID_PRIVATE_KEY` / `NEXT_PUBLIC_VAPID_PUBLIC_KEY` | No | Notificaciones push del recordatorio semanal — genera con `npx web-push generate-vapid-keys` |
+| `VAPID_SUBJECT` | No | `mailto:tu-email` requerido por el estándar de Web Push |
+| `CRON_SECRET` | No | Protege la ruta que dispara los recordatorios — genera con `openssl rand -hex 24` |
+
+### Recordatorio semanal por notificación push
+
+En Ajustes, cada usuario puede activar un aviso "Prepara tu próxima semana"
+(día + franja mañana/tarde). Técnicamente:
+
+- `public/sw.js` es el service worker que recibe y muestra la notificación.
+- `vercel.json` define **dos Cron Jobs** (mañana ~9:00 UTC+1, tarde ~19:00
+  UTC+1) que llaman a `/api/cron/weekly-reminder`, protegida con
+  `CRON_SECRET` (Vercel se lo pasa solo si la variable está definida).
+- El plan gratuito de Vercel limita los Cron Jobs a una ejecución diaria por
+  cron (por eso solo hay franjas "mañana/tarde", no una hora exacta al
+  minuto). Si despliegas en un VPS propio, puedes sustituirlo por un cron de
+  sistema con la granularidad que quieras, llamando a la misma URL.
+- Sin las variables `VAPID_*`, esta función queda simplemente desactivada
+  (el botón "Activar notificaciones" en Ajustes se puede pulsar pero
+  fallará) — el resto de la app funciona igual.
 
 ## Despliegue recomendado: Vercel + Postgres gestionado (Neon/Supabase)
 
@@ -99,15 +119,17 @@ suele bastar).
    [Supabase](https://supabase.com), copia la connection string (con
    `?sslmode=require`).
 2. **Repositorio**: este proyecto ya está en GitHub
-   (`victorganan/plan-semanal`).
+   (`victorganan/nortvira`).
 3. **Vercel**: [vercel.com/new](https://vercel.com/new) → importa el
    repositorio → framework Next.js (detectado automáticamente).
 4. **Variables de entorno** en el proyecto de Vercel (Settings → tu
    Environment → Environment Variables): `DATABASE_URL`, `AUTH_SECRET`,
    **`AUTH_TRUST_HOST="true"`** (imprescindible, ver tabla de abajo),
    `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `ALLOWED_EMAILS`, y
-   opcionalmente `TODOIST_CLIENT_ID`/`SECRET`. No hace falta `AUTH_URL` en
-   Vercel (solo en self-host).
+   opcionalmente `TODOIST_CLIENT_ID`/`SECRET` y `VAPID_PUBLIC_KEY` /
+   `VAPID_PRIVATE_KEY` / `NEXT_PUBLIC_VAPID_PUBLIC_KEY` / `VAPID_SUBJECT` /
+   `CRON_SECRET` (para el recordatorio semanal por notificación push). No
+   hace falta `AUTH_URL` en Vercel (solo en self-host).
 5. **Deploy**. El script `build` (`prisma migrate deploy && next build`) ya
    aplica las migraciones pendientes en cada despliegue automáticamente.
 6. Actualiza en Google Cloud Console el origen y el URI de redirección con
@@ -126,19 +148,19 @@ curl -fsSL https://deb.nodesource.com/setup_20.x | sudo bash -
 sudo apt-get install -y nodejs postgresql
 
 # 2. Base de datos
-sudo -u postgres createuser plansemanal -P
-sudo -u postgres createdb plan_semanal -O plansemanal
+sudo -u postgres createuser nortvira -P
+sudo -u postgres createdb nortvira -O nortvira
 
 # 3. Clonar y construir
-git clone https://github.com/victorganan/plan-semanal.git
-cd plan-semanal
+git clone https://github.com/victorganan/nortvira.git
+cd nortvira
 npm install
 cp .env.example .env.local   # rellena DATABASE_URL, AUTH_SECRET, AUTH_TRUST_HOST=true, AUTH_URL, etc.
 npm run build                # aplica migraciones + build
 
 # 4. Proceso persistente con PM2
 sudo npm install -g pm2
-pm2 start npm --name plan-semanal -- start
+pm2 start npm --name nortvira -- start
 pm2 save
 pm2 startup
 
@@ -153,7 +175,7 @@ de tu propio Nginx.
 
 ```bash
 # cron diario, por ejemplo a las 4am
-0 4 * * * pg_dump -U plansemanal plan_semanal | gzip > /var/backups/plan-semanal-$(date +\%F).sql.gz
+0 4 * * * pg_dump -U nortvira nortvira | gzip > /var/backups/nortvira-$(date +\%F).sql.gz
 ```
 
 Sube esos volcados a almacenamiento externo (S3, Backblaze, etc.) para no

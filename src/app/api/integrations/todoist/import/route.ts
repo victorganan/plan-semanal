@@ -37,6 +37,7 @@ export async function POST(req: NextRequest) {
 
   const task = await prisma.task.create({
     data: {
+      userId,
       weekId: week.id,
       dayId,
       kind: body.kind,

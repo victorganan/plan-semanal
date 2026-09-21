@@ -12,8 +12,8 @@ export async function POST(req: NextRequest) {
   if (isResponse(userId)) return userId;
 
   const { taskId } = schema.parse(await req.json());
-  const task = await prisma.task.findUnique({ where: { id: taskId }, include: { week: true, project: true } });
-  if (!task || task.week.userId !== userId) return NextResponse.json({ error: 'No encontrada' }, { status: 404 });
+  const task = await prisma.task.findUnique({ where: { id: taskId }, include: { project: true } });
+  if (!task || task.userId !== userId) return NextResponse.json({ error: 'No encontrada' }, { status: 404 });
   if (!task.scheduledAt) {
     return NextResponse.json({ error: 'La tarea no tiene fecha y hora asignada' }, { status: 400 });
   }

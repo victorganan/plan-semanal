@@ -5,5 +5,5 @@ import { authConfig } from '@/auth.config';
 export const { auth: middleware } = NextAuth(authConfig);
 
 export const config = {
-  matcher: ['/((?!api|_next/static|_next/image|favicon.ico|login|manifest.json).*)'],
+  matcher: ['/((?!api|_next/static|_next/image|favicon.ico|login|manifest.json|sw.js|icon.png).*)'],
 };

@@ -1,7 +1,10 @@
 'use client';
 
 import { useState } from 'react';
-import type { WeekFull } from '@/types';
+import clsx from 'clsx';
+import { AddTaskInline } from '@/components/AddTaskInline';
+import { AREA_LABELS } from '@/types';
+import type { WeekFull, Project, TaskWithProject } from '@/types';
 
 function TextField({
   label,
@@ -43,29 +46,121 @@ export function ObjectivesForm({ week, onSave }: { week: WeekFull; onSave: (patc
   );
 }
 
-export function MindDumpForm({ week, onSave }: { week: WeekFull; onSave: (patch: Record<string, unknown>) => void }) {
+function ProjectMultiSelect({
+  projects,
+  selectedIds,
+  onToggle,
+}: {
+  projects: Project[];
+  selectedIds: string[];
+  onToggle: (id: string, selected: boolean) => void;
+}) {
+  const active = projects.filter((p) => p.status === 'ACTIVE');
+  if (active.length === 0) return <p className="text-sm text-base-muted">No hay proyectos activos.</p>;
   return (
-    <div className="rounded-card border border-base-border bg-base-surface p-4">
-      <h3 className="mb-3 text-sm font-semibold">Vaciado de mente</h3>
-      <TextField label="" defaultValue={week.mindDump ?? ''} onSave={(v) => onSave({ mindDump: v })} rows={5} />
+    <div className="flex flex-wrap gap-2">
+      {active.map((p) => {
+        const selected = selectedIds.includes(p.id);
+        return (
+          <button
+            key={p.id}
+            type="button"
+            onClick={() => onToggle(p.id, !selected)}
+            className={clsx(
+              'rounded-full border px-3 py-1.5 text-sm transition',
+              selected ? 'border-accent bg-accent/10 text-accent' : 'border-base-border hover:bg-base-border/40'
+            )}
+          >
+            {p.name} <span className="text-xs text-base-muted">· {AREA_LABELS[p.area]}</span>
+          </button>
+        );
+      })}
     </div>
   );
 }
 
-export function EvaluationForm({ week, onSave }: { week: WeekFull; onSave: (patch: Record<string, unknown>) => void }) {
+function TaskMultiSelect({
+  tasks,
+  selectedIds,
+  onToggle,
+  onAddNew,
+}: {
+  tasks: TaskWithProject[];
+  selectedIds: string[];
+  onToggle: (id: string, selected: boolean) => void;
+  onAddNew: (text: string) => Promise<void>;
+}) {
+  return (
+    <div>
+      {tasks.length === 0 ? (
+        <p className="mb-2 text-sm text-base-muted">No hay tareas pendientes esta semana.</p>
+      ) : (
+        <ul className="mb-2 max-h-40 space-y-1 overflow-y-auto">
+          {tasks.map((t) => {
+            const selected = selectedIds.includes(t.id);
+            return (
+              <li key={t.id}>
+                <label className="flex items-center gap-2 rounded-lg px-2 py-1 text-sm hover:bg-base-border/30">
+                  <input type="checkbox" checked={selected} onChange={(e) => onToggle(t.id, e.target.checked)} />
+                  <span className={clsx(selected && 'font-medium')}>{t.text}</span>
+                </label>
+              </li>
+            );
+          })}
+        </ul>
+      )}
+      <AddTaskInline onAdd={onAddNew} placeholder="Crear tarea nueva y marcarla…" />
+    </div>
+  );
+}
+
+interface EvaluationProps {
+  week: WeekFull;
+  projects: Project[];
+  pendingTasks: TaskWithProject[];
+  onSave: (patch: Record<string, unknown>) => void;
+  onAddAndTag: (text: string, field: 'evalPostponedTaskIds' | 'evalDelegateTaskIds') => Promise<void>;
+}
+
+export function EvaluationForm({ week, projects, pendingTasks, onSave, onAddAndTag }: EvaluationProps) {
+  function toggleInArray(field: 'evalNextWeekFocusProjectIds' | 'evalPostponedTaskIds' | 'evalDelegateTaskIds', id: string, selected: boolean) {
+    const current = week[field] ?? [];
+    const next = selected ? [...current, id] : current.filter((x) => x !== id);
+    onSave({ [field]: next });
+  }
+
   return (
     <div className="rounded-card border border-base-border bg-base-surface p-4">
-      <h3 className="mb-3 text-sm font-semibold">Evaluación de la semana</h3>
-      <div className="grid gap-3 sm:grid-cols-2">
-        <TextField
-          label="Foco próxima semana"
-          defaultValue={week.evalNextWeekFocus ?? ''}
-          onSave={(v) => onSave({ evalNextWeekFocus: v })}
-          rows={3}
-        />
-        <TextField label="Aplazado" defaultValue={week.evalPostponed ?? ''} onSave={(v) => onSave({ evalPostponed: v })} rows={3} />
+      <h3 className="mb-1 text-sm font-semibold">Evaluación de la semana</h3>
+      <p className="mb-3 text-xs text-base-muted">Complétala al finalizar la semana, antes de planificar la siguiente.</p>
+      <div className="grid gap-4 sm:grid-cols-2">
+        <div>
+          <span className="mb-1 block text-xs text-base-muted">Foco próxima semana (proyectos)</span>
+          <ProjectMultiSelect
+            projects={projects}
+            selectedIds={week.evalNextWeekFocusProjectIds ?? []}
+            onToggle={(id, sel) => toggleInArray('evalNextWeekFocusProjectIds', id, sel)}
+          />
+        </div>
         <TextField label="A mejorar" defaultValue={week.evalToImprove ?? ''} onSave={(v) => onSave({ evalToImprove: v })} rows={3} />
-        <TextField label="Delegar" defaultValue={week.evalDelegate ?? ''} onSave={(v) => onSave({ evalDelegate: v })} rows={3} />
+        <div>
+          <span className="mb-1 block text-xs text-base-muted">Aplazado</span>
+          <TaskMultiSelect
+            tasks={pendingTasks}
+            selectedIds={week.evalPostponedTaskIds ?? []}
+            onToggle={(id, sel) => toggleInArray('evalPostponedTaskIds', id, sel)}
+            onAddNew={(text) => onAddAndTag(text, 'evalPostponedTaskIds')}
+          />
+        </div>
+        <div>
+          <span className="mb-1 block text-xs text-base-muted">Delegar</span>
+          <TaskMultiSelect
+            tasks={pendingTasks}
+            selectedIds={week.evalDelegateTaskIds ?? []}
+            onToggle={(id, sel) => toggleInArray('evalDelegateTaskIds', id, sel)}
+            onAddNew={(text) => onAddAndTag(text, 'evalDelegateTaskIds')}
+          />
+        </div>
       </div>
     </div>
   );

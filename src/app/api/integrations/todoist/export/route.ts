@@ -15,8 +15,8 @@ export async function POST(req: NextRequest) {
   if (!token) return NextResponse.json({ error: 'Todoist no conectado' }, { status: 400 });
 
   const { taskId } = schema.parse(await req.json());
-  const task = await prisma.task.findUnique({ where: { id: taskId }, include: { week: true } });
-  if (!task || task.week.userId !== userId) return NextResponse.json({ error: 'No encontrada' }, { status: 404 });
+  const task = await prisma.task.findUnique({ where: { id: taskId } });
+  if (!task || task.userId !== userId) return NextResponse.json({ error: 'No encontrada' }, { status: 404 });
 
   const created = await createTodoistTask(token, {
     content: task.text,

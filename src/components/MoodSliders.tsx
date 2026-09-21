@@ -2,23 +2,31 @@
 
 import clsx from 'clsx';
 
+const FACES = ['😞', '🙁', '😐', '🙂', '😄'];
+const LABELS = ['Muy mal', 'Mal', 'Regular', 'Bien', 'Muy bien'];
+
 function Scale({ label, value, onChange }: { label: string; value: number | null; onChange: (v: number) => void }) {
   return (
     <div>
       <div className="mb-1 text-xs text-base-muted">{label}</div>
       <div className="flex gap-1">
-        {[1, 2, 3, 4, 5].map((n) => (
-          <button
-            key={n}
-            onClick={() => onChange(n)}
-            className={clsx(
-              'h-8 w-8 rounded-full border text-sm font-medium transition',
-              value === n ? 'border-accent bg-accent text-white' : 'border-base-border hover:bg-base-border/40'
-            )}
-          >
-            {n}
-          </button>
-        ))}
+        {FACES.map((face, i) => {
+          const n = i + 1;
+          return (
+            <button
+              key={n}
+              onClick={() => onChange(n)}
+              title={LABELS[i]}
+              aria-label={LABELS[i]}
+              className={clsx(
+                'flex h-9 w-9 items-center justify-center rounded-full border text-lg transition',
+                value === n ? 'border-accent bg-accent/10 scale-110' : 'border-transparent hover:bg-base-border/40'
+              )}
+            >
+              {face}
+            </button>
+          );
+        })}
       </div>
     </div>
   );

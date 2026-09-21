@@ -14,6 +14,7 @@ export default async function SemanaPage({ params }: { params: Promise<{ iso: st
   return (
     <PlanWeekClient
       initialWeek={data.week}
+      initialInbox={data.inbox}
       habits={data.habits}
       projects={data.projects}
       isoWeek={iso}

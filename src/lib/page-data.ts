@@ -2,12 +2,12 @@ import { prisma } from '@/lib/prisma';
 import { getOrCreateWeek } from '@/lib/recurring';
 import { getTodoistToken } from '@/lib/todoist';
 import { hasCalendarAccess } from '@/lib/google-calendar';
-import type { WeekFull } from '@/types';
+import type { WeekFull, TaskWithProject } from '@/types';
 
 export async function getWeekPageData(userId: string, isoWeek: string) {
   const weekRef = await getOrCreateWeek(userId, isoWeek);
 
-  const [week, habits, projects, todoistToken, calendarConnected] = await Promise.all([
+  const [week, habits, projects, todoistToken, calendarConnected, inbox] = await Promise.all([
     prisma.week.findUnique({
       where: { id: weekRef.id },
       include: {
@@ -21,6 +21,11 @@ export async function getWeekPageData(userId: string, isoWeek: string) {
     prisma.project.findMany({ where: { userId }, orderBy: { createdAt: 'desc' } }),
     getTodoistToken(userId),
     hasCalendarAccess(userId),
+    prisma.task.findMany({
+      where: { userId, kind: 'BACKLOG' },
+      orderBy: [{ order: 'asc' }, { createdAt: 'asc' }],
+      include: { project: true },
+    }) as Promise<TaskWithProject[]>,
   ]);
 
   return {
@@ -29,5 +34,6 @@ export async function getWeekPageData(userId: string, isoWeek: string) {
     projects,
     todoistConnected: !!todoistToken,
     calendarConnected,
+    inbox,
   };
 }

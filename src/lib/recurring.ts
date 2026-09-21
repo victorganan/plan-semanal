@@ -71,6 +71,7 @@ export async function materializeRecurringTasks(userId: string, weekId: string, 
     if (!day) continue;
     const task = await prisma.task.create({
       data: {
+        userId,
         weekId,
         dayId: day.id,
         kind: 'DAY_AREA',

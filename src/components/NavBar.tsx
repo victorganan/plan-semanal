@@ -15,7 +15,7 @@ export function NavBar({ userName, userImage }: { userName?: string | null; user
     <header className="sticky top-0 z-40 border-b border-base-border bg-base-bg/90 backdrop-blur">
       <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-3 sm:px-6">
         <Link href="/hoy" className="text-lg font-semibold tracking-tight">
-          Plan Semanal
+          Nortvira
         </Link>
         <nav className="hidden gap-1 sm:flex">
           {LINKS.map((link) => (

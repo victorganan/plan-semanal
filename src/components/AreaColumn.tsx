@@ -1,3 +1,7 @@
+'use client';
+
+import { useState } from 'react';
+import clsx from 'clsx';
 import { AddTaskInline } from '@/components/AddTaskInline';
 import { TaskCard } from '@/components/TaskCard';
 import { AREA_LABELS } from '@/types';
@@ -11,6 +15,8 @@ const AREA_BAR: Record<string, string> = {
 
 interface Props {
   area: string;
+  dayOfWeek: number;
+  isoWeek: string;
   tasks: TaskWithProject[];
   projects: Project[];
   onAdd: (area: string, text: string) => Promise<void>;
@@ -20,9 +26,38 @@ interface Props {
   onCreateCalendarEvent?: (id: string) => Promise<void>;
 }
 
-export function AreaColumn({ area, tasks, projects, onAdd, onUpdate, onDelete, onExportTodoist, onCreateCalendarEvent }: Props) {
+export function AreaColumn({
+  area,
+  dayOfWeek,
+  isoWeek,
+  tasks,
+  projects,
+  onAdd,
+  onUpdate,
+  onDelete,
+  onExportTodoist,
+  onCreateCalendarEvent,
+}: Props) {
+  const [dragOver, setDragOver] = useState(false);
+
   return (
-    <div className="rounded-card border border-base-border bg-base-bg/50 p-3">
+    <div
+      onDragOver={(e) => {
+        e.preventDefault();
+        setDragOver(true);
+      }}
+      onDragLeave={() => setDragOver(false)}
+      onDrop={(e) => {
+        e.preventDefault();
+        setDragOver(false);
+        const taskId = e.dataTransfer.getData('text/plain');
+        if (taskId) onUpdate(taskId, { kind: 'DAY_AREA', isoWeek, dayOfWeek, area });
+      }}
+      className={clsx(
+        'rounded-card border p-3 transition',
+        dragOver ? 'border-accent bg-accent/5' : 'border-base-border bg-base-bg/50'
+      )}
+    >
       <div className="mb-2 flex items-center gap-2">
         <span className={`h-2 w-2 rounded-full ${AREA_BAR[area]}`} />
         <h3 className="text-sm font-semibold tracking-wide">{AREA_LABELS[area]}</h3>
@@ -38,6 +73,7 @@ export function AreaColumn({ area, tasks, projects, onAdd, onUpdate, onDelete, o
             onExportTodoist={onExportTodoist}
             onCreateCalendarEvent={onCreateCalendarEvent}
             showRecurrence
+            currentIsoWeek={isoWeek}
           />
         ))}
       </div>

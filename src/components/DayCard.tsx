@@ -51,6 +51,8 @@ export function DayCard({
           <AreaColumn
             key={area}
             area={area}
+            dayOfWeek={dayOfWeek}
+            isoWeek={isoWeek}
             tasks={tasks.filter((t) => t.area === area)}
             projects={projects}
             onAdd={onAddTask}
