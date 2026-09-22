@@ -16,6 +16,9 @@ import { InboxList } from '@/components/InboxList';
 import { EisenhowerMatrix } from '@/components/EisenhowerMatrix';
 import { PlanningWizard } from '@/components/PlanningWizard';
 import { WeekNav } from '@/components/WeekNav';
+import { DayNav } from '@/components/DayNav';
+import { ViewSwitcher } from '@/components/ViewSwitcher';
+import { DAY_NAMES, dateForDayOfWeek } from '@/lib/week';
 
 interface Props {
   initialWeek: WeekFull;
@@ -23,7 +26,8 @@ interface Props {
   habits: Habit[];
   projects: Project[];
   isoWeek: string;
-  mode: 'today' | 'week';
+  mode: 'day' | 'week';
+  viewDow: number;
   todayDow: number;
   todoistConnected: boolean;
   calendarConnected: boolean;
@@ -40,6 +44,7 @@ export function PlanWeekClient({
   projects,
   isoWeek,
   mode,
+  viewDow,
   todayDow,
   todoistConnected,
   calendarConnected,
@@ -317,25 +322,31 @@ export function PlanWeekClient({
   const exportProps = todoistConnected ? { onExportTodoist: exportTodoist } : {};
   const calendarProps = calendarConnected ? { onCreateCalendarEvent: createCalendarEvent } : {};
 
-  if (mode === 'today') {
-    const day = week.days.find((d) => d.dayOfWeek === todayDow);
+  if (mode === 'day') {
+    const day = week.days.find((d) => d.dayOfWeek === viewDow);
     const dayTasks = week.tasks.filter((t) => t.kind === 'DAY_AREA' && t.dayId === day?.id);
+    const isViewingToday = isoWeek === weekIsoOfToday && viewDow === todayDow;
+    const viewDate = dateForDayOfWeek(isoWeek, viewDow);
 
     return (
       <div className="space-y-6">
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div>
-            <h1 className="text-2xl font-semibold">Hoy</h1>
+            <h1 className="text-2xl font-semibold">{isViewingToday ? 'Hoy' : DAY_NAMES[viewDow]}</h1>
             <p className="text-sm text-base-muted">
-              {new Date().toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' })}
+              {viewDate.toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long', timeZone: 'UTC' })}
             </p>
           </div>
-          <button
-            onClick={() => setWizardOpen(true)}
-            className="rounded-full border border-accent px-3 py-1.5 text-sm font-medium text-accent hover:bg-accent/10"
-          >
-            ✨ Planificar la semana
-          </button>
+          <div className="flex flex-wrap items-center gap-2">
+            <button
+              onClick={() => setWizardOpen(true)}
+              className="rounded-full border border-accent px-3 py-1.5 text-sm font-medium text-accent hover:bg-accent/10"
+            >
+              ✨ Planificar la semana
+            </button>
+            <ViewSwitcher mode="day" isoWeek={isoWeek} />
+            <DayNav isoWeek={isoWeek} dayOfWeek={viewDow} />
+          </div>
         </div>
 
         {wizardOpen ? (
@@ -360,23 +371,25 @@ export function PlanWeekClient({
 
         <DayCard
           isoWeek={isoWeek}
-          dayOfWeek={todayDow}
+          dayOfWeek={viewDow}
           day={day}
           tasks={dayTasks}
           projects={projects}
-          isToday
-          onAddTask={(area, text) => addTask('DAY_AREA', text, { dayOfWeek: todayDow, area })}
+          isToday={isViewingToday}
+          onAddTask={(area, text) => addTask('DAY_AREA', text, { dayOfWeek: viewDow, area })}
           onUpdateTask={updateTask}
           onDeleteTask={deleteTask}
-          onStarChange={(v) => saveStar(todayDow, v)}
+          onStarChange={(v) => saveStar(viewDow, v)}
           {...exportProps}
           {...calendarProps}
         />
 
         <div className="grid gap-4 lg:grid-cols-2">
           <div>
-            <h3 className="mb-2 text-sm font-semibold text-base-muted">Hábitos de hoy</h3>
-            <HabitGrid habits={habits} completions={week.habitCompletions} onToggle={toggleHabit} mode="today" todayDow={todayDow} />
+            <h3 className="mb-2 text-sm font-semibold text-base-muted">
+              {isViewingToday ? 'Hábitos de hoy' : `Hábitos del ${DAY_NAMES[viewDow].toLowerCase()}`}
+            </h3>
+            <HabitGrid habits={habits} completions={week.habitCompletions} onToggle={toggleHabit} mode="today" todayDow={viewDow} />
           </div>
           <div className="space-y-4">
             <PriorityListSection
@@ -416,6 +429,7 @@ export function PlanWeekClient({
           >
             ✨ Asistente de planificación
           </button>
+          <ViewSwitcher mode="week" isoWeek={isoWeek} />
           <WeekNav isoWeek={isoWeek} />
         </div>
       </div>
