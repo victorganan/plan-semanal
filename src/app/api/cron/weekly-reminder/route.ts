@@ -21,7 +21,7 @@ export async function GET(req: NextRequest) {
     select: { id: true },
   });
 
-  await Promise.all(
+  const results = await Promise.all(
     users.map((u) =>
       sendPushToUser(u.id, {
         title: 'Prepara tu próxima semana',
@@ -31,5 +31,16 @@ export async function GET(req: NextRequest) {
     )
   );
 
-  return NextResponse.json({ ok: true, notified: users.length });
+  const summary = results.reduce(
+    (acc, r) => ({
+      sent: acc.sent + r.sent,
+      expired: acc.expired + r.expired,
+      failed: acc.failed + r.failed,
+    }),
+    { sent: 0, expired: 0, failed: 0 }
+  );
+
+  console.log(`[cron:weekly-reminder] slot=${slot} usuarios=${users.length}`, summary);
+
+  return NextResponse.json({ ok: true, notified: users.length, ...summary });
 }

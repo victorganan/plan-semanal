@@ -15,30 +15,31 @@
     "postinstall": "prisma generate"
   },
   "dependencies": {
-    "next": "15.5.25",
-    "react": "18.3.1",
-    "react-dom": "18.3.1",
-    "next-auth": "5.0.0-beta.32",
     "@auth/prisma-adapter": "^2.7.2",
     "@prisma/client": "^5.20.0",
-    "zod": "^3.23.8",
-    "date-fns": "^3.6.0",
-    "recharts": "^2.12.7",
+    "@sentry/nextjs": "^10.75.2",
     "clsx": "^2.1.1",
-    "web-push": "^3.6.7"
+    "date-fns": "^3.6.0",
+    "next": "15.5.25",
+    "next-auth": "5.0.0-beta.32",
+    "react": "18.3.1",
+    "react-dom": "18.3.1",
+    "recharts": "^2.12.7",
+    "web-push": "^3.6.7",
+    "zod": "^3.23.8"
   },
   "devDependencies": {
-    "@types/web-push": "^3.6.4",
-    "eslint": "^8.57.0",
-    "eslint-config-next": "15.5.25",
-    "typescript": "^5.5.4",
     "@types/node": "^20.14.15",
     "@types/react": "^18.3.3",
     "@types/react-dom": "^18.3.0",
-    "tailwindcss": "^3.4.10",
-    "postcss": "^8.5.28",
+    "@types/web-push": "^3.6.4",
     "autoprefixer": "^10.4.20",
+    "eslint": "^8.57.0",
+    "eslint-config-next": "15.5.25",
+    "postcss": "^8.5.28",
     "prisma": "^5.20.0",
-    "tsx": "^4.19.1"
+    "tailwindcss": "^3.4.10",
+    "tsx": "^4.19.1",
+    "typescript": "^5.5.4"
   }
 }

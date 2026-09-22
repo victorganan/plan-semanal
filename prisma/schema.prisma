@@ -200,6 +200,7 @@ model Task {
   updatedAt DateTime @updatedAt
 
   @@index([userId])
+  @@index([userId, kind])
   @@index([weekId])
   @@index([dayId])
   @@index([projectId])

@@ -92,6 +92,8 @@ Ver `.env.example`. Resumen:
 | `VAPID_PUBLIC_KEY` / `VAPID_PRIVATE_KEY` / `NEXT_PUBLIC_VAPID_PUBLIC_KEY` | No | Notificaciones push del recordatorio semanal — genera con `npx web-push generate-vapid-keys` |
 | `VAPID_SUBJECT` | No | `mailto:tu-email` requerido por el estándar de Web Push |
 | `CRON_SECRET` | No | Protege la ruta que dispara los recordatorios — genera con `openssl rand -hex 24` |
+| `SENTRY_DSN` / `NEXT_PUBLIC_SENTRY_DSN` | No | Monitorización de errores (ver sección abajo) |
+| `SENTRY_ORG` / `SENTRY_PROJECT` / `SENTRY_AUTH_TOKEN` | No | Solo para subir source maps y ver stacktraces legibles |
 
 ### Recordatorio semanal por notificación push
 
@@ -110,6 +112,28 @@ En Ajustes, cada usuario puede activar un aviso "Prepara tu próxima semana"
   (el botón "Activar notificaciones" en Ajustes se puede pulsar pero
   fallará) — el resto de la app funciona igual.
 
+### Monitorización de errores (Sentry, opcional)
+
+Sin configurar nada, si algo falla solo lo verás en los logs de Vercel. Con
+una cuenta gratuita de [Sentry](https://sentry.io) (hasta 5.000
+eventos/mes, de sobra para este uso) recibes aviso y stacktrace de cada
+error real de la app, tanto en el navegador como en el servidor:
+
+1. Crea cuenta y un proyecto tipo "Next.js" en sentry.io.
+2. Copia el DSN que te da y ponlo en Vercel como `SENTRY_DSN` y
+   `NEXT_PUBLIC_SENTRY_DSN` (mismo valor en ambas).
+3. Sin más variables, ya captura errores (con stacktraces "minificados").
+   Opcionalmente añade `SENTRY_ORG`, `SENTRY_PROJECT` y un
+   `SENTRY_AUTH_TOKEN` (Settings → Auth Tokens en Sentry) para que el build
+   suba los source maps y los stacktraces se vean con tu código real.
+4. Sin ninguna de estas variables la app funciona exactamente igual, solo
+   que sin reportar errores a ningún sitio.
+
+También hay un endpoint `GET /api/health` que comprueba la conexión a la
+base de datos (responde `200` u/`503`) — útil para un monitor externo
+gratuito tipo [UptimeRobot](https://uptimerobot.com) que te avise si la app
+cae.
+
 ## Despliegue recomendado: Vercel + Postgres gestionado (Neon/Supabase)
 
 La combinación de menor mantenimiento para un único usuario (capa gratuita
@@ -117,7 +141,11 @@ suele bastar).
 
 1. **Base de datos**: crea un proyecto en [Neon](https://neon.tech) o
    [Supabase](https://supabase.com), copia la connection string (con
-   `?sslmode=require`).
+   `?sslmode=require`). En Neon, usa la cadena de conexión **pooled**
+   (host con sufijo `-pooler`, la que te muestra por defecto en su panel):
+   Vercel ejecuta cada petición en una función serverless independiente y
+   sin el pooler puedes agotar las conexiones de Postgres si varias
+   peticiones llegan a la vez.
 2. **Repositorio**: este proyecto ya está en GitHub
    (`victorganan/nortvira`).
 3. **Vercel**: [vercel.com/new](https://vercel.com/new) → importa el

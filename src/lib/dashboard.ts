@@ -5,25 +5,33 @@ const AREAS = ['SERVILIA', 'GESTIONA', 'PERSONAL'] as const;
 
 async function computeStreak(userId: string, habitIds: string[]): Promise<number> {
   if (habitIds.length === 0) return 0;
-  let streak = 0;
+
+  // Recorre los últimos 90 días día a día, pero solo para reunir qué semanas
+  // ISO hacen falta: la consulta a la base de datos se hace una única vez,
+  // agrupada, en vez de una por día (evita hasta 90 round-trips secuenciales).
+  const days: { iso: string; dow: number }[] = [];
   const cursor = new Date();
   for (let i = 0; i < 90; i++) {
     const dow = mondayBasedDayOfWeek(cursor);
-    if (dow > 4) {
-      cursor.setDate(cursor.getDate() - 1);
-      continue;
-    }
-    const iso = isoWeekOf(cursor);
-    const week = await prisma.week.findUnique({
-      where: { userId_isoWeek: { userId, isoWeek: iso } },
-      include: { habitCompletions: true },
-    });
+    if (dow <= 4) days.push({ iso: isoWeekOf(cursor), dow });
+    cursor.setDate(cursor.getDate() - 1);
+  }
+
+  const isoWeeks = Array.from(new Set(days.map((d) => d.iso)));
+  const weeks = await prisma.week.findMany({
+    where: { userId, isoWeek: { in: isoWeeks } },
+    include: { habitCompletions: true },
+  });
+  const weekByIso = new Map(weeks.map((w) => [w.isoWeek, w]));
+
+  let streak = 0;
+  for (const { iso, dow } of days) {
+    const week = weekByIso.get(iso);
     const allDone = week
       ? habitIds.every((hid) => week.habitCompletions.some((c) => c.habitId === hid && c.dayOfWeek === dow && c.done))
       : false;
     if (!allDone) break;
     streak += 1;
-    cursor.setDate(cursor.getDate() - 1);
   }
   return streak;
 }

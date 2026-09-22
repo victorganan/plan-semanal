@@ -17,6 +17,10 @@ export async function sendPushToUser(userId: string, payload: { title: string; b
   ensureConfigured();
   const subs = await prisma.pushSubscription.findMany({ where: { userId } });
 
+  let sent = 0;
+  let expired = 0;
+  let failed = 0;
+
   await Promise.all(
     subs.map(async (sub) => {
       try {
@@ -27,12 +31,19 @@ export async function sendPushToUser(userId: string, payload: { title: string; b
           },
           JSON.stringify(payload)
         );
+        sent += 1;
       } catch (err: unknown) {
         const statusCode = (err as { statusCode?: number }).statusCode;
         if (statusCode === 404 || statusCode === 410) {
+          expired += 1;
           await prisma.pushSubscription.delete({ where: { id: sub.id } }).catch(() => {});
+        } else {
+          failed += 1;
+          console.error(`[push] fallo enviando a userId=${userId} statusCode=${statusCode ?? 'desconocido'}`, err);
         }
       }
     })
   );
+
+  return { total: subs.length, sent, expired, failed };
 }
