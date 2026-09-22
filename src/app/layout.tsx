@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import { auth } from '@/auth';
 import { NavBar } from '@/components/NavBar';
+import { Footer } from '@/components/Footer';
 import { ThemeScript } from '@/components/ThemeScript';
 import { ToastProvider } from '@/components/Toast';
 import './globals.css';
@@ -18,10 +19,11 @@ export default async function RootLayout({ children }: { children: React.ReactNo
       <head>
         <ThemeScript />
       </head>
-      <body className="min-h-screen font-sans antialiased">
+      <body className="flex min-h-screen flex-col font-sans antialiased">
         <ToastProvider>
           {session?.user ? <NavBar userName={session.user.name} userImage={session.user.image} /> : null}
-          <main className="mx-auto max-w-6xl px-4 py-6 sm:px-6 sm:py-8">{children}</main>
+          <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-6 sm:px-6 sm:py-8">{children}</main>
+          {session?.user ? <Footer /> : null}
         </ToastProvider>
       </body>
     </html>

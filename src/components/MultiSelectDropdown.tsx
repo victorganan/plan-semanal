@@ -18,6 +18,8 @@ interface Props {
   noSelectionLabel?: string;
 }
 
+const PANEL_ESTIMATED_HEIGHT = 280; // input + hasta ~7 filas visibles
+
 export function MultiSelectDropdown({
   options,
   selectedIds,
@@ -27,16 +29,35 @@ export function MultiSelectDropdown({
   noSelectionLabel = 'Nada seleccionado todavía.',
 }: Props) {
   const [open, setOpen] = useState(false);
+  const [openUpward, setOpenUpward] = useState(false);
   const [query, setQuery] = useState('');
   const ref = useRef<HTMLDivElement>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
     function onClick(e: MouseEvent) {
       if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
     }
+    function onKey(e: KeyboardEvent) {
+      if (e.key === 'Escape') setOpen(false);
+    }
     document.addEventListener('mousedown', onClick);
-    return () => document.removeEventListener('mousedown', onClick);
+    document.addEventListener('keydown', onKey);
+    return () => {
+      document.removeEventListener('mousedown', onClick);
+      document.removeEventListener('keydown', onKey);
+    };
   }, []);
+
+  function toggleOpen() {
+    if (!open && triggerRef.current) {
+      const rect = triggerRef.current.getBoundingClientRect();
+      const spaceBelow = window.innerHeight - rect.bottom;
+      const spaceAbove = rect.top;
+      setOpenUpward(spaceBelow < PANEL_ESTIMATED_HEIGHT && spaceAbove > spaceBelow);
+    }
+    setOpen((v) => !v);
+  }
 
   const selected = options.filter((o) => selectedIds.includes(o.id));
   const filtered = options.filter((o) => o.label.toLowerCase().includes(query.toLowerCase()));
@@ -56,15 +77,21 @@ export function MultiSelectDropdown({
       </div>
 
       <button
+        ref={triggerRef}
         type="button"
-        onClick={() => setOpen((v) => !v)}
+        onClick={toggleOpen}
         className="w-full rounded-lg border border-base-border bg-base-bg px-3 py-1.5 text-left text-sm text-base-muted hover:border-accent"
       >
         + Añadir…
       </button>
 
       {open ? (
-        <div className="absolute z-20 mt-1 w-full rounded-lg border border-base-border bg-base-surface shadow-lg">
+        <div
+          className={clsx(
+            'absolute z-20 w-full rounded-lg border border-base-border bg-base-surface shadow-lg',
+            openUpward ? 'bottom-full mb-1' : 'top-full mt-1'
+          )}
+        >
           <input
             autoFocus
             value={query}
