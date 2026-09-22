@@ -1,7 +1,5 @@
-'use client';
-
-import clsx from 'clsx';
 import { AREA_LABELS } from '@/types';
+import { MultiSelectDropdown } from '@/components/MultiSelectDropdown';
 import type { Project } from '@/types';
 
 export function ProjectFocusPicker({
@@ -21,23 +19,13 @@ export function ProjectFocusPicker({
       {active.length === 0 ? (
         <p className="text-sm text-base-muted">Crea proyectos en la sección Proyectos para poder enfocarlos aquí.</p>
       ) : (
-        <div className="flex flex-wrap gap-2">
-          {active.map((p) => {
-            const focused = focusedIds.includes(p.id);
-            return (
-              <button
-                key={p.id}
-                onClick={() => onToggle(p.id, !focused)}
-                className={clsx(
-                  'rounded-full border px-3 py-1.5 text-sm transition',
-                  focused ? 'border-accent bg-accent/10 text-accent' : 'border-base-border hover:bg-base-border/40'
-                )}
-              >
-                {p.name} <span className="text-xs text-base-muted">· {AREA_LABELS[p.area]}</span>
-              </button>
-            );
-          })}
-        </div>
+        <MultiSelectDropdown
+          options={active.map((p) => ({ id: p.id, label: p.name, sublabel: AREA_LABELS[p.area] }))}
+          selectedIds={focusedIds}
+          onToggle={onToggle}
+          placeholder="Buscar proyecto…"
+          noSelectionLabel="Ningún proyecto en foco todavía."
+        />
       )}
     </div>
   );

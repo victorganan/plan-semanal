@@ -1,8 +1,8 @@
 'use client';
 
 import { useState } from 'react';
-import clsx from 'clsx';
 import { AddTaskInline } from '@/components/AddTaskInline';
+import { MultiSelectDropdown } from '@/components/MultiSelectDropdown';
 import { AREA_LABELS } from '@/types';
 import type { WeekFull, Project, TaskWithProject } from '@/types';
 
@@ -58,24 +58,12 @@ function ProjectMultiSelect({
   const active = projects.filter((p) => p.status === 'ACTIVE');
   if (active.length === 0) return <p className="text-sm text-base-muted">No hay proyectos activos.</p>;
   return (
-    <div className="flex flex-wrap gap-2">
-      {active.map((p) => {
-        const selected = selectedIds.includes(p.id);
-        return (
-          <button
-            key={p.id}
-            type="button"
-            onClick={() => onToggle(p.id, !selected)}
-            className={clsx(
-              'rounded-full border px-3 py-1.5 text-sm transition',
-              selected ? 'border-accent bg-accent/10 text-accent' : 'border-base-border hover:bg-base-border/40'
-            )}
-          >
-            {p.name} <span className="text-xs text-base-muted">· {AREA_LABELS[p.area]}</span>
-          </button>
-        );
-      })}
-    </div>
+    <MultiSelectDropdown
+      options={active.map((p) => ({ id: p.id, label: p.name, sublabel: AREA_LABELS[p.area] }))}
+      selectedIds={selectedIds}
+      onToggle={onToggle}
+      placeholder="Buscar proyecto…"
+    />
   );
 }
 
@@ -95,21 +83,17 @@ function TaskMultiSelect({
       {tasks.length === 0 ? (
         <p className="mb-2 text-sm text-base-muted">No hay tareas pendientes esta semana.</p>
       ) : (
-        <ul className="mb-2 max-h-40 space-y-1 overflow-y-auto">
-          {tasks.map((t) => {
-            const selected = selectedIds.includes(t.id);
-            return (
-              <li key={t.id}>
-                <label className="flex items-center gap-2 rounded-lg px-2 py-1 text-sm hover:bg-base-border/30">
-                  <input type="checkbox" checked={selected} onChange={(e) => onToggle(t.id, e.target.checked)} />
-                  <span className={clsx(selected && 'font-medium')}>{t.text}</span>
-                </label>
-              </li>
-            );
-          })}
-        </ul>
+        <MultiSelectDropdown
+          options={tasks.map((t) => ({ id: t.id, label: t.text }))}
+          selectedIds={selectedIds}
+          onToggle={onToggle}
+          placeholder="Buscar tarea…"
+          noSelectionLabel="Ninguna marcada todavía."
+        />
       )}
-      <AddTaskInline onAdd={onAddNew} placeholder="Crear tarea nueva y marcarla…" />
+      <div className="mt-2">
+        <AddTaskInline onAdd={onAddNew} placeholder="Crear tarea nueva y marcarla…" />
+      </div>
     </div>
   );
 }
