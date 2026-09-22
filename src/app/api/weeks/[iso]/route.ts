@@ -36,6 +36,9 @@ const patchSchema = z.object({
   evalPostponed: z.string().max(10000).nullable().optional(),
   evalToImprove: z.string().max(10000).nullable().optional(),
   evalDelegate: z.string().max(10000).nullable().optional(),
+  evalNextWeekFocusProjectIds: z.array(z.string()).optional(),
+  evalPostponedTaskIds: z.array(z.string()).optional(),
+  evalDelegateTaskIds: z.array(z.string()).optional(),
   days: z
     .array(z.object({ dayOfWeek: z.number().int().min(0).max(6), starRating: z.number().int().min(0).max(5).nullable() }))
     .optional(),
