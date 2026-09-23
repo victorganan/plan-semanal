@@ -6,7 +6,7 @@ import { AddTaskInline } from '@/components/AddTaskInline';
 import { TaskCard } from '@/components/TaskCard';
 import { areaBgClass } from '@/types';
 import { dateForDayOfWeek } from '@/lib/week';
-import type { Area, ProjectWithAreaAndCollaborators, TaskWithProject } from '@/types';
+import type { Area, ProjectWithAreaAndCollaborators, Tag, TaskWithProject } from '@/types';
 
 interface Props {
   area: Area;
@@ -14,6 +14,7 @@ interface Props {
   isoWeek: string;
   tasks: TaskWithProject[];
   projects: ProjectWithAreaAndCollaborators[];
+  tags?: Tag[];
   onAdd: (areaId: string, text: string) => Promise<void>;
   onUpdate: (id: string, patch: Record<string, unknown>) => Promise<void>;
   onDelete: (id: string) => Promise<void>;
@@ -27,6 +28,7 @@ export function AreaColumn({
   isoWeek,
   tasks,
   projects,
+  tags,
   onAdd,
   onUpdate,
   onDelete,
@@ -63,6 +65,7 @@ export function AreaColumn({
             key={t.id}
             task={t}
             projects={projects}
+            tags={tags}
             referenceDate={dateForDayOfWeek(isoWeek, dayOfWeek)}
             onUpdate={onUpdate}
             onDelete={onDelete}

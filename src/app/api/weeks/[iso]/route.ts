@@ -23,6 +23,7 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ iso
           area: true,
           subtasks: true,
           recurringTemplate: true,
+          tags: true,
         },
       },
       habitCompletions: true,

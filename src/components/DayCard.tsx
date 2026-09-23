@@ -3,7 +3,7 @@ import { StarRating } from '@/components/StarRating';
 import { CapacityBar } from '@/components/CapacityBar';
 import { Top3Today } from '@/components/Top3Today';
 import { DAY_NAMES, dateForDayOfWeek } from '@/lib/week';
-import type { Area, Day, ProjectWithAreaAndCollaborators, TaskWithProject } from '@/types';
+import type { Area, Day, ProjectWithAreaAndCollaborators, Tag, TaskWithProject } from '@/types';
 import clsx from 'clsx';
 
 interface Props {
@@ -13,6 +13,7 @@ interface Props {
   tasks: TaskWithProject[];
   projects: ProjectWithAreaAndCollaborators[];
   areas: Area[];
+  tags?: Tag[];
   isToday: boolean;
   capacityMinutes: number;
   onAddTask: (areaId: string, text: string) => Promise<void>;
@@ -30,6 +31,7 @@ export function DayCard({
   tasks,
   projects,
   areas,
+  tags,
   isToday,
   capacityMinutes,
   onAddTask,
@@ -72,6 +74,7 @@ export function DayCard({
               isoWeek={isoWeek}
               tasks={tasks.filter((t) => t.areaId === area.id)}
               projects={projects}
+              tags={tags}
               onAdd={onAddTask}
               onUpdate={onUpdateTask}
               onDelete={onDeleteTask}

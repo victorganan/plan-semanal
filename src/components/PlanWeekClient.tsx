@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { api, ApiError } from '@/lib/api-client';
 import { currentIsoWeek } from '@/lib/week';
 import { useToast } from '@/components/Toast';
-import type { WeekFull, Habit, ProjectWithAreaAndCollaborators, Area, TaskWithProject } from '@/types';
+import type { WeekFull, Habit, ProjectWithAreaAndCollaborators, Area, Tag, TaskWithProject } from '@/types';
 import { DayCard } from '@/components/DayCard';
 import { HabitGrid } from '@/components/HabitGrid';
 import { MoodSliders } from '@/components/MoodSliders';
@@ -27,6 +27,7 @@ interface Props {
   habits: Habit[];
   projects: ProjectWithAreaAndCollaborators[];
   areas: Area[];
+  tags: Tag[];
   isoWeek: string;
   mode: 'day' | 'week';
   viewDow: number;
@@ -46,6 +47,7 @@ export function PlanWeekClient({
   habits,
   projects,
   areas,
+  tags,
   isoWeek,
   mode,
   viewDow,
@@ -93,6 +95,8 @@ export function PlanWeekClient({
       areaId: extra?.areaId ?? null,
       area: optimisticArea,
       text,
+      description: null,
+      tags: [],
       done: false,
       priority: 'MEDIUM',
       durationMinutes: null,
@@ -118,7 +122,7 @@ export function PlanWeekClient({
       setWeek((w) => ({
         ...w,
         tasks: w.tasks.map((t) =>
-          t.id === optimistic.id ? { ...created, project: null, area: optimisticArea, subtasks: [], recurringTemplate: null } : t
+          t.id === optimistic.id ? { ...created, project: null, area: optimisticArea, subtasks: [], recurringTemplate: null, tags: [] } : t
         ),
       }));
     } catch {
@@ -137,6 +141,8 @@ export function PlanWeekClient({
       areaId: null,
       area: null,
       text,
+      description: null,
+      tags: [],
       done: false,
       priority: 'MEDIUM',
       durationMinutes: null,
@@ -160,7 +166,7 @@ export function PlanWeekClient({
     try {
       const created = await api.post('/api/tasks', { kind: 'BACKLOG', text });
       setInbox((prev) =>
-        prev.map((t) => (t.id === optimistic.id ? { ...created, project: null, area: null, subtasks: [], recurringTemplate: null } : t))
+        prev.map((t) => (t.id === optimistic.id ? { ...created, project: null, area: null, subtasks: [], recurringTemplate: null, tags: [] } : t))
       );
     } catch {
       setInbox((prev) => prev.filter((t) => t.id !== optimistic.id));
@@ -342,6 +348,8 @@ export function PlanWeekClient({
       areaId: null,
       area: null,
       text,
+      description: null,
+      tags: [],
       done: false,
       priority: 'MEDIUM',
       durationMinutes: null,
@@ -366,7 +374,7 @@ export function PlanWeekClient({
     try {
       const created = await api.post('/api/tasks', { kind: 'BACKLOG', text });
       setInbox((prev) =>
-        prev.map((t) => (t.id === id ? { ...created, project: null, area: null, subtasks: [], recurringTemplate: null } : t))
+        prev.map((t) => (t.id === id ? { ...created, project: null, area: null, subtasks: [], recurringTemplate: null, tags: [] } : t))
       );
       setWeek((w) => ({ ...w, [field]: w[field].map((x: string) => (x === id ? created.id : x)) }));
       await api.patch(`/api/weeks/${isoWeek}`, { [field]: week[field]?.map((x) => (x === id ? created.id : x)) ?? [created.id] });
@@ -452,6 +460,7 @@ export function PlanWeekClient({
             inbox={inbox}
             projects={projects}
             areas={areas}
+            tags={tags}
             isoWeek={isoWeek}
             onSaveWeekMeta={saveWeekMeta}
             onToggleProjectFocus={toggleProjectFocus}
@@ -494,6 +503,7 @@ export function PlanWeekClient({
           tasks={dayTasks}
           projects={projects}
           areas={areas}
+          tags={tags}
           isToday={isViewingToday}
           capacityMinutes={dailyCapacityMinutes}
           onAddTask={(areaId, text) => addTask('DAY_AREA', text, { dayOfWeek: viewDow, areaId })}
@@ -516,6 +526,7 @@ export function PlanWeekClient({
               title="Acciones prioritarias / No olvidar"
               tasks={priorityTasks}
               projects={projects}
+              tags={tags}
               onAdd={(text) => addTask('PRIORITY_ACTION', text)}
               onUpdate={updateTask}
               onDelete={deleteTask}
@@ -526,6 +537,7 @@ export function PlanWeekClient({
               title="Llamadas"
               tasks={callTasks}
               projects={projects}
+              tags={tags}
               onAdd={(text) => addTask('CALL', text)}
               onUpdate={updateTask}
               onDelete={deleteTask}
@@ -560,6 +572,7 @@ export function PlanWeekClient({
           inbox={inbox}
           projects={projects}
           areas={areas}
+          tags={tags}
           isoWeek={isoWeek}
           onSaveWeekMeta={saveWeekMeta}
           onToggleProjectFocus={toggleProjectFocus}
@@ -596,6 +609,7 @@ export function PlanWeekClient({
               tasks={week.tasks.filter((t) => t.kind === 'DAY_AREA' && t.dayId === day.id)}
               projects={projects}
               areas={areas}
+              tags={tags}
               isToday={isoWeek === weekIsoOfToday && day.dayOfWeek === todayDow}
               capacityMinutes={dailyCapacityMinutes}
               onAddTask={(areaId, text) => addTask('DAY_AREA', text, { dayOfWeek: day.dayOfWeek, areaId })}
@@ -613,6 +627,7 @@ export function PlanWeekClient({
           title="Acciones prioritarias / No olvidar"
           tasks={priorityTasks}
           projects={projects}
+          tags={tags}
           onAdd={(text) => addTask('PRIORITY_ACTION', text)}
           onUpdate={updateTask}
           onDelete={deleteTask}
@@ -623,6 +638,7 @@ export function PlanWeekClient({
           title="Llamadas"
           tasks={callTasks}
           projects={projects}
+          tags={tags}
           onAdd={(text) => addTask('CALL', text)}
           onUpdate={updateTask}
           onDelete={deleteTask}
@@ -635,7 +651,16 @@ export function PlanWeekClient({
 
       <ObjectivesForm week={week} onSave={saveWeekMeta} />
 
-      <InboxList tasks={inbox} projects={projects} areas={areas} currentIsoWeek={isoWeek} onAdd={addBacklog} onUpdate={updateTask} onDelete={deleteTask} />
+      <InboxList
+        tasks={inbox}
+        projects={projects}
+        areas={areas}
+        tags={tags}
+        currentIsoWeek={isoWeek}
+        onAdd={addBacklog}
+        onUpdate={updateTask}
+        onDelete={deleteTask}
+      />
 
       <div>
         <h3 className="mb-2 text-sm font-semibold text-base-muted">Hábitos (lunes a viernes)</h3>

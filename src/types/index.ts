@@ -9,6 +9,7 @@ import type {
   Area,
   ProjectCollaborator,
   RecurringTaskTemplate,
+  Tag,
 } from '@prisma/client';
 
 export type ProjectWithArea = Project & { area: Area };
@@ -18,6 +19,7 @@ export type TaskWithProject = Task & {
   area: Area | null;
   subtasks: Task[];
   recurringTemplate: RecurringTaskTemplate | null;
+  tags: Tag[];
 };
 
 export type WeekFull = Week & {
@@ -27,7 +29,19 @@ export type WeekFull = Week & {
   projectFocus: (WeekProjectFocus & { project: ProjectWithArea })[];
 };
 
-export type { Task, Day, Week, Habit, HabitCompletion, Project, WeekProjectFocus, Area, ProjectCollaborator, RecurringTaskTemplate };
+export type {
+  Task,
+  Day,
+  Week,
+  Habit,
+  HabitCompletion,
+  Project,
+  WeekProjectFocus,
+  Area,
+  ProjectCollaborator,
+  RecurringTaskTemplate,
+  Tag,
+};
 
 const AREA_PALETTE = [
   'bg-area-1',

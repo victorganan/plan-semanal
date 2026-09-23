@@ -9,6 +9,7 @@ import { syncParentCompletion } from '@/lib/subtasks';
 
 const patchSchema = z.object({
   text: z.string().min(1).max(500).optional(),
+  description: z.string().max(5000).nullable().optional(),
   done: z.boolean().optional(),
   priority: z.enum(['LOW', 'MEDIUM', 'HIGH']).optional(),
   durationMinutes: durationMinutesSchema,
@@ -24,6 +25,7 @@ const patchSchema = z.object({
   quadrant: z.enum(['HACER', 'DECIDIR', 'DELEGAR', 'ALGUN_DIA']).nullable().optional(),
   assignedTo: z.string().max(100).nullable().optional(),
   isTop3: z.boolean().optional(),
+  tagIds: z.array(z.string()).max(20).optional(),
 });
 
 async function loadOwnedTask(userId: string, id: string) {
@@ -41,12 +43,17 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   if (!existing) return NextResponse.json({ error: 'No encontrada' }, { status: 404 });
 
   const body = patchSchema.parse(await req.json());
-  const { dayOfWeek, isoWeek, kind, areaId, scheduledAt, ...rest } = body;
+  const { dayOfWeek, isoWeek, kind, areaId, scheduledAt, tagIds, ...rest } = body;
 
   const nextKind = kind ?? existing.kind;
   const data: Record<string, unknown> = { ...rest };
   if (kind) data.kind = kind;
   if (scheduledAt !== undefined) data.scheduledAt = scheduledAt ? new Date(scheduledAt) : null;
+  if (tagIds !== undefined) {
+    // Solo etiquetas propias del usuario: evita asociar ids ajenos adivinados.
+    const owned = await prisma.tag.findMany({ where: { id: { in: tagIds }, userId }, select: { id: true } });
+    data.tags = { set: owned.map((t) => ({ id: t.id })) };
+  }
 
   if (nextKind === 'BACKLOG') {
     data.weekId = null;
@@ -88,7 +95,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     }
   }
 
-  const task = await prisma.task.update({ where: { id }, data });
+  const task = await prisma.task.update({ where: { id }, data, include: { tags: true } });
 
   if (body.done !== undefined) {
     // Si es un miniproyecto (tiene subtareas), marcar/desmarcar se aplica

@@ -28,6 +28,7 @@ model User {
   tasks             Task[]
   pushSubscriptions PushSubscription[]
   areas             Area[]
+  tags              Tag[]
 
   weeklyReminderDayOfWeek Int? // 0=lunes .. 6=domingo
   weeklyReminderTime      String? // "HH:MM"
@@ -134,6 +135,21 @@ enum IntegrationProvider {
   TODOIST
 }
 
+model Tag {
+  id         String @id @default(cuid())
+  userId     String
+  name       String
+  colorIndex Int    @default(0) // índice en la misma paleta de colores que Área (0-7)
+
+  user  User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tasks Task[]
+
+  createdAt DateTime @default(now())
+
+  @@unique([userId, name])
+  @@index([userId])
+}
+
 model Area {
   id          String  @id @default(cuid())
   userId      String
@@ -210,8 +226,9 @@ model Task {
   kind   TaskKind
   areaId String? // solo para kind = DAY_AREA
 
-  text     String
-  done     Boolean  @default(false)
+  text        String
+  description String? @db.Text // notas o contexto de la tarea; el título queda para la acción en sí
+  done        Boolean  @default(false)
   priority Priority @default(MEDIUM)
   durationMinutes Int? // duración estimada en minutos (pasos de 15')
 
@@ -237,6 +254,7 @@ model Task {
   recurringTemplate RecurringTaskTemplate? @relation(fields: [recurringTemplateId], references: [id], onDelete: SetNull)
   parentTask Task?  @relation("TaskSubtasks", fields: [parentTaskId], references: [id], onDelete: Cascade)
   subtasks   Task[] @relation("TaskSubtasks")
+  tags       Tag[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

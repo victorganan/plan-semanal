@@ -8,16 +8,17 @@ import { DurationPicker } from '@/components/DurationPicker';
 import { AddTaskInline } from '@/components/AddTaskInline';
 import { RecurrenceEditor } from '@/components/RecurrenceEditor';
 import { api } from '@/lib/api-client';
-import { PRIORITY_LABELS, RECURRENCE_LABELS, formatDurationMinutes } from '@/types';
+import { PRIORITY_LABELS, RECURRENCE_LABELS, formatDurationMinutes, areaBgClass } from '@/types';
 import { describeRecurrence } from '@/lib/rrule-helpers';
 import type { RecurrenceValue } from '@/lib/rrule-helpers';
 import { DAY_NAMES, isoWeekOf, mondayBasedDayOfWeek } from '@/lib/week';
-import type { Area, ProjectWithAreaAndCollaborators, Task, TaskWithProject, RecurringTaskTemplate } from '@/types';
+import type { Area, ProjectWithAreaAndCollaborators, Task, TaskWithProject, RecurringTaskTemplate, Tag } from '@/types';
 
 interface Props {
   task: TaskWithProject;
   projects: ProjectWithAreaAndCollaborators[];
   areas?: Area[];
+  tags?: Tag[];
   referenceDate?: Date;
   onUpdate: (id: string, patch: Record<string, unknown>) => Promise<void>;
   onDelete: (id: string) => Promise<void>;
@@ -53,6 +54,7 @@ export function TaskCard({
   task,
   projects,
   areas = [],
+  tags = [],
   referenceDate,
   onUpdate,
   onDelete,
@@ -63,7 +65,9 @@ export function TaskCard({
 }: Props) {
   const [open, setOpen] = useState(false);
   const [text, setText] = useState(task.text);
+  const [description, setDescription] = useState(task.description ?? '');
   const [assignedTo, setAssignedTo] = useState(task.assignedTo ?? '');
+  const [newTagName, setNewTagName] = useState('');
   const [busy, setBusy] = useState(false);
   const initialSplit = splitScheduled(task.scheduledAt);
   const [date, setDate] = useState(initialSplit.date);
@@ -115,6 +119,27 @@ export function TaskCard({
   async function saveAssignedTo() {
     const next = assignedTo.trim() || null;
     if (next !== (task.assignedTo ?? null)) await onUpdate(task.id, { assignedTo: next });
+  }
+
+  async function saveDescription() {
+    const next = description.trim() || null;
+    if (next !== (task.description ?? null)) await onUpdate(task.id, { description: next });
+  }
+
+  async function addTag(name: string) {
+    const trimmed = name.trim();
+    if (!trimmed) return;
+    setNewTagName('');
+    const existing = tags.find((t) => t.name.toLowerCase() === trimmed.toLowerCase());
+    const tag: Tag = existing ?? (await api.post('/api/tags', { name: trimmed }));
+    if (task.tags.some((t) => t.id === tag.id)) return;
+    const nextTags = [...task.tags, tag];
+    await onUpdate(task.id, { tagIds: nextTags.map((t) => t.id), tags: nextTags });
+  }
+
+  async function removeTag(tagId: string) {
+    const nextTags = task.tags.filter((t) => t.id !== tagId);
+    await onUpdate(task.id, { tagIds: nextTags.map((t) => t.id), tags: nextTags });
   }
 
   async function toggleDone() {
@@ -190,11 +215,17 @@ export function TaskCard({
               <PriorityDot priority={task.priority} /> {PRIORITY_LABELS[task.priority]}
             </span>
             {task.durationMinutes ? <span>· {formatDurationMinutes(task.durationMinutes)}</span> : null}
+            {task.description ? <span title={task.description}>📝</span> : null}
             {task.project ? (
               <span className="rounded-full bg-base-border/50 px-2 py-0.5">{task.project.name}</span>
             ) : null}
             {scheduledLabel ? <span>📅 {scheduledLabel}</span> : null}
             {task.assignedTo ? <span>👤 {task.assignedTo}</span> : null}
+            {task.tags.map((t) => (
+              <span key={t.id} className={clsx('rounded-full px-2 py-0.5 text-white', areaBgClass(t.colorIndex))}>
+                #{t.name}
+              </span>
+            ))}
             {showRecurrence && task.recurrence !== 'NONE' ? <span>🔁 {RECURRENCE_LABELS[task.recurrence]}</span> : null}
             {task.parentTaskId ? <span>↳ subtarea</span> : null}
             {subtasks.length > 0 ? (
@@ -266,6 +297,18 @@ export function TaskCard({
 
       {open ? (
         <div className="space-y-3 border-t border-base-border px-3 py-3 text-sm">
+          <label className="block space-y-1">
+            <span className="block text-xs text-base-muted">Descripción</span>
+            <textarea
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              onBlur={saveDescription}
+              rows={3}
+              placeholder="Notas, contexto o detalles de esta tarea…"
+              className="w-full rounded-lg border border-base-border bg-base-bg px-2 py-1.5 text-sm"
+            />
+          </label>
+
           <div className="grid grid-cols-2 gap-3">
             <label className="space-y-1">
               <span className="block text-xs text-base-muted">Prioridad</span>
@@ -343,6 +386,41 @@ export function TaskCard({
                 />
               </div>
             </div>
+          </div>
+
+          <div className="space-y-2 border-t border-base-border pt-3">
+            <span className="block text-xs text-base-muted">Etiquetas</span>
+            <div className="flex flex-wrap items-center gap-1.5">
+              {task.tags.map((t) => (
+                <span
+                  key={t.id}
+                  className={clsx('flex items-center gap-1 rounded-full px-2 py-0.5 text-xs text-white', areaBgClass(t.colorIndex))}
+                >
+                  #{t.name}
+                  <button onClick={() => removeTag(t.id)} aria-label={`Quitar etiqueta ${t.name}`} className="hover:opacity-70">
+                    ✕
+                  </button>
+                </span>
+              ))}
+              <input
+                value={newTagName}
+                onChange={(e) => setNewTagName(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    addTag(newTagName);
+                  }
+                }}
+                placeholder="Añadir etiqueta…"
+                list="task-tag-suggestions"
+                className="min-w-0 flex-1 rounded-full border border-base-border bg-base-bg px-2 py-0.5 text-xs"
+              />
+            </div>
+            <datalist id="task-tag-suggestions">
+              {tags.map((t) => (
+                <option key={t.id} value={t.name} />
+              ))}
+            </datalist>
           </div>
 
           {task.kind === 'DAY_AREA' && referenceDate ? (

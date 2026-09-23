@@ -1,11 +1,12 @@
 import { AddTaskInline } from '@/components/AddTaskInline';
 import { TaskCard } from '@/components/TaskCard';
-import type { ProjectWithAreaAndCollaborators, TaskWithProject } from '@/types';
+import type { ProjectWithAreaAndCollaborators, Tag, TaskWithProject } from '@/types';
 
 interface Props {
   title: string;
   tasks: TaskWithProject[];
   projects: ProjectWithAreaAndCollaborators[];
+  tags?: Tag[];
   onAdd: (text: string) => Promise<void>;
   onUpdate: (id: string, patch: Record<string, unknown>) => Promise<void>;
   onDelete: (id: string) => Promise<void>;
@@ -13,7 +14,17 @@ interface Props {
   onCreateCalendarEvent?: (id: string) => Promise<void>;
 }
 
-export function PriorityListSection({ title, tasks, projects, onAdd, onUpdate, onDelete, onExportTodoist, onCreateCalendarEvent }: Props) {
+export function PriorityListSection({
+  title,
+  tasks,
+  projects,
+  tags,
+  onAdd,
+  onUpdate,
+  onDelete,
+  onExportTodoist,
+  onCreateCalendarEvent,
+}: Props) {
   return (
     <div className="rounded-card border border-base-border bg-base-surface p-4">
       <h3 className="mb-3 text-sm font-semibold">{title}</h3>
@@ -23,6 +34,7 @@ export function PriorityListSection({ title, tasks, projects, onAdd, onUpdate, o
             key={t.id}
             task={t}
             projects={projects}
+            tags={tags}
             onUpdate={onUpdate}
             onDelete={onDelete}
             onExportTodoist={onExportTodoist}

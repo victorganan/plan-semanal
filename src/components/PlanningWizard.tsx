@@ -6,13 +6,14 @@ import { ProjectFocusPicker } from '@/components/ProjectFocusPicker';
 import { PriorityListSection } from '@/components/PriorityListSection';
 import { InboxList } from '@/components/InboxList';
 import { ObjectivesForm } from '@/components/WeekMetaForm';
-import type { WeekFull, ProjectWithAreaAndCollaborators, Area, TaskWithProject } from '@/types';
+import type { WeekFull, ProjectWithAreaAndCollaborators, Area, Tag, TaskWithProject } from '@/types';
 
 interface Props {
   week: WeekFull;
   inbox: TaskWithProject[];
   projects: ProjectWithAreaAndCollaborators[];
   areas: Area[];
+  tags?: Tag[];
   isoWeek: string;
   onSaveWeekMeta: (patch: Record<string, unknown>) => void;
   onToggleProjectFocus: (projectId: string, focused: boolean) => Promise<void>;
@@ -31,6 +32,7 @@ export function PlanningWizard({
   inbox,
   projects,
   areas,
+  tags,
   isoWeek,
   onSaveWeekMeta,
   onToggleProjectFocus,
@@ -97,11 +99,20 @@ export function PlanningWizard({
                 title="Acciones prioritarias / No olvidar"
                 tasks={priorityTasks}
                 projects={projects}
+                tags={tags}
                 onAdd={onAddPriority}
                 onUpdate={onUpdateTask}
                 onDelete={onDeleteTask}
               />
-              <PriorityListSection title="Llamadas" tasks={callTasks} projects={projects} onAdd={onAddCall} onUpdate={onUpdateTask} onDelete={onDeleteTask} />
+              <PriorityListSection
+                title="Llamadas"
+                tasks={callTasks}
+                projects={projects}
+                tags={tags}
+                onAdd={onAddCall}
+                onUpdate={onUpdateTask}
+                onDelete={onDeleteTask}
+              />
             </div>
           ) : null}
 
@@ -110,7 +121,16 @@ export function PlanningWizard({
               <p className="mb-3 text-sm text-base-muted">
                 Revisa lo que dejaste anotado. Muévelo a un día si ya sabes cuándo, o déjalo aquí si aún no.
               </p>
-              <InboxList tasks={inbox} projects={projects} areas={areas} currentIsoWeek={isoWeek} onAdd={onAddBacklog} onUpdate={onUpdateTask} onDelete={onDeleteTask} />
+              <InboxList
+                tasks={inbox}
+                projects={projects}
+                areas={areas}
+                tags={tags}
+                currentIsoWeek={isoWeek}
+                onAdd={onAddBacklog}
+                onUpdate={onUpdateTask}
+                onDelete={onDeleteTask}
+              />
             </div>
           ) : null}
         </div>

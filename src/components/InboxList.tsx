@@ -4,19 +4,20 @@ import { useState } from 'react';
 import { AddTaskInline } from '@/components/AddTaskInline';
 import { TaskCard } from '@/components/TaskCard';
 import { InboxTriageWizard } from '@/components/InboxTriageWizard';
-import type { Area, ProjectWithAreaAndCollaborators, TaskWithProject } from '@/types';
+import type { Area, ProjectWithAreaAndCollaborators, Tag, TaskWithProject } from '@/types';
 
 interface Props {
   tasks: TaskWithProject[];
   projects: ProjectWithAreaAndCollaborators[];
   areas: Area[];
+  tags?: Tag[];
   currentIsoWeek: string;
   onAdd: (text: string) => Promise<void>;
   onUpdate: (id: string, patch: Record<string, unknown>) => Promise<void>;
   onDelete: (id: string) => Promise<void>;
 }
 
-export function InboxList({ tasks, projects, areas, currentIsoWeek, onAdd, onUpdate, onDelete }: Props) {
+export function InboxList({ tasks, projects, areas, tags, currentIsoWeek, onAdd, onUpdate, onDelete }: Props) {
   const [triageOpen, setTriageOpen] = useState(false);
 
   return (
@@ -52,6 +53,7 @@ export function InboxList({ tasks, projects, areas, currentIsoWeek, onAdd, onUpd
             task={t}
             projects={projects}
             areas={areas}
+            tags={tags}
             onUpdate={onUpdate}
             onDelete={onDelete}
             currentIsoWeek={currentIsoWeek}
