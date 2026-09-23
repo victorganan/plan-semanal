@@ -81,9 +81,23 @@ enum Priority {
 
 enum Recurrence {
   NONE
+  DAILY
   WEEKLY
-  BIWEEKLY
-  FOUR_WEEKLY
+  MONTHLY
+  YEARLY
+}
+
+enum RecurrenceFreq {
+  DAILY
+  WEEKLY
+  MONTHLY
+  YEARLY
+}
+
+enum RecurrenceEndMode {
+  NEVER
+  ON_DATE
+  AFTER_COUNT
 }
 
 enum TaskKind {
@@ -299,14 +313,23 @@ model RecurringTaskTemplate {
   id     String @id @default(cuid())
   userId String
 
-  dayOfWeek Int // 0-6
   areaId    String
   text      String
   priority  Priority   @default(MEDIUM)
   durationMinutes Int?
-  recurrence Recurrence @default(WEEKLY) // WEEKLY | BIWEEKLY | FOUR_WEEKLY
-  startIsoWeek String
   active    Boolean    @default(true)
+
+  // Patrón de repetición (equivalente a RRULE): dtstart es la fecha de
+  // referencia (primera ocurrencia), de la que se deriva el día de la
+  // semana / del mes / del año según freq.
+  dtstart             DateTime
+  freq                RecurrenceFreq
+  interval            Int               @default(1)
+  byWeekdays          Int[]             @default([]) // 0=lunes..6=domingo, solo relevante si freq=WEEKLY
+  monthlyByNthWeekday Boolean           @default(false) // true: "el enésimo [día de la semana]" en vez del mismo día del mes
+  endMode             RecurrenceEndMode @default(NEVER)
+  endDate             DateTime?
+  endCount            Int?
 
   user  User   @relation(fields: [userId], references: [id], onDelete: Cascade)
   area  Area   @relation(fields: [areaId], references: [id], onDelete: Restrict)

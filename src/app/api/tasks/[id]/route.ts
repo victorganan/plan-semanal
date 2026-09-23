@@ -14,7 +14,7 @@ const patchSchema = z.object({
   durationMinutes: durationMinutesSchema,
   projectId: z.string().nullable().optional(),
   scheduledAt: z.string().datetime().nullable().optional(),
-  recurrence: z.enum(['NONE', 'WEEKLY', 'BIWEEKLY', 'FOUR_WEEKLY']).optional(),
+  recurrence: z.enum(['NONE', 'DAILY', 'WEEKLY', 'MONTHLY', 'YEARLY']).optional(),
   order: z.number().int().optional(),
   // Mover/promocionar una tarea a un día concreto (p.ej. desde la bandeja de entrada, o al arrastrarla)
   kind: z.enum(['DAY_AREA', 'PRIORITY_ACTION', 'CALL', 'BACKLOG']).optional(),

@@ -6,21 +6,37 @@ import { PriorityDot } from '@/components/PriorityDot';
 import { TimeSelect } from '@/components/TimeSelect';
 import { DurationPicker } from '@/components/DurationPicker';
 import { AddTaskInline } from '@/components/AddTaskInline';
+import { RecurrenceEditor } from '@/components/RecurrenceEditor';
 import { api } from '@/lib/api-client';
 import { PRIORITY_LABELS, RECURRENCE_LABELS, formatDurationMinutes } from '@/types';
+import { describeRecurrence } from '@/lib/rrule-helpers';
+import type { RecurrenceValue } from '@/lib/rrule-helpers';
 import { DAY_NAMES, isoWeekOf, mondayBasedDayOfWeek } from '@/lib/week';
-import type { Area, Project, Task, TaskWithProject } from '@/types';
+import type { Area, Project, Task, TaskWithProject, RecurringTaskTemplate } from '@/types';
 
 interface Props {
   task: TaskWithProject;
   projects: Project[];
   areas?: Area[];
+  referenceDate?: Date;
   onUpdate: (id: string, patch: Record<string, unknown>) => Promise<void>;
   onDelete: (id: string) => Promise<void>;
   onExportTodoist?: (id: string) => Promise<void>;
   onCreateCalendarEvent?: (id: string) => Promise<void>;
   showRecurrence?: boolean;
   currentIsoWeek?: string;
+}
+
+function templateToValue(t: RecurringTaskTemplate): RecurrenceValue {
+  return {
+    freq: t.freq,
+    interval: t.interval,
+    byWeekdays: t.byWeekdays,
+    monthlyByNthWeekday: t.monthlyByNthWeekday,
+    endMode: t.endMode,
+    endDate: t.endDate ? t.endDate.toISOString().slice(0, 10) : null,
+    endCount: t.endCount,
+  };
 }
 
 function splitScheduled(scheduledAt: Date | string | null) {
@@ -37,6 +53,7 @@ export function TaskCard({
   task,
   projects,
   areas = [],
+  referenceDate,
   onUpdate,
   onDelete,
   onExportTodoist,
@@ -53,6 +70,23 @@ export function TaskCard({
   const [moveDay, setMoveDay] = useState(0);
   const [moveArea, setMoveArea] = useState(areas[0]?.id ?? '');
   const [subtasks, setSubtasks] = useState<Task[]>(task.subtasks);
+  const [recurrenceOpen, setRecurrenceOpen] = useState(false);
+  const [recurrenceBusy, setRecurrenceBusy] = useState(false);
+  const [recurrenceValue, setRecurrenceValue] = useState<RecurrenceValue | null>(() =>
+    task.recurringTemplate ? templateToValue(task.recurringTemplate) : null
+  );
+
+  async function saveRecurrence(v: RecurrenceValue | null) {
+    setRecurrenceBusy(true);
+    try {
+      const updated = await api.patch(`/api/tasks/${task.id}/recurrence`, { value: v });
+      setRecurrenceValue(v);
+      setRecurrenceOpen(false);
+      await onUpdate(task.id, { recurrence: updated.recurrence });
+    } finally {
+      setRecurrenceBusy(false);
+    }
+  }
 
   async function toggleSubtask(sub: Task) {
     const next = !sub.done;
@@ -264,23 +298,45 @@ export function TaskCard({
                 />
               </div>
             </div>
-            {task.kind === 'DAY_AREA' ? (
-              <label className="col-span-2 space-y-1">
-                <span className="block text-xs text-base-muted">Recurrencia</span>
-                <select
-                  value={task.recurrence}
-                  onChange={(e) => onUpdate(task.id, { recurrence: e.target.value })}
-                  className="w-full rounded-lg border border-base-border bg-base-bg px-2 py-1.5 text-sm"
-                >
-                  {Object.entries(RECURRENCE_LABELS).map(([v, l]) => (
-                    <option key={v} value={v}>
-                      {l}
-                    </option>
-                  ))}
-                </select>
-              </label>
-            ) : null}
           </div>
+
+          {task.kind === 'DAY_AREA' && referenceDate ? (
+            <div className="space-y-2 border-t border-base-border pt-3">
+              <span className="block text-xs text-base-muted">Repetir</span>
+              {recurrenceOpen ? (
+                <div className="space-y-2">
+                  <RecurrenceEditor value={recurrenceValue} referenceDate={referenceDate} onChange={setRecurrenceValue} />
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => saveRecurrence(recurrenceValue)}
+                      disabled={recurrenceBusy}
+                      className="rounded-full bg-accent px-3 py-1 text-xs font-medium text-white disabled:opacity-40"
+                    >
+                      Guardar
+                    </button>
+                    <button
+                      onClick={() => setRecurrenceOpen(false)}
+                      className="rounded-full border border-base-border px-3 py-1 text-xs"
+                    >
+                      Cancelar
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-xs text-base-muted">
+                    {recurrenceValue ? describeRecurrence(recurrenceValue, referenceDate) : 'No se repite'}
+                  </span>
+                  <button
+                    onClick={() => setRecurrenceOpen(true)}
+                    className="rounded-full border border-base-border px-3 py-1 text-xs hover:bg-base-border/40"
+                  >
+                    {recurrenceValue ? 'Cambiar' : 'Repetir'}
+                  </button>
+                </div>
+              )}
+            </div>
+          ) : null}
 
           {!task.parentTaskId ? (
             <div className="space-y-2 border-t border-base-border pt-3">

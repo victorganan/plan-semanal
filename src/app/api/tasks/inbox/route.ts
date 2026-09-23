@@ -9,7 +9,7 @@ export async function GET() {
   const tasks = await prisma.task.findMany({
     where: { userId, kind: 'BACKLOG' },
     orderBy: [{ order: 'asc' }, { createdAt: 'asc' }],
-    include: { project: { include: { area: true } }, area: true, subtasks: true },
+    include: { project: { include: { area: true } }, area: true, subtasks: true, recurringTemplate: true },
   });
 
   return NextResponse.json(tasks);

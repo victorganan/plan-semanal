@@ -1,8 +1,24 @@
-import type { Task, Day, Week, Habit, HabitCompletion, Project, WeekProjectFocus, Area, ProjectCollaborator } from '@prisma/client';
+import type {
+  Task,
+  Day,
+  Week,
+  Habit,
+  HabitCompletion,
+  Project,
+  WeekProjectFocus,
+  Area,
+  ProjectCollaborator,
+  RecurringTaskTemplate,
+} from '@prisma/client';
 
 export type ProjectWithArea = Project & { area: Area };
 export type ProjectWithAreaAndCollaborators = ProjectWithArea & { collaborators: ProjectCollaborator[] };
-export type TaskWithProject = Task & { project: ProjectWithArea | null; area: Area | null; subtasks: Task[] };
+export type TaskWithProject = Task & {
+  project: ProjectWithArea | null;
+  area: Area | null;
+  subtasks: Task[];
+  recurringTemplate: RecurringTaskTemplate | null;
+};
 
 export type WeekFull = Week & {
   days: Day[];
@@ -11,7 +27,7 @@ export type WeekFull = Week & {
   projectFocus: (WeekProjectFocus & { project: ProjectWithArea })[];
 };
 
-export type { Task, Day, Week, Habit, HabitCompletion, Project, WeekProjectFocus, Area, ProjectCollaborator };
+export type { Task, Day, Week, Habit, HabitCompletion, Project, WeekProjectFocus, Area, ProjectCollaborator, RecurringTaskTemplate };
 
 const AREA_PALETTE = [
   'bg-area-1',
@@ -61,7 +77,8 @@ export function formatDurationMinutes(minutes: number | null | undefined): strin
 
 export const RECURRENCE_LABELS: Record<string, string> = {
   NONE: 'Sin recurrencia',
+  DAILY: 'Diaria',
   WEEKLY: 'Semanal',
-  BIWEEKLY: 'Quincenal',
-  FOUR_WEEKLY: 'Cada 4 semanas',
+  MONTHLY: 'Mensual',
+  YEARLY: 'Anual',
 };

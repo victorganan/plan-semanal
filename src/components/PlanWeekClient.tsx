@@ -99,6 +99,7 @@ export function PlanWeekClient({
       recurringTemplateId: null,
       parentTaskId: null,
       subtasks: [],
+      recurringTemplate: null,
       order: 0,
       createdAt: new Date(),
       updatedAt: new Date(),
@@ -109,7 +110,9 @@ export function PlanWeekClient({
       const created = await api.post('/api/tasks', { isoWeek, kind, text, ...extra });
       setWeek((w) => ({
         ...w,
-        tasks: w.tasks.map((t) => (t.id === optimistic.id ? { ...created, project: null, area: optimisticArea, subtasks: [] } : t)),
+        tasks: w.tasks.map((t) =>
+          t.id === optimistic.id ? { ...created, project: null, area: optimisticArea, subtasks: [], recurringTemplate: null } : t
+        ),
       }));
     } catch {
       setWeek((w) => ({ ...w, tasks: w.tasks.filter((t) => t.id !== optimistic.id) }));
@@ -137,6 +140,7 @@ export function PlanWeekClient({
       recurringTemplateId: null,
       parentTaskId: null,
       subtasks: [],
+      recurringTemplate: null,
       order: 0,
       createdAt: new Date(),
       updatedAt: new Date(),
@@ -145,7 +149,9 @@ export function PlanWeekClient({
 
     try {
       const created = await api.post('/api/tasks', { kind: 'BACKLOG', text });
-      setInbox((prev) => prev.map((t) => (t.id === optimistic.id ? { ...created, project: null, area: null, subtasks: [] } : t)));
+      setInbox((prev) =>
+        prev.map((t) => (t.id === optimistic.id ? { ...created, project: null, area: null, subtasks: [], recurringTemplate: null } : t))
+      );
     } catch {
       setInbox((prev) => prev.filter((t) => t.id !== optimistic.id));
       showToast('No se pudo guardar en la bandeja de entrada', 'error');
@@ -289,6 +295,7 @@ export function PlanWeekClient({
       recurringTemplateId: null,
       parentTaskId: null,
       subtasks: [],
+      recurringTemplate: null,
       order: 0,
       createdAt: new Date(),
       updatedAt: new Date(),
@@ -298,7 +305,9 @@ export function PlanWeekClient({
 
     try {
       const created = await api.post('/api/tasks', { kind: 'BACKLOG', text });
-      setInbox((prev) => prev.map((t) => (t.id === id ? { ...created, project: null, area: null, subtasks: [] } : t)));
+      setInbox((prev) =>
+        prev.map((t) => (t.id === id ? { ...created, project: null, area: null, subtasks: [], recurringTemplate: null } : t))
+      );
       setWeek((w) => ({ ...w, [field]: w[field].map((x: string) => (x === id ? created.id : x)) }));
       await api.patch(`/api/weeks/${isoWeek}`, { [field]: week[field]?.map((x) => (x === id ? created.id : x)) ?? [created.id] });
     } catch {

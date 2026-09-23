@@ -17,7 +17,7 @@ const createSchema = z.object({
   durationMinutes: durationMinutesSchema,
   projectId: z.string().nullable().optional(),
   scheduledAt: z.string().datetime().nullable().optional(),
-  recurrence: z.enum(['NONE', 'WEEKLY', 'BIWEEKLY', 'FOUR_WEEKLY']).optional(),
+  recurrence: z.enum(['NONE', 'DAILY', 'WEEKLY', 'MONTHLY', 'YEARLY']).optional(),
   parentTaskId: z.string().optional(),
 });
 

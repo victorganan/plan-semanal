@@ -18,7 +18,7 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ iso
       days: { orderBy: { dayOfWeek: 'asc' } },
       tasks: {
         orderBy: [{ order: 'asc' }, { createdAt: 'asc' }],
-        include: { project: { include: { area: true } }, area: true, subtasks: true },
+        include: { project: { include: { area: true } }, area: true, subtasks: true, recurringTemplate: true },
       },
       habitCompletions: true,
       projectFocus: { include: { project: { include: { area: true } } } },

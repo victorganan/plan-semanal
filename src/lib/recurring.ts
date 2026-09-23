@@ -1,16 +1,8 @@
 import { prisma } from '@/lib/prisma';
 import { logActivity } from '@/lib/audit';
-import { weeksBetween } from '@/lib/week';
+import { dateForDayOfWeek, mondayBasedDayOfWeek } from '@/lib/week';
+import { buildRRule } from '@/lib/rrule-helpers';
 import type { RecurringTaskTemplate } from '@prisma/client';
-
-function templateAppliesToWeek(template: RecurringTaskTemplate, isoWeek: string): boolean {
-  const diff = weeksBetween(template.startIsoWeek, isoWeek);
-  if (diff < 0) return false;
-  if (template.recurrence === 'WEEKLY') return true;
-  if (template.recurrence === 'BIWEEKLY') return diff % 2 === 0;
-  if (template.recurrence === 'FOUR_WEEKLY') return diff % 4 === 0;
-  return false;
-}
 
 /**
  * Devuelve la semana (creándola junto a sus 7 días si no existe) y
@@ -46,50 +38,79 @@ export async function getOrCreateWeek(userId: string, isoWeek: string) {
   return week;
 }
 
-export async function materializeRecurringTasks(userId: string, weekId: string, isoWeek: string) {
-  const templates = await prisma.recurringTaskTemplate.findMany({
-    where: { userId, active: true },
-  });
+function templateToRecurrenceValue(template: RecurringTaskTemplate) {
+  return {
+    freq: template.freq,
+    interval: template.interval,
+    byWeekdays: template.byWeekdays,
+    monthlyByNthWeekday: template.monthlyByNthWeekday,
+    endMode: template.endMode,
+    endDate: template.endDate ? template.endDate.toISOString().slice(0, 10) : null,
+    endCount: template.endCount,
+  };
+}
 
-  const applicable = templates.filter((t) => templateAppliesToWeek(t, isoWeek));
-  if (applicable.length === 0) return;
+export async function materializeRecurringTasks(userId: string, weekId: string, isoWeek: string) {
+  const templates = await prisma.recurringTaskTemplate.findMany({ where: { userId, active: true } });
+  if (templates.length === 0) return;
+
+  const weekStart = dateForDayOfWeek(isoWeek, 0);
+  const weekEnd = dateForDayOfWeek(isoWeek, 6);
+
+  // Para cada plantilla, qué días de esta semana (0=lunes..6=domingo) le corresponden.
+  const dowsByTemplate = new Map<string, number[]>();
+  for (const template of templates) {
+    const rule = buildRRule(templateToRecurrenceValue(template), template.dtstart);
+    const occurrences = rule.between(weekStart, weekEnd, true);
+    if (occurrences.length > 0) {
+      dowsByTemplate.set(
+        template.id,
+        occurrences.map((d) => mondayBasedDayOfWeek(d))
+      );
+    }
+  }
+  if (dowsByTemplate.size === 0) return;
 
   const days = await prisma.day.findMany({ where: { weekId } });
   const dayByDow = new Map(days.map((d) => [d.dayOfWeek, d]));
 
+  const templateIds = Array.from(dowsByTemplate.keys());
   const existing = await prisma.task.findMany({
-    where: { weekId, recurringTemplateId: { in: applicable.map((t) => t.id) } },
-    select: { recurringTemplateId: true },
+    where: { weekId, recurringTemplateId: { in: templateIds } },
+    select: { recurringTemplateId: true, dayId: true },
   });
-  const existingIds = new Set(existing.map((t) => t.recurringTemplateId));
+  const existingKeys = new Set(existing.map((t) => `${t.recurringTemplateId}:${t.dayId}`));
 
-  const toCreate = applicable.filter((t) => !existingIds.has(t.id));
-  if (toCreate.length === 0) return;
+  const templateById = new Map(templates.map((t) => [t.id, t]));
 
-  for (const template of toCreate) {
-    const day = dayByDow.get(template.dayOfWeek);
-    if (!day) continue;
-    const task = await prisma.task.create({
-      data: {
+  for (const [templateId, dows] of dowsByTemplate) {
+    const template = templateById.get(templateId)!;
+    for (const dow of dows) {
+      const day = dayByDow.get(dow);
+      if (!day || existingKeys.has(`${templateId}:${day.id}`)) continue;
+
+      const task = await prisma.task.create({
+        data: {
+          userId,
+          weekId,
+          dayId: day.id,
+          kind: 'DAY_AREA',
+          areaId: template.areaId,
+          text: template.text,
+          priority: template.priority,
+          durationMinutes: template.durationMinutes,
+          recurrence: template.freq,
+          recurringTemplateId: template.id,
+        },
+      });
+      await logActivity(prisma, {
         userId,
-        weekId,
-        dayId: day.id,
-        kind: 'DAY_AREA',
-        areaId: template.areaId,
-        text: template.text,
-        priority: template.priority,
-        durationMinutes: template.durationMinutes,
-        recurrence: template.recurrence,
-        recurringTemplateId: template.id,
-      },
-    });
-    await logActivity(prisma, {
-      userId,
-      entityType: 'Task',
-      entityId: task.id,
-      action: 'CREATED',
-      summary: `Tarea recurrente generada: "${task.text}"`,
-      metadata: { fromTemplate: template.id },
-    });
+        entityType: 'Task',
+        entityId: task.id,
+        action: 'CREATED',
+        summary: `Tarea recurrente generada: "${task.text}"`,
+        metadata: { fromTemplate: template.id },
+      });
+    }
   }
 }

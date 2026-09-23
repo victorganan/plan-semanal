@@ -15,7 +15,7 @@ export default async function AjustesPage({ searchParams }: { searchParams: Prom
 
   const [habits, templates, areas, todoistToken, calendarConnected, activity, user] = await Promise.all([
     prisma.habit.findMany({ where: { userId, active: true }, orderBy: { order: 'asc' } }),
-    prisma.recurringTaskTemplate.findMany({ where: { userId, active: true }, include: { area: true }, orderBy: [{ dayOfWeek: 'asc' }] }),
+    prisma.recurringTaskTemplate.findMany({ where: { userId, active: true }, include: { area: true }, orderBy: [{ dtstart: 'asc' }] }),
     prisma.area.findMany({ where: { userId }, orderBy: { order: 'asc' } }),
     getTodoistToken(userId),
     hasCalendarAccess(userId),

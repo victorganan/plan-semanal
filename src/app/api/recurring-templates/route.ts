@@ -3,7 +3,6 @@ import { z } from 'zod';
 import { prisma } from '@/lib/prisma';
 import { logActivity } from '@/lib/audit';
 import { requireUserId, isResponse } from '@/lib/api-auth';
-import { currentIsoWeek } from '@/lib/week';
 import { durationMinutesSchema } from '@/lib/validation';
 
 export async function GET() {
@@ -13,19 +12,24 @@ export async function GET() {
   const templates = await prisma.recurringTaskTemplate.findMany({
     where: { userId, active: true },
     include: { area: true },
-    orderBy: [{ dayOfWeek: 'asc' }],
+    orderBy: [{ dtstart: 'asc' }],
   });
   return NextResponse.json(templates);
 }
 
 const createSchema = z.object({
-  dayOfWeek: z.number().int().min(0).max(6),
   areaId: z.string(),
   text: z.string().min(1).max(500),
   priority: z.enum(['LOW', 'MEDIUM', 'HIGH']).optional(),
   durationMinutes: durationMinutesSchema,
-  recurrence: z.enum(['WEEKLY', 'BIWEEKLY', 'FOUR_WEEKLY']),
-  startIsoWeek: z.string().regex(/^\d{4}-W\d{2}$/).optional(),
+  dtstart: z.string(), // yyyy-mm-dd
+  freq: z.enum(['DAILY', 'WEEKLY', 'MONTHLY', 'YEARLY']),
+  interval: z.number().int().min(1).max(99),
+  byWeekdays: z.array(z.number().int().min(0).max(6)),
+  monthlyByNthWeekday: z.boolean(),
+  endMode: z.enum(['NEVER', 'ON_DATE', 'AFTER_COUNT']),
+  endDate: z.string().nullable(),
+  endCount: z.number().int().min(1).nullable(),
 });
 
 export async function POST(req: NextRequest) {
@@ -33,9 +37,15 @@ export async function POST(req: NextRequest) {
   if (isResponse(userId)) return userId;
 
   const body = createSchema.parse(await req.json());
+  const { dtstart, endDate, ...rest } = body;
 
   const template = await prisma.recurringTaskTemplate.create({
-    data: { userId, ...body, startIsoWeek: body.startIsoWeek ?? currentIsoWeek() },
+    data: {
+      userId,
+      ...rest,
+      dtstart: new Date(`${dtstart}T00:00:00Z`),
+      endDate: endDate ? new Date(`${endDate}T23:59:59Z`) : null,
+    },
   });
 
   await logActivity(prisma, {

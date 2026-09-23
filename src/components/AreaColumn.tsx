@@ -5,6 +5,7 @@ import clsx from 'clsx';
 import { AddTaskInline } from '@/components/AddTaskInline';
 import { TaskCard } from '@/components/TaskCard';
 import { areaBgClass } from '@/types';
+import { dateForDayOfWeek } from '@/lib/week';
 import type { Area, Project, TaskWithProject } from '@/types';
 
 interface Props {
@@ -62,6 +63,7 @@ export function AreaColumn({
             key={t.id}
             task={t}
             projects={projects}
+            referenceDate={dateForDayOfWeek(isoWeek, dayOfWeek)}
             onUpdate={onUpdate}
             onDelete={onDelete}
             onExportTodoist={onExportTodoist}
