@@ -83,11 +83,13 @@ function AreaBlockers({
   areas,
   currentAreaId,
   onMoved,
+  onCancel,
 }: {
   blockers: { projects: { id: string; name: string }[]; templates: { id: string; name: string }[] };
   areas: Area[];
   currentAreaId: string;
   onMoved: (kind: 'project' | 'template', id: string) => void;
+  onCancel: () => void;
 }) {
   const destinations = areas.filter((a) => a.id !== currentAreaId);
   const [target, setTarget] = useState(destinations[0]?.id ?? '');
@@ -101,19 +103,24 @@ function AreaBlockers({
 
   return (
     <div className="mt-2 space-y-2 rounded-lg border border-priority-high/30 bg-priority-high/5 p-3">
-      <div className="flex items-center gap-2 text-xs">
-        <span className="text-base-muted">Mover a:</span>
-        <select
-          value={target}
-          onChange={(e) => setTarget(e.target.value)}
-          className="rounded-lg border border-base-border bg-base-bg px-2 py-1 text-xs"
-        >
-          {destinations.map((a) => (
-            <option key={a.id} value={a.id}>
-              {a.name}
-            </option>
-          ))}
-        </select>
+      <div className="flex items-center justify-between gap-2">
+        <div className="flex items-center gap-2 text-xs">
+          <span className="text-base-muted">Mover a:</span>
+          <select
+            value={target}
+            onChange={(e) => setTarget(e.target.value)}
+            className="rounded-lg border border-base-border bg-base-bg px-2 py-1 text-xs"
+          >
+            {destinations.map((a) => (
+              <option key={a.id} value={a.id}>
+                {a.name}
+              </option>
+            ))}
+          </select>
+        </div>
+        <button onClick={onCancel} className="rounded-full border border-base-border px-2.5 py-1 text-xs hover:bg-base-border/40">
+          Cancelar
+        </button>
       </div>
       <ul className="space-y-1">
         {blockers.projects.map((p) => (
@@ -272,7 +279,18 @@ function AreaRow({
           </button>
         </div>
       </div>
-      {blockers ? <AreaBlockers blockers={blockers} areas={areas} currentAreaId={area.id} onMoved={handleMoved} /> : null}
+      {blockers ? (
+        <AreaBlockers
+          blockers={blockers}
+          areas={areas}
+          currentAreaId={area.id}
+          onMoved={handleMoved}
+          onCancel={() => {
+            setBlockers(null);
+            setError(null);
+          }}
+        />
+      ) : null}
     </div>
   );
 }
