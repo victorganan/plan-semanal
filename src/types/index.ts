@@ -2,7 +2,7 @@ import type { Task, Day, Week, Habit, HabitCompletion, Project, WeekProjectFocus
 
 export type ProjectWithArea = Project & { area: Area };
 export type ProjectWithAreaAndCollaborators = ProjectWithArea & { collaborators: ProjectCollaborator[] };
-export type TaskWithProject = Task & { project: ProjectWithArea | null; area: Area | null };
+export type TaskWithProject = Task & { project: ProjectWithArea | null; area: Area | null; subtasks: Task[] };
 
 export type WeekFull = Week & {
   days: Day[];

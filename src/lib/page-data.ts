@@ -12,7 +12,10 @@ export async function getWeekPageData(userId: string, isoWeek: string) {
       where: { id: weekRef.id },
       include: {
         days: { orderBy: { dayOfWeek: 'asc' } },
-        tasks: { orderBy: [{ order: 'asc' }, { createdAt: 'asc' }], include: { project: { include: { area: true } }, area: true } },
+        tasks: {
+          orderBy: [{ order: 'asc' }, { createdAt: 'asc' }],
+          include: { project: { include: { area: true } }, area: true, subtasks: true },
+        },
         habitCompletions: true,
         projectFocus: { include: { project: { include: { area: true } } } },
       },
@@ -25,7 +28,7 @@ export async function getWeekPageData(userId: string, isoWeek: string) {
     prisma.task.findMany({
       where: { userId, kind: 'BACKLOG' },
       orderBy: [{ order: 'asc' }, { createdAt: 'asc' }],
-      include: { project: { include: { area: true } }, area: true },
+      include: { project: { include: { area: true } }, area: true, subtasks: true },
     }) as Promise<TaskWithProject[]>,
   ]);
 

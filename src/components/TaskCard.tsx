@@ -5,9 +5,11 @@ import clsx from 'clsx';
 import { PriorityDot } from '@/components/PriorityDot';
 import { TimeSelect } from '@/components/TimeSelect';
 import { DurationPicker } from '@/components/DurationPicker';
+import { AddTaskInline } from '@/components/AddTaskInline';
+import { api } from '@/lib/api-client';
 import { PRIORITY_LABELS, RECURRENCE_LABELS, formatDurationMinutes } from '@/types';
 import { DAY_NAMES, isoWeekOf, mondayBasedDayOfWeek } from '@/lib/week';
-import type { Area, Project, TaskWithProject } from '@/types';
+import type { Area, Project, Task, TaskWithProject } from '@/types';
 
 interface Props {
   task: TaskWithProject;
@@ -50,6 +52,26 @@ export function TaskCard({
   const [time, setTime] = useState(initialSplit.time);
   const [moveDay, setMoveDay] = useState(0);
   const [moveArea, setMoveArea] = useState(areas[0]?.id ?? '');
+  const [subtasks, setSubtasks] = useState<Task[]>(task.subtasks);
+
+  async function toggleSubtask(sub: Task) {
+    const next = !sub.done;
+    setSubtasks((prev) => prev.map((s) => (s.id === sub.id ? { ...s, done: next } : s)));
+    await api.patch(`/api/tasks/${sub.id}`, { done: next });
+    const allDone = subtasks.every((s) => (s.id === sub.id ? next : s.done));
+    await onUpdate(task.id, { done: allDone });
+  }
+
+  async function addSubtask(text: string) {
+    const created = await api.post('/api/tasks', { kind: 'BACKLOG', text, parentTaskId: task.id });
+    setSubtasks((prev) => [...prev, created]);
+    if (task.done) await onUpdate(task.id, { done: false });
+  }
+
+  async function deleteSubtask(sub: Task) {
+    setSubtasks((prev) => prev.filter((s) => s.id !== sub.id));
+    await api.delete(`/api/tasks/${sub.id}`);
+  }
 
   async function saveText() {
     if (text.trim() && text !== task.text) await onUpdate(task.id, { text: text.trim() });
@@ -127,6 +149,12 @@ export function TaskCard({
             ) : null}
             {scheduledLabel ? <span>📅 {scheduledLabel}</span> : null}
             {showRecurrence && task.recurrence !== 'NONE' ? <span>🔁 {RECURRENCE_LABELS[task.recurrence]}</span> : null}
+            {task.parentTaskId ? <span>↳ subtarea</span> : null}
+            {subtasks.length > 0 ? (
+              <span>
+                ☑️ {subtasks.filter((s) => s.done).length}/{subtasks.length}
+              </span>
+            ) : null}
           </div>
 
           {task.kind === 'BACKLOG' && currentIsoWeek ? (
@@ -253,6 +281,41 @@ export function TaskCard({
               </label>
             ) : null}
           </div>
+
+          {!task.parentTaskId ? (
+            <div className="space-y-2 border-t border-base-border pt-3">
+              <span className="block text-xs text-base-muted">
+                Subtareas{subtasks.length > 0 ? ` (${subtasks.filter((s) => s.done).length}/${subtasks.length})` : ''}
+              </span>
+              {subtasks.length > 0 ? (
+                <div className="space-y-1.5">
+                  {subtasks.map((s) => (
+                    <div key={s.id} className="flex items-center gap-2">
+                      <button
+                        onClick={() => toggleSubtask(s)}
+                        aria-label={s.done ? 'Marcar subtarea como pendiente' : 'Marcar subtarea como hecha'}
+                        className={clsx(
+                          'flex h-4 w-4 shrink-0 items-center justify-center rounded-full border-2 text-[10px] transition',
+                          s.done ? 'border-accent bg-accent text-white' : 'border-base-border text-transparent hover:border-accent'
+                        )}
+                      >
+                        ✓
+                      </button>
+                      <span className={clsx('flex-1 truncate text-sm', s.done && 'text-base-muted line-through')}>{s.text}</span>
+                      <button
+                        onClick={() => deleteSubtask(s)}
+                        aria-label={`Eliminar subtarea ${s.text}`}
+                        className="text-xs text-priority-high hover:underline"
+                      >
+                        ✕
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              ) : null}
+              <AddTaskInline onAdd={addSubtask} placeholder="Añadir subtarea…" />
+            </div>
+          ) : null}
 
           <div className="flex flex-wrap gap-2 pt-1">
             {onCreateCalendarEvent && task.scheduledAt ? (

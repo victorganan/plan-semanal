@@ -7,6 +7,7 @@ interface Stats {
   trend: { isoWeek: string; total: number; done: number; rate: number }[];
   habitAdherence: { habitId: string; name: string; done: number; total: number; rate: number }[];
   streak: number;
+  completionByLevel: { level: string; label: string; done: number; total: number; rate: number }[];
 }
 
 const AREA_COLOR_VARS = [
@@ -125,6 +126,28 @@ export function DashboardClient({ stats }: { stats: Stats }) {
             </LineChart>
           </ResponsiveContainer>
         </div>
+      </ChartCard>
+
+      <ChartCard title="Cumplimiento por nivel (Miniproyectos, subtareas, tareas sueltas)">
+        {stats.completionByLevel.every((l) => l.total === 0) ? (
+          <p className="text-sm text-base-muted">Sin tareas en este periodo.</p>
+        ) : (
+          <div className="space-y-3">
+            {stats.completionByLevel.map((l) => (
+              <div key={l.level}>
+                <div className="mb-1 flex justify-between text-xs">
+                  <span>{l.label}</span>
+                  <span className="text-base-muted">
+                    {pct(l.rate)} ({l.done}/{l.total})
+                  </span>
+                </div>
+                <div className="h-2 overflow-hidden rounded-full bg-base-border">
+                  <div className="h-full rounded-full bg-accent" style={{ width: pct(l.rate) }} />
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
       </ChartCard>
 
       <ChartCard title="Adherencia a hábitos">

@@ -5,6 +5,7 @@ import { logActivity } from '@/lib/audit';
 import { requireUserId, isResponse } from '@/lib/api-auth';
 import { getOrCreateWeek } from '@/lib/recurring';
 import { durationMinutesSchema } from '@/lib/validation';
+import { syncParentCompletion } from '@/lib/subtasks';
 
 const createSchema = z.object({
   isoWeek: z.string().regex(/^\d{4}-W\d{2}$/).optional(),
@@ -17,6 +18,7 @@ const createSchema = z.object({
   projectId: z.string().nullable().optional(),
   scheduledAt: z.string().datetime().nullable().optional(),
   recurrence: z.enum(['NONE', 'WEEKLY', 'BIWEEKLY', 'FOUR_WEEKLY']).optional(),
+  parentTaskId: z.string().optional(),
 });
 
 export async function POST(req: NextRequest) {
@@ -24,6 +26,16 @@ export async function POST(req: NextRequest) {
   if (isResponse(userId)) return userId;
 
   const body = createSchema.parse(await req.json());
+
+  if (body.parentTaskId) {
+    const parent = await prisma.task.findUnique({ where: { id: body.parentTaskId } });
+    if (!parent || parent.userId !== userId) {
+      return NextResponse.json({ error: 'Tarea padre no encontrada' }, { status: 404 });
+    }
+    if (parent.parentTaskId) {
+      return NextResponse.json({ error: 'Una subtarea no puede tener a su vez subtareas' }, { status: 400 });
+    }
+  }
 
   if (body.kind === 'DAY_AREA' && (body.dayOfWeek === undefined || !body.areaId)) {
     return NextResponse.json({ error: 'dayOfWeek y areaId son obligatorios para tareas de día' }, { status: 400 });
@@ -70,8 +82,13 @@ export async function POST(req: NextRequest) {
       scheduledAt: body.scheduledAt ? new Date(body.scheduledAt) : undefined,
       recurrence: body.recurrence ?? 'NONE',
       order: (maxOrder._max.order ?? -1) + 1,
+      parentTaskId: body.parentTaskId,
     },
   });
+
+  if (body.parentTaskId) {
+    await syncParentCompletion(body.parentTaskId);
+  }
 
   await logActivity(prisma, {
     userId,

@@ -83,6 +83,24 @@ export async function computeDashboardStats(userId: string, weeksBack = 8) {
     habits.map((h) => h.id)
   );
 
+  const sinceDate = new Date();
+  sinceDate.setDate(sinceDate.getDate() - weeksBack * 7);
+  const allTasks = await prisma.task.findMany({
+    where: { userId, createdAt: { gte: sinceDate } },
+    select: { id: true, done: true, parentTaskId: true },
+  });
+  const idsWithSubtasks = new Set(allTasks.filter((t) => t.parentTaskId).map((t) => t.parentTaskId));
+  const LEVELS = [
+    { key: 'MINIPROJECT', label: 'Miniproyectos', match: (t: (typeof allTasks)[number]) => !t.parentTaskId && idsWithSubtasks.has(t.id) },
+    { key: 'SUBTASK', label: 'Subtareas', match: (t: (typeof allTasks)[number]) => !!t.parentTaskId },
+    { key: 'TASK', label: 'Tareas sueltas', match: (t: (typeof allTasks)[number]) => !t.parentTaskId && !idsWithSubtasks.has(t.id) },
+  ];
+  const completionByLevel = LEVELS.map(({ key, label, match }) => {
+    const levelTasks = allTasks.filter(match);
+    const done = levelTasks.filter((t) => t.done).length;
+    return { level: key, label, done, total: levelTasks.length, rate: levelTasks.length ? done / levelTasks.length : 0 };
+  });
+
   return {
     completionByArea: areas.map((a) => {
       const bucket = completionByArea.get(a.id)!;
@@ -98,5 +116,6 @@ export async function computeDashboardStats(userId: string, weeksBack = 8) {
     trend,
     habitAdherence,
     streak,
+    completionByLevel,
   };
 }

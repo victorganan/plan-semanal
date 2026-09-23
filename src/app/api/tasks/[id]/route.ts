@@ -5,6 +5,7 @@ import { logActivity } from '@/lib/audit';
 import { requireUserId, isResponse } from '@/lib/api-auth';
 import { getOrCreateWeek } from '@/lib/recurring';
 import { durationMinutesSchema } from '@/lib/validation';
+import { syncParentCompletion } from '@/lib/subtasks';
 
 const patchSchema = z.object({
   text: z.string().min(1).max(500).optional(),
@@ -70,6 +71,19 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
 
   const task = await prisma.task.update({ where: { id }, data });
 
+  if (body.done !== undefined) {
+    // Si es un miniproyecto (tiene subtareas), marcar/desmarcar se aplica
+    // en cascada a todas ellas; si esta tarea es a su vez subtarea de otra,
+    // su padre se recalcula (hecho solo cuando todas sus subtareas lo están).
+    const subtaskCount = await prisma.task.count({ where: { parentTaskId: id } });
+    if (subtaskCount > 0) {
+      await prisma.task.updateMany({ where: { parentTaskId: id }, data: { done: body.done } });
+    }
+    if (existing.parentTaskId) {
+      await syncParentCompletion(existing.parentTaskId);
+    }
+  }
+
   let action: 'UPDATED' | 'COMPLETED' | 'UNCOMPLETED' = 'UPDATED';
   if (body.done === true && !existing.done) action = 'COMPLETED';
   if (body.done === false && existing.done) action = 'UNCOMPLETED';
@@ -99,6 +113,10 @@ export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ 
   if (!existing) return NextResponse.json({ error: 'No encontrada' }, { status: 404 });
 
   await prisma.task.delete({ where: { id } });
+
+  if (existing.parentTaskId) {
+    await syncParentCompletion(existing.parentTaskId);
+  }
 
   await logActivity(prisma, {
     userId,

@@ -16,9 +16,12 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ iso
     where: { id: week.id },
     include: {
       days: { orderBy: { dayOfWeek: 'asc' } },
-      tasks: { orderBy: [{ order: 'asc' }, { createdAt: 'asc' }], include: { project: true } },
+      tasks: {
+        orderBy: [{ order: 'asc' }, { createdAt: 'asc' }],
+        include: { project: { include: { area: true } }, area: true, subtasks: true },
+      },
       habitCompletions: true,
-      projectFocus: { include: { project: true } },
+      projectFocus: { include: { project: { include: { area: true } } } },
     },
   });
 
