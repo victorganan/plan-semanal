@@ -6,6 +6,7 @@ import { requireUserId, isResponse } from '@/lib/api-auth';
 
 const patchSchema = z.object({
   text: z.string().min(1).max(500).optional(),
+  areaId: z.string().optional(),
   priority: z.enum(['LOW', 'MEDIUM', 'HIGH']).optional(),
   duration: z.enum(['LT_HALF', 'HALF_TO_ONE', 'ONE_TO_TWO', 'GT_TWO']).nullable().optional(),
   active: z.boolean().optional(),

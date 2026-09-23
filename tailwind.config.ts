@@ -20,6 +20,8 @@ const config: Config = {
           4: 'rgb(var(--color-area-4) / <alpha-value>)',
           5: 'rgb(var(--color-area-5) / <alpha-value>)',
           6: 'rgb(var(--color-area-6) / <alpha-value>)',
+          7: 'rgb(var(--color-area-7) / <alpha-value>)',
+          8: 'rgb(var(--color-area-8) / <alpha-value>)',
         },
         priority: {
           low: 'rgb(var(--color-priority-low) / <alpha-value>)',

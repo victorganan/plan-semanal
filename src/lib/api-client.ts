@@ -1,7 +1,15 @@
+export class ApiError extends Error {
+  data: Record<string, unknown>;
+  constructor(message: string, data: Record<string, unknown>) {
+    super(message);
+    this.data = data;
+  }
+}
+
 async function handle(res: Response) {
   if (!res.ok) {
     const body = await res.json().catch(() => ({}));
-    throw new Error(body.error ?? `Error ${res.status}`);
+    throw new ApiError(body.error ?? `Error ${res.status}`, body);
   }
   if (res.status === 204) return null;
   return res.json();

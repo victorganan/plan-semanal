@@ -51,11 +51,10 @@ export function DayCard({
         <p className="text-sm text-base-muted">Crea un área en Tu espacio para empezar a añadir tareas del día.</p>
       ) : (
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          {areas.map((area, index) => (
+          {areas.map((area) => (
             <AreaColumn
               key={area.id}
               area={area}
-              colorIndex={index}
               dayOfWeek={dayOfWeek}
               isoWeek={isoWeek}
               tasks={tasks.filter((t) => t.areaId === area.id)}

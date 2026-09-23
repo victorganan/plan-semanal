@@ -8,7 +8,11 @@ export default async function TuEspacioPage() {
 
   const [areas, projects] = await Promise.all([
     prisma.area.findMany({ where: { userId }, orderBy: { order: 'asc' } }),
-    prisma.project.findMany({ where: { userId }, include: { area: true }, orderBy: { createdAt: 'desc' } }),
+    prisma.project.findMany({
+      where: { userId },
+      include: { area: true, collaborators: true },
+      orderBy: { createdAt: 'desc' },
+    }),
   ]);
 
   return <TuEspacioClient initialAreas={areas} initialProjects={projects} />;

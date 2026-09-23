@@ -16,6 +16,8 @@
   --color-area-4: 225 29 72; /* rose */
   --color-area-5: 2 132 199; /* sky */
   --color-area-6: 124 58 237; /* violet */
+  --color-area-7: 8 145 178; /* cyan */
+  --color-area-8: 219 39 119; /* fuchsia */
 
   --color-priority-low: 100 116 139; /* slate */
   --color-priority-medium: 217 119 6; /* amber */
@@ -37,6 +39,8 @@
   --color-area-4: 251 113 133;
   --color-area-5: 56 189 248;
   --color-area-6: 167 139 250;
+  --color-area-7: 34 211 238;
+  --color-area-8: 244 114 182;
 
   --color-priority-low: 148 163 184;
   --color-priority-medium: 251 191 36;

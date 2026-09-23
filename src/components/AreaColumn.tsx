@@ -9,7 +9,6 @@ import type { Area, Project, TaskWithProject } from '@/types';
 
 interface Props {
   area: Area;
-  colorIndex: number;
   dayOfWeek: number;
   isoWeek: string;
   tasks: TaskWithProject[];
@@ -23,7 +22,6 @@ interface Props {
 
 export function AreaColumn({
   area,
-  colorIndex,
   dayOfWeek,
   isoWeek,
   tasks,
@@ -55,7 +53,7 @@ export function AreaColumn({
       )}
     >
       <div className="mb-2 flex items-center gap-2">
-        <span className={clsx('h-2 w-2 rounded-full', areaBgClass(colorIndex))} />
+        <span className={clsx('h-2 w-2 rounded-full', areaBgClass(area.colorIndex))} />
         <h3 className="text-sm font-semibold tracking-wide">{area.name}</h3>
       </div>
       <div className="space-y-2">

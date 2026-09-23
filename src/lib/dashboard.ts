@@ -84,12 +84,12 @@ export async function computeDashboardStats(userId: string, weeksBack = 8) {
   );
 
   return {
-    completionByArea: areas.map((a, index) => {
+    completionByArea: areas.map((a) => {
       const bucket = completionByArea.get(a.id)!;
       return {
         areaId: a.id,
         areaName: a.name,
-        areaIndex: index,
+        areaColorIndex: a.colorIndex,
         done: bucket.done,
         total: bucket.total,
         rate: bucket.total ? bucket.done / bucket.total : 0,

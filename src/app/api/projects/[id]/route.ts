@@ -7,7 +7,9 @@ import { requireUserId, isResponse } from '@/lib/api-auth';
 const patchSchema = z.object({
   name: z.string().min(1).max(200).optional(),
   areaId: z.string().optional(),
-  status: z.enum(['ACTIVE', 'ARCHIVED']).optional(),
+  status: z.enum(['ACTIVE', 'COMPLETED', 'ARCHIVED']).optional(),
+  dueDate: z.string().datetime().nullable().optional(),
+  collaboratorNames: z.array(z.string().min(1).max(100)).max(30).optional(),
 });
 
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
@@ -19,7 +21,23 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   if (!project || project.userId !== userId) return NextResponse.json({ error: 'No encontrado' }, { status: 404 });
 
   const body = patchSchema.parse(await req.json());
-  const updated = await prisma.project.update({ where: { id }, data: body });
+  const { collaboratorNames, dueDate, ...rest } = body;
+
+  const updated = await prisma.$transaction(async (tx) => {
+    if (collaboratorNames !== undefined) {
+      await tx.projectCollaborator.deleteMany({ where: { projectId: id } });
+      if (collaboratorNames.length) {
+        await tx.projectCollaborator.createMany({
+          data: Array.from(new Set(collaboratorNames)).map((name) => ({ projectId: id, name })),
+        });
+      }
+    }
+    return tx.project.update({
+      where: { id },
+      data: { ...rest, ...(dueDate !== undefined ? { dueDate: dueDate ? new Date(dueDate) : null } : {}) },
+      include: { area: true, collaborators: true },
+    });
+  });
 
   await logActivity(prisma, {
     userId,

@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { prisma } from '@/lib/prisma';
 import { logActivity } from '@/lib/audit';
 import { requireUserId, isResponse } from '@/lib/api-auth';
+import { AREA_PALETTE_SIZE } from '@/types';
 
 export async function GET() {
   const userId = await requireUserId();
@@ -15,6 +16,7 @@ export async function GET() {
 const createSchema = z.object({
   name: z.string().min(1).max(80),
   description: z.string().max(500).nullable().optional(),
+  colorIndex: z.number().int().min(0).max(AREA_PALETTE_SIZE - 1).optional(),
 });
 
 export async function POST(req: NextRequest) {
@@ -25,9 +27,18 @@ export async function POST(req: NextRequest) {
 
   const existing = await prisma.area.findFirst({ where: { userId }, orderBy: { order: 'desc' } });
   const order = (existing?.order ?? -1) + 1;
+  const areaCount = await prisma.area.count({ where: { userId } });
 
   const area = await prisma.area
-    .create({ data: { userId, name: body.name, description: body.description ?? null, order } })
+    .create({
+      data: {
+        userId,
+        name: body.name,
+        description: body.description ?? null,
+        order,
+        colorIndex: body.colorIndex ?? areaCount % AREA_PALETTE_SIZE,
+      },
+    })
     .catch(() => null);
 
   if (!area) {

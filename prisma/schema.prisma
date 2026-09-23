@@ -102,6 +102,7 @@ enum TaskKind {
 
 enum ProjectStatus {
   ACTIVE
+  COMPLETED
   ARCHIVED
 }
 
@@ -123,6 +124,7 @@ model Area {
   name        String
   description String?
   order       Int     @default(0)
+  colorIndex  Int     @default(0) // índice en la paleta de colores (0-7), elegido por el usuario
 
   user     User                     @relation(fields: [userId], references: [id], onDelete: Cascade)
   tasks    Task[]
@@ -252,22 +254,36 @@ model HabitCompletion {
 }
 
 model Project {
-  id     String        @id @default(cuid())
-  userId String
-  name   String
-  areaId String
-  status ProjectStatus @default(ACTIVE)
+  id          String        @id @default(cuid())
+  userId      String
+  name        String
+  areaId      String
+  status      ProjectStatus @default(ACTIVE)
+  dueDate     DateTime?
 
-  user  User               @relation(fields: [userId], references: [id], onDelete: Cascade)
-  area  Area               @relation(fields: [areaId], references: [id], onDelete: Restrict)
-  tasks Task[]
-  focus WeekProjectFocus[]
+  user          User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  area          Area                @relation(fields: [areaId], references: [id], onDelete: Restrict)
+  tasks         Task[]
+  focus         WeekProjectFocus[]
+  collaborators ProjectCollaborator[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   @@index([userId])
   @@index([areaId])
+}
+
+model ProjectCollaborator {
+  id        String @id @default(cuid())
+  projectId String
+  name      String
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@unique([projectId, name])
 }
 
 model WeekProjectFocus {
