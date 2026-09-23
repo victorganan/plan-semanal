@@ -173,9 +173,24 @@ export function PlanWeekClient({
     if (!found) return;
     const { location, task: previous } = found;
 
-    const promotedOut = location === 'inbox' && patch.kind && patch.kind !== 'BACKLOG';
     const project = 'projectId' in patch ? projects.find((p) => p.id === patch.projectId) ?? null : previous.project;
-    const optimisticTask = { ...previous, ...patch, project } as TaskWithProject;
+    const promotedOut = location === 'inbox' && patch.kind && patch.kind !== 'BACKLOG';
+    const demotedToBacklog = location === 'week' && patch.kind === 'BACKLOG';
+    const movesToOtherWeek =
+      location === 'week' && !demotedToBacklog && patch.isoWeek !== undefined && patch.isoWeek !== isoWeek;
+
+    // El servidor resuelve dayId a partir de isoWeek+dayOfWeek; el patch nunca lo
+    // incluye directamente, así que hay que recalcularlo aquí o la tarjeta se queda
+    // "pegada" visualmente a su día anterior tras moverla (p.ej. al arrastrarla).
+    let dayId = previous.dayId;
+    if (demotedToBacklog || movesToOtherWeek) {
+      dayId = null;
+    } else if (typeof patch.dayOfWeek === 'number') {
+      const targetDow = patch.dayOfWeek;
+      dayId = week.days.find((d) => d.dayOfWeek === targetDow)?.id ?? null;
+    }
+
+    const optimisticTask = { ...previous, ...patch, project, dayId } as TaskWithProject;
 
     if (promotedOut) {
       // Sale de la bandeja de entrada; si pertenece a la semana que se está viendo, se añade ahí.
@@ -183,6 +198,13 @@ export function PlanWeekClient({
       if (patch.isoWeek === isoWeek) {
         setWeek((w) => ({ ...w, tasks: [...w.tasks, optimisticTask] }));
       }
+    } else if (demotedToBacklog) {
+      // Pasa a la bandeja de entrada; si se está viendo, la reflejamos ahí también.
+      setWeek((w) => ({ ...w, tasks: w.tasks.filter((t) => t.id !== id) }));
+      setInbox((prev) => [...prev, optimisticTask]);
+    } else if (movesToOtherWeek) {
+      // Se va a una semana distinta de la que se está viendo: desaparece de aquí.
+      setWeek((w) => ({ ...w, tasks: w.tasks.filter((t) => t.id !== id) }));
     } else if (location === 'week') {
       setWeek((w) => ({ ...w, tasks: w.tasks.map((t) => (t.id === id ? optimisticTask : t)) }));
     } else {
@@ -196,6 +218,11 @@ export function PlanWeekClient({
       if (promotedOut) {
         setInbox((prev) => [...prev, previous]);
         setWeek((w) => ({ ...w, tasks: w.tasks.filter((t) => t.id !== id) }));
+      } else if (demotedToBacklog) {
+        setInbox((prev) => prev.filter((t) => t.id !== id));
+        setWeek((w) => ({ ...w, tasks: [...w.tasks, previous] }));
+      } else if (movesToOtherWeek) {
+        setWeek((w) => ({ ...w, tasks: [...w.tasks, previous] }));
       } else if (location === 'week') {
         setWeek((w) => ({ ...w, tasks: w.tasks.map((t) => (t.id === id ? previous : t)) }));
       } else {
