@@ -11,6 +11,7 @@ export async function GET(req: NextRequest) {
   const status = req.nextUrl.searchParams.get('status');
   const projects = await prisma.project.findMany({
     where: { userId, ...(status ? { status: status as 'ACTIVE' | 'ARCHIVED' } : {}) },
+    include: { area: true },
     orderBy: { createdAt: 'desc' },
   });
   return NextResponse.json(projects);
@@ -18,7 +19,7 @@ export async function GET(req: NextRequest) {
 
 const createSchema = z.object({
   name: z.string().min(1).max(200),
-  area: z.enum(['SERVILIA', 'GESTIONA', 'PERSONAL']),
+  areaId: z.string(),
 });
 
 export async function POST(req: NextRequest) {

@@ -19,6 +19,7 @@ export default async function DiaPage({ params }: { params: Promise<{ iso: strin
       initialInbox={data.inbox}
       habits={data.habits}
       projects={data.projects}
+      areas={data.areas}
       isoWeek={iso}
       mode="day"
       viewDow={dayOfWeek}

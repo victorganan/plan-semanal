@@ -1,17 +1,18 @@
 import { AddTaskInline } from '@/components/AddTaskInline';
 import { TaskCard } from '@/components/TaskCard';
-import type { Project, TaskWithProject } from '@/types';
+import type { Area, Project, TaskWithProject } from '@/types';
 
 interface Props {
   tasks: TaskWithProject[];
   projects: Project[];
+  areas: Area[];
   currentIsoWeek: string;
   onAdd: (text: string) => Promise<void>;
   onUpdate: (id: string, patch: Record<string, unknown>) => Promise<void>;
   onDelete: (id: string) => Promise<void>;
 }
 
-export function InboxList({ tasks, projects, currentIsoWeek, onAdd, onUpdate, onDelete }: Props) {
+export function InboxList({ tasks, projects, areas, currentIsoWeek, onAdd, onUpdate, onDelete }: Props) {
   return (
     <div className="rounded-card border border-base-border bg-base-surface p-4">
       <h3 className="mb-1 text-sm font-semibold">Vaciado de mente / Bandeja de entrada</h3>
@@ -24,6 +25,7 @@ export function InboxList({ tasks, projects, currentIsoWeek, onAdd, onUpdate, on
             key={t.id}
             task={t}
             projects={projects}
+            areas={areas}
             onUpdate={onUpdate}
             onDelete={onDelete}
             currentIsoWeek={currentIsoWeek}

@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { api } from '@/lib/api-client';
 import { currentIsoWeek } from '@/lib/week';
 import { useToast } from '@/components/Toast';
-import type { WeekFull, Habit, Project, TaskWithProject } from '@/types';
+import type { WeekFull, Habit, ProjectWithArea, Area, TaskWithProject } from '@/types';
 import { DayCard } from '@/components/DayCard';
 import { HabitGrid } from '@/components/HabitGrid';
 import { MoodSliders } from '@/components/MoodSliders';
@@ -24,7 +24,8 @@ interface Props {
   initialWeek: WeekFull;
   initialInbox: TaskWithProject[];
   habits: Habit[];
-  projects: Project[];
+  projects: ProjectWithArea[];
+  areas: Area[];
   isoWeek: string;
   mode: 'day' | 'week';
   viewDow: number;
@@ -42,6 +43,7 @@ export function PlanWeekClient({
   initialInbox,
   habits,
   projects,
+  areas,
   isoWeek,
   mode,
   viewDow,
@@ -74,16 +76,18 @@ export function PlanWeekClient({
   async function addTask(
     kind: 'DAY_AREA' | 'PRIORITY_ACTION' | 'CALL',
     text: string,
-    extra?: { dayOfWeek?: number; area?: string }
+    extra?: { dayOfWeek?: number; areaId?: string }
   ) {
     const day = extra?.dayOfWeek !== undefined ? week.days.find((d) => d.dayOfWeek === extra.dayOfWeek) : undefined;
+    const optimisticArea = extra?.areaId ? areas.find((a) => a.id === extra.areaId) ?? null : null;
     const optimistic: TaskWithProject = {
       id: tempId(),
       userId: '',
       weekId: week.id,
       dayId: day?.id ?? null,
       kind,
-      area: (extra?.area as TaskWithProject['area']) ?? null,
+      areaId: extra?.areaId ?? null,
+      area: optimisticArea,
       text,
       done: false,
       priority: 'MEDIUM',
@@ -101,7 +105,10 @@ export function PlanWeekClient({
 
     try {
       const created = await api.post('/api/tasks', { isoWeek, kind, text, ...extra });
-      setWeek((w) => ({ ...w, tasks: w.tasks.map((t) => (t.id === optimistic.id ? { ...created, project: null } : t)) }));
+      setWeek((w) => ({
+        ...w,
+        tasks: w.tasks.map((t) => (t.id === optimistic.id ? { ...created, project: null, area: optimisticArea } : t)),
+      }));
     } catch {
       setWeek((w) => ({ ...w, tasks: w.tasks.filter((t) => t.id !== optimistic.id) }));
       showToast('No se pudo crear la tarea', 'error');
@@ -115,6 +122,7 @@ export function PlanWeekClient({
       weekId: null,
       dayId: null,
       kind: 'BACKLOG',
+      areaId: null,
       area: null,
       text,
       done: false,
@@ -133,7 +141,7 @@ export function PlanWeekClient({
 
     try {
       const created = await api.post('/api/tasks', { kind: 'BACKLOG', text });
-      setInbox((prev) => prev.map((t) => (t.id === optimistic.id ? { ...created, project: null } : t)));
+      setInbox((prev) => prev.map((t) => (t.id === optimistic.id ? { ...created, project: null, area: null } : t)));
     } catch {
       setInbox((prev) => prev.filter((t) => t.id !== optimistic.id));
       showToast('No se pudo guardar en la bandeja de entrada', 'error');
@@ -264,6 +272,7 @@ export function PlanWeekClient({
       weekId: null,
       dayId: null,
       kind: 'BACKLOG',
+      areaId: null,
       area: null,
       text,
       done: false,
@@ -283,7 +292,7 @@ export function PlanWeekClient({
 
     try {
       const created = await api.post('/api/tasks', { kind: 'BACKLOG', text });
-      setInbox((prev) => prev.map((t) => (t.id === id ? { ...created, project: null } : t)));
+      setInbox((prev) => prev.map((t) => (t.id === id ? { ...created, project: null, area: null } : t)));
       setWeek((w) => ({ ...w, [field]: w[field].map((x: string) => (x === id ? created.id : x)) }));
       await api.patch(`/api/weeks/${isoWeek}`, { [field]: week[field]?.map((x) => (x === id ? created.id : x)) ?? [created.id] });
     } catch {
@@ -354,6 +363,7 @@ export function PlanWeekClient({
             week={week}
             inbox={inbox}
             projects={projects}
+            areas={areas}
             isoWeek={isoWeek}
             onSaveWeekMeta={saveWeekMeta}
             onToggleProjectFocus={toggleProjectFocus}
@@ -375,8 +385,9 @@ export function PlanWeekClient({
           day={day}
           tasks={dayTasks}
           projects={projects}
+          areas={areas}
           isToday={isViewingToday}
-          onAddTask={(area, text) => addTask('DAY_AREA', text, { dayOfWeek: viewDow, area })}
+          onAddTask={(areaId, text) => addTask('DAY_AREA', text, { dayOfWeek: viewDow, areaId })}
           onUpdateTask={updateTask}
           onDeleteTask={deleteTask}
           onStarChange={(v) => saveStar(viewDow, v)}
@@ -439,6 +450,7 @@ export function PlanWeekClient({
           week={week}
           inbox={inbox}
           projects={projects}
+          areas={areas}
           isoWeek={isoWeek}
           onSaveWeekMeta={saveWeekMeta}
           onToggleProjectFocus={toggleProjectFocus}
@@ -467,8 +479,9 @@ export function PlanWeekClient({
               day={day}
               tasks={week.tasks.filter((t) => t.kind === 'DAY_AREA' && t.dayId === day.id)}
               projects={projects}
+              areas={areas}
               isToday={isoWeek === weekIsoOfToday && day.dayOfWeek === todayDow}
-              onAddTask={(area, text) => addTask('DAY_AREA', text, { dayOfWeek: day.dayOfWeek, area })}
+              onAddTask={(areaId, text) => addTask('DAY_AREA', text, { dayOfWeek: day.dayOfWeek, areaId })}
               onUpdateTask={updateTask}
               onDeleteTask={deleteTask}
               onStarChange={(v) => saveStar(day.dayOfWeek, v)}
@@ -505,7 +518,7 @@ export function PlanWeekClient({
 
       <ObjectivesForm week={week} onSave={saveWeekMeta} />
 
-      <InboxList tasks={inbox} projects={projects} currentIsoWeek={isoWeek} onAdd={addBacklog} onUpdate={updateTask} onDelete={deleteTask} />
+      <InboxList tasks={inbox} projects={projects} areas={areas} currentIsoWeek={isoWeek} onAdd={addBacklog} onUpdate={updateTask} onDelete={deleteTask} />
 
       <div>
         <h3 className="mb-2 text-sm font-semibold text-base-muted">Hábitos (lunes a viernes)</h3>

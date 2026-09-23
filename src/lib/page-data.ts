@@ -7,24 +7,25 @@ import type { WeekFull, TaskWithProject } from '@/types';
 export async function getWeekPageData(userId: string, isoWeek: string) {
   const weekRef = await getOrCreateWeek(userId, isoWeek);
 
-  const [week, habits, projects, todoistToken, calendarConnected, inbox] = await Promise.all([
+  const [week, habits, projects, areas, todoistToken, calendarConnected, inbox] = await Promise.all([
     prisma.week.findUnique({
       where: { id: weekRef.id },
       include: {
         days: { orderBy: { dayOfWeek: 'asc' } },
-        tasks: { orderBy: [{ order: 'asc' }, { createdAt: 'asc' }], include: { project: true } },
+        tasks: { orderBy: [{ order: 'asc' }, { createdAt: 'asc' }], include: { project: { include: { area: true } }, area: true } },
         habitCompletions: true,
-        projectFocus: { include: { project: true } },
+        projectFocus: { include: { project: { include: { area: true } } } },
       },
     }) as Promise<WeekFull | null>,
     prisma.habit.findMany({ where: { userId, active: true }, orderBy: { order: 'asc' } }),
-    prisma.project.findMany({ where: { userId }, orderBy: { createdAt: 'desc' } }),
+    prisma.project.findMany({ where: { userId }, include: { area: true }, orderBy: { createdAt: 'desc' } }),
+    prisma.area.findMany({ where: { userId }, orderBy: { order: 'asc' } }),
     getTodoistToken(userId),
     hasCalendarAccess(userId),
     prisma.task.findMany({
       where: { userId, kind: 'BACKLOG' },
       orderBy: [{ order: 'asc' }, { createdAt: 'asc' }],
-      include: { project: true },
+      include: { project: { include: { area: true } }, area: true },
     }) as Promise<TaskWithProject[]>,
   ]);
 
@@ -32,6 +33,7 @@ export async function getWeekPageData(userId: string, isoWeek: string) {
     week: week!,
     habits,
     projects,
+    areas,
     todoistConnected: !!todoistToken,
     calendarConnected,
     inbox,

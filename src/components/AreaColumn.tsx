@@ -4,22 +4,17 @@ import { useState } from 'react';
 import clsx from 'clsx';
 import { AddTaskInline } from '@/components/AddTaskInline';
 import { TaskCard } from '@/components/TaskCard';
-import { AREA_LABELS } from '@/types';
-import type { Project, TaskWithProject } from '@/types';
-
-const AREA_BAR: Record<string, string> = {
-  SERVILIA: 'bg-area-servilia',
-  GESTIONA: 'bg-area-gestiona',
-  PERSONAL: 'bg-area-personal',
-};
+import { areaBgClass } from '@/types';
+import type { Area, Project, TaskWithProject } from '@/types';
 
 interface Props {
-  area: string;
+  area: Area;
+  colorIndex: number;
   dayOfWeek: number;
   isoWeek: string;
   tasks: TaskWithProject[];
   projects: Project[];
-  onAdd: (area: string, text: string) => Promise<void>;
+  onAdd: (areaId: string, text: string) => Promise<void>;
   onUpdate: (id: string, patch: Record<string, unknown>) => Promise<void>;
   onDelete: (id: string) => Promise<void>;
   onExportTodoist?: (id: string) => Promise<void>;
@@ -28,6 +23,7 @@ interface Props {
 
 export function AreaColumn({
   area,
+  colorIndex,
   dayOfWeek,
   isoWeek,
   tasks,
@@ -51,7 +47,7 @@ export function AreaColumn({
         e.preventDefault();
         setDragOver(false);
         const taskId = e.dataTransfer.getData('text/plain');
-        if (taskId) onUpdate(taskId, { kind: 'DAY_AREA', isoWeek, dayOfWeek, area });
+        if (taskId) onUpdate(taskId, { kind: 'DAY_AREA', isoWeek, dayOfWeek, areaId: area.id });
       }}
       className={clsx(
         'rounded-card border p-3 transition',
@@ -59,8 +55,8 @@ export function AreaColumn({
       )}
     >
       <div className="mb-2 flex items-center gap-2">
-        <span className={`h-2 w-2 rounded-full ${AREA_BAR[area]}`} />
-        <h3 className="text-sm font-semibold tracking-wide">{AREA_LABELS[area]}</h3>
+        <span className={clsx('h-2 w-2 rounded-full', areaBgClass(colorIndex))} />
+        <h3 className="text-sm font-semibold tracking-wide">{area.name}</h3>
       </div>
       <div className="space-y-2">
         {tasks.map((t) => (
@@ -78,7 +74,7 @@ export function AreaColumn({
         ))}
       </div>
       <div className="mt-2 border-t border-base-border pt-2">
-        <AddTaskInline onAdd={(text) => onAdd(area, text)} placeholder="Añadir tarea…" />
+        <AddTaskInline onAdd={(text) => onAdd(area.id, text)} placeholder="Añadir tarea…" />
       </div>
     </div>
   );

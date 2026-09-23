@@ -3,8 +3,7 @@
 import { useState } from 'react';
 import { AddTaskInline } from '@/components/AddTaskInline';
 import { MultiSelectDropdown } from '@/components/MultiSelectDropdown';
-import { AREA_LABELS } from '@/types';
-import type { WeekFull, Project, TaskWithProject } from '@/types';
+import type { WeekFull, ProjectWithArea, TaskWithProject } from '@/types';
 
 function TextField({
   label,
@@ -51,7 +50,7 @@ function ProjectMultiSelect({
   selectedIds,
   onToggle,
 }: {
-  projects: Project[];
+  projects: ProjectWithArea[];
   selectedIds: string[];
   onToggle: (id: string, selected: boolean) => void;
 }) {
@@ -59,7 +58,7 @@ function ProjectMultiSelect({
   if (active.length === 0) return <p className="text-sm text-base-muted">No hay proyectos activos.</p>;
   return (
     <MultiSelectDropdown
-      options={active.map((p) => ({ id: p.id, label: p.name, sublabel: AREA_LABELS[p.area] }))}
+      options={active.map((p) => ({ id: p.id, label: p.name, sublabel: p.area.name }))}
       selectedIds={selectedIds}
       onToggle={onToggle}
       placeholder="Buscar proyecto…"
@@ -100,7 +99,7 @@ function TaskMultiSelect({
 
 interface EvaluationProps {
   week: WeekFull;
-  projects: Project[];
+  projects: ProjectWithArea[];
   pendingTasks: TaskWithProject[];
   onSave: (patch: Record<string, unknown>) => void;
   onAddAndTag: (text: string, field: 'evalPostponedTaskIds' | 'evalDelegateTaskIds') => Promise<void>;

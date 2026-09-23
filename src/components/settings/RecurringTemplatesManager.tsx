@@ -2,24 +2,25 @@
 
 import { useState } from 'react';
 import { api } from '@/lib/api-client';
-import { AREA_LABELS, PRIORITY_LABELS, RECURRENCE_LABELS } from '@/types';
+import { PRIORITY_LABELS, RECURRENCE_LABELS } from '@/types';
+import type { Area } from '@/types';
 import { DAY_NAMES, currentIsoWeek } from '@/lib/week';
 
 interface Template {
   id: string;
   dayOfWeek: number;
-  area: string;
+  area: Area;
   text: string;
   priority: string;
   recurrence: string;
   startIsoWeek: string;
 }
 
-export function RecurringTemplatesManager({ initialTemplates }: { initialTemplates: Template[] }) {
+export function RecurringTemplatesManager({ initialTemplates, areas }: { initialTemplates: Template[]; areas: Area[] }) {
   const [templates, setTemplates] = useState(initialTemplates);
   const [form, setForm] = useState({
     dayOfWeek: 0,
-    area: 'SERVILIA',
+    areaId: areas[0]?.id ?? '',
     text: '',
     priority: 'MEDIUM',
     recurrence: 'WEEKLY',
@@ -31,7 +32,7 @@ export function RecurringTemplatesManager({ initialTemplates }: { initialTemplat
 
   async function add(e: React.FormEvent) {
     e.preventDefault();
-    if (!form.text.trim()) return;
+    if (!form.text.trim() || !form.areaId) return;
     await api.post('/api/recurring-templates', { ...form, text: form.text.trim(), startIsoWeek: currentIsoWeek() });
     setForm((f) => ({ ...f, text: '' }));
     await refresh();
@@ -48,11 +49,14 @@ export function RecurringTemplatesManager({ initialTemplates }: { initialTemplat
       <p className="mb-3 text-xs text-base-muted">
         Se generan automáticamente en cada semana que corresponda, sin duplicarse, desde la semana actual en adelante.
       </p>
+      {areas.length === 0 ? (
+        <p className="mb-3 text-xs text-priority-high">Crea al menos un área en Tu espacio antes de añadir plantillas.</p>
+      ) : null}
       <ul className="space-y-2">
         {templates.map((t) => (
           <li key={t.id} className="flex items-center justify-between rounded-lg border border-base-border px-3 py-2 text-sm">
             <span>
-              {DAY_NAMES[t.dayOfWeek]} · {AREA_LABELS[t.area]} · {t.text} · {RECURRENCE_LABELS[t.recurrence]}
+              {DAY_NAMES[t.dayOfWeek]} · {t.area.name} · {t.text} · {RECURRENCE_LABELS[t.recurrence]}
             </span>
             <button onClick={() => remove(t.id)} className="text-xs text-priority-high hover:underline">
               Eliminar
@@ -75,13 +79,13 @@ export function RecurringTemplatesManager({ initialTemplates }: { initialTemplat
           ))}
         </select>
         <select
-          value={form.area}
-          onChange={(e) => setForm((f) => ({ ...f, area: e.target.value }))}
+          value={form.areaId}
+          onChange={(e) => setForm((f) => ({ ...f, areaId: e.target.value }))}
           className="rounded-lg border border-base-border bg-base-bg px-2 py-1.5 text-sm"
         >
-          {Object.entries(AREA_LABELS).map(([v, l]) => (
-            <option key={v} value={v}>
-              {l}
+          {areas.map((a) => (
+            <option key={a.id} value={a.id}>
+              {a.name}
             </option>
           ))}
         </select>
@@ -113,7 +117,11 @@ export function RecurringTemplatesManager({ initialTemplates }: { initialTemplat
             </option>
           ))}
         </select>
-        <button type="submit" className="sm:col-span-2 rounded-full bg-accent px-3 py-1.5 text-sm font-medium text-white">
+        <button
+          type="submit"
+          disabled={areas.length === 0}
+          className="sm:col-span-2 rounded-full bg-accent px-3 py-1.5 text-sm font-medium text-white disabled:opacity-40"
+        >
           Añadir plantilla
         </button>
       </form>

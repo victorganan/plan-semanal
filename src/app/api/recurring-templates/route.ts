@@ -11,6 +11,7 @@ export async function GET() {
 
   const templates = await prisma.recurringTaskTemplate.findMany({
     where: { userId, active: true },
+    include: { area: true },
     orderBy: [{ dayOfWeek: 'asc' }],
   });
   return NextResponse.json(templates);
@@ -18,7 +19,7 @@ export async function GET() {
 
 const createSchema = z.object({
   dayOfWeek: z.number().int().min(0).max(6),
-  area: z.enum(['SERVILIA', 'GESTIONA', 'PERSONAL']),
+  areaId: z.string(),
   text: z.string().min(1).max(500),
   priority: z.enum(['LOW', 'MEDIUM', 'HIGH']).optional(),
   duration: z.enum(['LT_HALF', 'HALF_TO_ONE', 'ONE_TO_TWO', 'GT_TWO']).nullable().optional(),

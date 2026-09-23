@@ -1,8 +1,7 @@
 import { AreaColumn } from '@/components/AreaColumn';
 import { StarRating } from '@/components/StarRating';
-import { AREA_ORDER } from '@/types';
 import { DAY_NAMES, dateForDayOfWeek } from '@/lib/week';
-import type { Day, Project, TaskWithProject } from '@/types';
+import type { Area, Day, Project, TaskWithProject } from '@/types';
 import clsx from 'clsx';
 
 interface Props {
@@ -11,8 +10,9 @@ interface Props {
   day: Day | undefined;
   tasks: TaskWithProject[];
   projects: Project[];
+  areas: Area[];
   isToday: boolean;
-  onAddTask: (area: string, text: string) => Promise<void>;
+  onAddTask: (areaId: string, text: string) => Promise<void>;
   onUpdateTask: (id: string, patch: Record<string, unknown>) => Promise<void>;
   onDeleteTask: (id: string) => Promise<void>;
   onStarChange: (v: number) => Promise<void>;
@@ -26,6 +26,7 @@ export function DayCard({
   day,
   tasks,
   projects,
+  areas,
   isToday,
   onAddTask,
   onUpdateTask,
@@ -46,23 +47,28 @@ export function DayCard({
         </h2>
         <StarRating value={day?.starRating ?? null} onChange={onStarChange} />
       </div>
-      <div className="grid gap-3 sm:grid-cols-3">
-        {AREA_ORDER.map((area) => (
-          <AreaColumn
-            key={area}
-            area={area}
-            dayOfWeek={dayOfWeek}
-            isoWeek={isoWeek}
-            tasks={tasks.filter((t) => t.area === area)}
-            projects={projects}
-            onAdd={onAddTask}
-            onUpdate={onUpdateTask}
-            onDelete={onDeleteTask}
-            onExportTodoist={onExportTodoist}
-            onCreateCalendarEvent={onCreateCalendarEvent}
-          />
-        ))}
-      </div>
+      {areas.length === 0 ? (
+        <p className="text-sm text-base-muted">Crea un área en Tu espacio para empezar a añadir tareas del día.</p>
+      ) : (
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          {areas.map((area, index) => (
+            <AreaColumn
+              key={area.id}
+              area={area}
+              colorIndex={index}
+              dayOfWeek={dayOfWeek}
+              isoWeek={isoWeek}
+              tasks={tasks.filter((t) => t.areaId === area.id)}
+              projects={projects}
+              onAdd={onAddTask}
+              onUpdate={onUpdateTask}
+              onDelete={onDeleteTask}
+              onExportTodoist={onExportTodoist}
+              onCreateCalendarEvent={onCreateCalendarEvent}
+            />
+          ))}
+        </div>
+      )}
     </section>
   );
 }

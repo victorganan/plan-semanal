@@ -4,13 +4,14 @@ import { useState } from 'react';
 import clsx from 'clsx';
 import { PriorityDot } from '@/components/PriorityDot';
 import { TimeSelect } from '@/components/TimeSelect';
-import { DURATION_LABELS, PRIORITY_LABELS, RECURRENCE_LABELS, AREA_LABELS } from '@/types';
+import { DURATION_LABELS, PRIORITY_LABELS, RECURRENCE_LABELS } from '@/types';
 import { DAY_NAMES, isoWeekOf, mondayBasedDayOfWeek } from '@/lib/week';
-import type { Project, TaskWithProject } from '@/types';
+import type { Area, Project, TaskWithProject } from '@/types';
 
 interface Props {
   task: TaskWithProject;
   projects: Project[];
+  areas?: Area[];
   onUpdate: (id: string, patch: Record<string, unknown>) => Promise<void>;
   onDelete: (id: string) => Promise<void>;
   onExportTodoist?: (id: string) => Promise<void>;
@@ -32,6 +33,7 @@ function splitScheduled(scheduledAt: Date | string | null) {
 export function TaskCard({
   task,
   projects,
+  areas = [],
   onUpdate,
   onDelete,
   onExportTodoist,
@@ -46,7 +48,7 @@ export function TaskCard({
   const [date, setDate] = useState(initialSplit.date);
   const [time, setTime] = useState(initialSplit.time);
   const [moveDay, setMoveDay] = useState(0);
-  const [moveArea, setMoveArea] = useState('SERVILIA');
+  const [moveArea, setMoveArea] = useState(areas[0]?.id ?? '');
 
   async function saveText() {
     if (text.trim() && text !== task.text) await onUpdate(task.id, { text: text.trim() });
@@ -144,17 +146,18 @@ export function TaskCard({
                 onChange={(e) => setMoveArea(e.target.value)}
                 className="rounded-lg border border-base-border bg-base-bg px-2 py-1 text-xs"
               >
-                {Object.entries(AREA_LABELS).map(([v, l]) => (
-                  <option key={v} value={v}>
-                    {l}
+                {areas.map((a) => (
+                  <option key={a.id} value={a.id}>
+                    {a.name}
                   </option>
                 ))}
               </select>
               <button
                 onClick={() =>
-                  onUpdate(task.id, { kind: 'DAY_AREA', isoWeek: currentIsoWeek, dayOfWeek: moveDay, area: moveArea })
+                  onUpdate(task.id, { kind: 'DAY_AREA', isoWeek: currentIsoWeek, dayOfWeek: moveDay, areaId: moveArea })
                 }
-                className="rounded-full bg-accent px-3 py-1 text-xs font-medium text-white"
+                disabled={!moveArea}
+                className="rounded-full bg-accent px-3 py-1 text-xs font-medium text-white disabled:opacity-40"
               >
                 Mover a esta semana →
               </button>

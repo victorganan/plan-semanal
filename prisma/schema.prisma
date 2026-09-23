@@ -27,6 +27,7 @@ model User {
   integrationTokens IntegrationToken[]
   tasks             Task[]
   pushSubscriptions PushSubscription[]
+  areas             Area[]
 
   weeklyReminderDayOfWeek Int? // 0=lunes .. 6=domingo
   weeklyReminderTime      String? // "HH:MM"
@@ -72,12 +73,6 @@ model VerificationToken {
 
 // ---------- Dominio: Plan Semanal ----------
 
-enum Area {
-  SERVILIA
-  GESTIONA
-  PERSONAL
-}
-
 enum Priority {
   LOW
   MEDIUM
@@ -120,6 +115,25 @@ enum ActivityAction {
 
 enum IntegrationProvider {
   TODOIST
+}
+
+model Area {
+  id          String  @id @default(cuid())
+  userId      String
+  name        String
+  description String?
+  order       Int     @default(0)
+
+  user     User                     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tasks    Task[]
+  projects Project[]
+  recurringTemplates RecurringTaskTemplate[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([userId, name])
+  @@index([userId])
 }
 
 model Week {
@@ -175,7 +189,7 @@ model Task {
   weekId String? // ausente para kind = BACKLOG sin asignar todavía
   dayId  String? // solo para kind = DAY_AREA
   kind   TaskKind
-  area   Area? // solo para kind = DAY_AREA
+  areaId String? // solo para kind = DAY_AREA
 
   text     String
   done     Boolean  @default(false)
@@ -193,6 +207,7 @@ model Task {
   user    User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   week    Week?    @relation(fields: [weekId], references: [id], onDelete: Cascade)
   day     Day?     @relation(fields: [dayId], references: [id], onDelete: Cascade)
+  area    Area?    @relation(fields: [areaId], references: [id], onDelete: SetNull)
   project Project? @relation(fields: [projectId], references: [id], onDelete: SetNull)
   recurringTemplate RecurringTaskTemplate? @relation(fields: [recurringTemplateId], references: [id], onDelete: SetNull)
 
@@ -203,6 +218,7 @@ model Task {
   @@index([userId, kind])
   @@index([weekId])
   @@index([dayId])
+  @@index([areaId])
   @@index([projectId])
 }
 
@@ -239,10 +255,11 @@ model Project {
   id     String        @id @default(cuid())
   userId String
   name   String
-  area   Area
+  areaId String
   status ProjectStatus @default(ACTIVE)
 
   user  User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  area  Area               @relation(fields: [areaId], references: [id], onDelete: Restrict)
   tasks Task[]
   focus WeekProjectFocus[]
 
@@ -250,6 +267,7 @@ model Project {
   updatedAt DateTime @updatedAt
 
   @@index([userId])
+  @@index([areaId])
 }
 
 model WeekProjectFocus {
@@ -268,7 +286,7 @@ model RecurringTaskTemplate {
   userId String
 
   dayOfWeek Int // 0-6
-  area      Area
+  areaId    String
   text      String
   priority  Priority   @default(MEDIUM)
   duration  Duration?
@@ -277,11 +295,13 @@ model RecurringTaskTemplate {
   active    Boolean    @default(true)
 
   user  User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  area  Area   @relation(fields: [areaId], references: [id], onDelete: Restrict)
   tasks Task[]
 
   createdAt DateTime @default(now())
 
   @@index([userId])
+  @@index([areaId])
 }
 
 model ActivityLog {

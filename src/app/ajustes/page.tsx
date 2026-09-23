@@ -13,9 +13,10 @@ export default async function AjustesPage({ searchParams }: { searchParams: Prom
   const userId = session!.user.id;
   const { todoist } = await searchParams;
 
-  const [habits, templates, todoistToken, calendarConnected, activity, user] = await Promise.all([
+  const [habits, templates, areas, todoistToken, calendarConnected, activity, user] = await Promise.all([
     prisma.habit.findMany({ where: { userId, active: true }, orderBy: { order: 'asc' } }),
-    prisma.recurringTaskTemplate.findMany({ where: { userId, active: true }, orderBy: [{ dayOfWeek: 'asc' }] }),
+    prisma.recurringTaskTemplate.findMany({ where: { userId, active: true }, include: { area: true }, orderBy: [{ dayOfWeek: 'asc' }] }),
+    prisma.area.findMany({ where: { userId }, orderBy: { order: 'asc' } }),
     getTodoistToken(userId),
     hasCalendarAccess(userId),
     prisma.activityLog.findMany({ where: { userId }, orderBy: { createdAt: 'desc' }, take: 50 }),
@@ -44,7 +45,7 @@ export default async function AjustesPage({ searchParams }: { searchParams: Prom
         initialSlot={user?.weeklyReminderTime ?? null}
       />
       <HabitsManager initialHabits={habits} />
-      <RecurringTemplatesManager initialTemplates={templates} />
+      <RecurringTemplatesManager initialTemplates={templates} areas={areas} />
       <ActivityLogPanel
         initialItems={activity.map((a) => ({ id: a.id, summary: a.summary, action: a.action, createdAt: a.createdAt.toISOString() }))}
       />

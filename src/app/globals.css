@@ -9,9 +9,13 @@
   --color-text: 28 28 26;
   --color-muted: 115 115 110;
 
-  --color-servilia: 79 70 229; /* indigo */
-  --color-gestiona: 13 148 136; /* teal */
-  --color-personal: 217 119 6; /* amber */
+  /* Paleta rotativa para áreas (número de áreas variable por usuario) */
+  --color-area-1: 79 70 229; /* indigo */
+  --color-area-2: 13 148 136; /* teal */
+  --color-area-3: 217 119 6; /* amber */
+  --color-area-4: 225 29 72; /* rose */
+  --color-area-5: 2 132 199; /* sky */
+  --color-area-6: 124 58 237; /* violet */
 
   --color-priority-low: 100 116 139; /* slate */
   --color-priority-medium: 217 119 6; /* amber */
@@ -27,9 +31,12 @@
   --color-text: 237 237 235;
   --color-muted: 161 161 158;
 
-  --color-servilia: 129 140 248;
-  --color-gestiona: 45 212 191;
-  --color-personal: 251 146 60;
+  --color-area-1: 129 140 248;
+  --color-area-2: 45 212 191;
+  --color-area-3: 251 146 60;
+  --color-area-4: 251 113 133;
+  --color-area-5: 56 189 248;
+  --color-area-6: 167 139 250;
 
   --color-priority-low: 148 163 184;
   --color-priority-medium: 251 191 36;

@@ -9,7 +9,7 @@ const createSchema = z.object({
   isoWeek: z.string().regex(/^\d{4}-W\d{2}$/).optional(),
   kind: z.enum(['DAY_AREA', 'PRIORITY_ACTION', 'CALL', 'BACKLOG']),
   dayOfWeek: z.number().int().min(0).max(6).optional(),
-  area: z.enum(['SERVILIA', 'GESTIONA', 'PERSONAL']).optional(),
+  areaId: z.string().optional(),
   text: z.string().min(1).max(500),
   priority: z.enum(['LOW', 'MEDIUM', 'HIGH']).optional(),
   duration: z.enum(['LT_HALF', 'HALF_TO_ONE', 'ONE_TO_TWO', 'GT_TWO']).nullable().optional(),
@@ -24,8 +24,8 @@ export async function POST(req: NextRequest) {
 
   const body = createSchema.parse(await req.json());
 
-  if (body.kind === 'DAY_AREA' && (body.dayOfWeek === undefined || !body.area)) {
-    return NextResponse.json({ error: 'dayOfWeek y area son obligatorios para tareas de día' }, { status: 400 });
+  if (body.kind === 'DAY_AREA' && (body.dayOfWeek === undefined || !body.areaId)) {
+    return NextResponse.json({ error: 'dayOfWeek y areaId son obligatorios para tareas de día' }, { status: 400 });
   }
   if (body.kind !== 'BACKLOG' && !body.isoWeek) {
     return NextResponse.json({ error: 'isoWeek es obligatorio salvo para la bandeja de entrada' }, { status: 400 });
@@ -48,7 +48,7 @@ export async function POST(req: NextRequest) {
   const maxOrder = await prisma.task.aggregate({
     where:
       body.kind === 'DAY_AREA'
-        ? { dayId, area: body.area }
+        ? { dayId, areaId: body.areaId }
         : body.kind === 'BACKLOG'
           ? { userId, kind: 'BACKLOG' }
           : { weekId, kind: body.kind },
@@ -61,7 +61,7 @@ export async function POST(req: NextRequest) {
       weekId,
       dayId,
       kind: body.kind,
-      area: body.kind === 'DAY_AREA' ? body.area : undefined,
+      areaId: body.kind === 'DAY_AREA' ? body.areaId : undefined,
       text: body.text,
       priority: body.priority ?? 'MEDIUM',
       duration: body.duration ?? undefined,

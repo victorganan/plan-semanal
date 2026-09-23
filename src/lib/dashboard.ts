@@ -1,8 +1,6 @@
 import { prisma } from '@/lib/prisma';
 import { addWeeks, currentIsoWeek, isoWeekOf, mondayBasedDayOfWeek } from '@/lib/week';
 
-const AREAS = ['SERVILIA', 'GESTIONA', 'PERSONAL'] as const;
-
 async function computeStreak(userId: string, habitIds: string[]): Promise<number> {
   if (habitIds.length === 0) return 0;
 
@@ -41,16 +39,16 @@ export async function computeDashboardStats(userId: string, weeksBack = 8) {
   const isoWeeks: string[] = [];
   for (let i = weeksBack - 1; i >= 0; i--) isoWeeks.push(addWeeks(current, -i));
 
-  const weeks = await prisma.week.findMany({
-    where: { userId, isoWeek: { in: isoWeeks } },
-    include: { tasks: true, habitCompletions: true },
-  });
+  const [weeks, areas] = await Promise.all([
+    prisma.week.findMany({
+      where: { userId, isoWeek: { in: isoWeeks } },
+      include: { tasks: true, habitCompletions: true },
+    }),
+    prisma.area.findMany({ where: { userId }, orderBy: { order: 'asc' } }),
+  ]);
   const weekByIso = new Map(weeks.map((w) => [w.isoWeek, w]));
 
-  const completionByArea = Object.fromEntries(AREAS.map((a) => [a, { done: 0, total: 0 }])) as Record<
-    string,
-    { done: number; total: number }
-  >;
+  const completionByArea = new Map(areas.map((a) => [a.id, { done: 0, total: 0 }]));
 
   const trend = isoWeeks.map((iso) => {
     const w = weekByIso.get(iso);
@@ -58,9 +56,11 @@ export async function computeDashboardStats(userId: string, weeksBack = 8) {
     const total = dayTasks.length;
     const done = dayTasks.filter((t) => t.done).length;
     for (const t of dayTasks) {
-      if (!t.area) continue;
-      completionByArea[t.area].total += 1;
-      if (t.done) completionByArea[t.area].done += 1;
+      if (!t.areaId) continue;
+      const bucket = completionByArea.get(t.areaId);
+      if (!bucket) continue;
+      bucket.total += 1;
+      if (t.done) bucket.done += 1;
     }
     return { isoWeek: iso, total, done, rate: total ? done / total : 0 };
   });
@@ -84,12 +84,17 @@ export async function computeDashboardStats(userId: string, weeksBack = 8) {
   );
 
   return {
-    completionByArea: AREAS.map((a) => ({
-      area: a,
-      done: completionByArea[a].done,
-      total: completionByArea[a].total,
-      rate: completionByArea[a].total ? completionByArea[a].done / completionByArea[a].total : 0,
-    })),
+    completionByArea: areas.map((a, index) => {
+      const bucket = completionByArea.get(a.id)!;
+      return {
+        areaId: a.id,
+        areaName: a.name,
+        areaIndex: index,
+        done: bucket.done,
+        total: bucket.total,
+        rate: bucket.total ? bucket.done / bucket.total : 0,
+      };
+    }),
     trend,
     habitAdherence,
     streak,

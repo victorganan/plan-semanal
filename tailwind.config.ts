@@ -14,9 +14,12 @@ const config: Config = {
           muted: 'rgb(var(--color-muted) / <alpha-value>)',
         },
         area: {
-          servilia: 'rgb(var(--color-servilia) / <alpha-value>)',
-          gestiona: 'rgb(var(--color-gestiona) / <alpha-value>)',
-          personal: 'rgb(var(--color-personal) / <alpha-value>)',
+          1: 'rgb(var(--color-area-1) / <alpha-value>)',
+          2: 'rgb(var(--color-area-2) / <alpha-value>)',
+          3: 'rgb(var(--color-area-3) / <alpha-value>)',
+          4: 'rgb(var(--color-area-4) / <alpha-value>)',
+          5: 'rgb(var(--color-area-5) / <alpha-value>)',
+          6: 'rgb(var(--color-area-6) / <alpha-value>)',
         },
         priority: {
           low: 'rgb(var(--color-priority-low) / <alpha-value>)',

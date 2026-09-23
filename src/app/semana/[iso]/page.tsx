@@ -17,6 +17,7 @@ export default async function SemanaPage({ params }: { params: Promise<{ iso: st
       initialInbox={data.inbox}
       habits={data.habits}
       projects={data.projects}
+      areas={data.areas}
       isoWeek={iso}
       mode="week"
       viewDow={todayDayOfWeek()}

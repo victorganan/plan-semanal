@@ -18,7 +18,7 @@ const patchSchema = z.object({
   kind: z.enum(['DAY_AREA', 'PRIORITY_ACTION', 'CALL', 'BACKLOG']).optional(),
   isoWeek: z.string().regex(/^\d{4}-W\d{2}$/).optional(),
   dayOfWeek: z.number().int().min(0).max(6).optional(),
-  area: z.enum(['SERVILIA', 'GESTIONA', 'PERSONAL']).optional(),
+  areaId: z.string().nullable().optional(),
 });
 
 async function loadOwnedTask(userId: string, id: string) {
@@ -36,7 +36,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   if (!existing) return NextResponse.json({ error: 'No encontrada' }, { status: 404 });
 
   const body = patchSchema.parse(await req.json());
-  const { dayOfWeek, isoWeek, kind, area, scheduledAt, ...rest } = body;
+  const { dayOfWeek, isoWeek, kind, areaId, scheduledAt, ...rest } = body;
 
   const nextKind = kind ?? existing.kind;
   const data: Record<string, unknown> = { ...rest };
@@ -46,7 +46,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   if (nextKind === 'BACKLOG') {
     data.weekId = null;
     data.dayId = null;
-    data.area = null;
+    data.areaId = null;
   } else {
     let weekId = existing.weekId ?? undefined;
     if (isoWeek) {
@@ -56,14 +56,14 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     }
 
     if (nextKind === 'DAY_AREA') {
-      if (area !== undefined) data.area = area;
+      if (areaId !== undefined) data.areaId = areaId;
       if (dayOfWeek !== undefined && weekId) {
         const day = await prisma.day.findUnique({ where: { weekId_dayOfWeek: { weekId, dayOfWeek } } });
         data.dayId = day?.id ?? null;
       }
     } else {
       data.dayId = null;
-      data.area = null;
+      data.areaId = null;
     }
   }
 

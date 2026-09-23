@@ -11,7 +11,7 @@ const schema = z.object({
   isoWeek: z.string().regex(/^\d{4}-W\d{2}$/),
   kind: z.enum(['DAY_AREA', 'PRIORITY_ACTION', 'CALL']),
   dayOfWeek: z.number().int().min(0).max(6).optional(),
-  area: z.enum(['SERVILIA', 'GESTIONA', 'PERSONAL']).optional(),
+  areaId: z.string().optional(),
 });
 
 export async function POST(req: NextRequest) {
@@ -41,7 +41,7 @@ export async function POST(req: NextRequest) {
       weekId: week.id,
       dayId,
       kind: body.kind,
-      area: body.kind === 'DAY_AREA' ? body.area : undefined,
+      areaId: body.kind === 'DAY_AREA' ? body.areaId : undefined,
       text: source.content,
       priority: todoistPriorityToOurs(source.priority),
       scheduledAt: source.due?.datetime ? new Date(source.due.datetime) : undefined,

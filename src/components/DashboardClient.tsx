@@ -1,20 +1,26 @@
 'use client';
 
 import { Bar, BarChart, CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
-import { AREA_LABELS } from '@/types';
 
 interface Stats {
-  completionByArea: { area: string; done: number; total: number; rate: number }[];
+  completionByArea: { areaId: string; areaName: string; areaIndex: number; done: number; total: number; rate: number }[];
   trend: { isoWeek: string; total: number; done: number; rate: number }[];
   habitAdherence: { habitId: string; name: string; done: number; total: number; rate: number }[];
   streak: number;
 }
 
-const AREA_COLORS: Record<string, string> = {
-  SERVILIA: 'rgb(var(--color-servilia))',
-  GESTIONA: 'rgb(var(--color-gestiona))',
-  PERSONAL: 'rgb(var(--color-personal))',
-};
+const AREA_COLOR_VARS = [
+  'rgb(var(--color-area-1))',
+  'rgb(var(--color-area-2))',
+  'rgb(var(--color-area-3))',
+  'rgb(var(--color-area-4))',
+  'rgb(var(--color-area-5))',
+  'rgb(var(--color-area-6))',
+];
+
+function areaColorVar(index: number) {
+  return AREA_COLOR_VARS[index % AREA_COLOR_VARS.length];
+}
 
 function pct(rate: number) {
   return `${Math.round(rate * 100)}%`;
@@ -31,8 +37,9 @@ function ChartCard({ title, children }: { title: string; children: React.ReactNo
 
 export function DashboardClient({ stats }: { stats: Stats }) {
   const areaData = stats.completionByArea.map((a) => ({
-    area: AREA_LABELS[a.area],
-    key: a.area,
+    area: a.areaName,
+    key: a.areaId,
+    color: areaColorVar(a.areaIndex),
     rate: Math.round(a.rate * 100),
     done: a.done,
     total: a.total,
@@ -87,7 +94,7 @@ export function DashboardClient({ stats }: { stats: Stats }) {
               />
               <Bar dataKey="rate" radius={[4, 4, 0, 0]}>
                 {areaData.map((d) => (
-                  <Bar key={d.key} dataKey="rate" fill={AREA_COLORS[d.key]} />
+                  <Bar key={d.key} dataKey="rate" fill={d.color} />
                 ))}
               </Bar>
             </BarChart>
