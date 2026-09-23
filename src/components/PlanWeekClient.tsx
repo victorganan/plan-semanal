@@ -15,10 +15,11 @@ import { ProjectFocusPicker } from '@/components/ProjectFocusPicker';
 import { InboxList } from '@/components/InboxList';
 import { EisenhowerMatrix } from '@/components/EisenhowerMatrix';
 import { PlanningWizard } from '@/components/PlanningWizard';
+import { DayCloseRitual } from '@/components/DayCloseRitual';
 import { WeekNav } from '@/components/WeekNav';
 import { DayNav } from '@/components/DayNav';
 import { ViewSwitcher } from '@/components/ViewSwitcher';
-import { DAY_NAMES, dateForDayOfWeek } from '@/lib/week';
+import { DAY_NAMES, dateForDayOfWeek, addWeeks } from '@/lib/week';
 
 interface Props {
   initialWeek: WeekFull;
@@ -56,6 +57,7 @@ export function PlanWeekClient({
   const [week, setWeek] = useState(initialWeek);
   const [inbox, setInbox] = useState(initialInbox);
   const [wizardOpen, setWizardOpen] = useState(false);
+  const [closeRitualOpen, setCloseRitualOpen] = useState(false);
   const { showToast } = useToast();
   const router = useRouter();
   const weekIsoOfToday = currentIsoWeek();
@@ -282,6 +284,26 @@ export function PlanWeekClient({
     }
   }
 
+  async function saveJournal(dayOfWeek: number, note: string) {
+    const value = note.trim() || null;
+    setWeek((w) => ({
+      ...w,
+      days: w.days.map((d) => (d.dayOfWeek === dayOfWeek ? { ...d, journalNote: value } : d)),
+    }));
+    try {
+      await api.patch(`/api/weeks/${isoWeek}`, { days: [{ dayOfWeek, journalNote: value }] });
+    } catch {
+      showToast('No se pudo guardar el diario', 'error');
+      await hardRefresh();
+    }
+  }
+
+  async function replanPendingToTomorrow(pendingIds: string[], tomorrowIsoWeek: string, tomorrowDow: number) {
+    await Promise.all(pendingIds.map((id) => updateTask(id, { isoWeek: tomorrowIsoWeek, dayOfWeek: tomorrowDow })));
+    // El dayId real se resuelve en el servidor; refrescamos para que la vista de hoy deje de listarlas.
+    await hardRefresh();
+  }
+
   async function addAndTag(text: string, field: 'evalPostponedTaskIds' | 'evalDelegateTaskIds') {
     const id = tempId();
     const optimistic: TaskWithProject = {
@@ -362,6 +384,13 @@ export function PlanWeekClient({
     const dayTasks = week.tasks.filter((t) => t.kind === 'DAY_AREA' && t.dayId === day?.id);
     const isViewingToday = isoWeek === weekIsoOfToday && viewDow === todayDow;
     const viewDate = dateForDayOfWeek(isoWeek, viewDow);
+    const tomorrowDow = (viewDow + 1) % 7;
+    const tomorrowCrossesWeek = viewDow === 6;
+    const tomorrowIsoWeek = tomorrowCrossesWeek ? addWeeks(isoWeek, 1) : isoWeek;
+    const tomorrowDay = tomorrowCrossesWeek ? undefined : week.days.find((d) => d.dayOfWeek === tomorrowDow);
+    const tomorrowTasks = tomorrowCrossesWeek
+      ? null
+      : week.tasks.filter((t) => t.kind === 'DAY_AREA' && t.dayId === tomorrowDay?.id);
 
     return (
       <div className="space-y-6">
@@ -378,6 +407,12 @@ export function PlanWeekClient({
               className="rounded-full border border-accent px-3 py-1.5 text-sm font-medium text-accent hover:bg-accent/10"
             >
               ✨ Planificar la semana
+            </button>
+            <button
+              onClick={() => setCloseRitualOpen(true)}
+              className="rounded-full border border-base-border px-3 py-1.5 text-sm font-medium hover:bg-base-border/40"
+            >
+              🌙 Cerrar el día
             </button>
             <ViewSwitcher mode="day" isoWeek={isoWeek} />
             <DayNav isoWeek={isoWeek} dayOfWeek={viewDow} />
@@ -402,6 +437,26 @@ export function PlanWeekClient({
               setWizardOpen(false);
               router.push(`/semana/${isoWeek}`);
             }}
+          />
+        ) : null}
+
+        {closeRitualOpen ? (
+          <DayCloseRitual
+            dayLabel={isViewingToday ? 'hoy' : `el ${DAY_NAMES[viewDow].toLowerCase()}`}
+            tasks={dayTasks}
+            tomorrowLabel={DAY_NAMES[tomorrowDow]}
+            tomorrowTasks={tomorrowTasks}
+            initialJournalNote={day?.journalNote ?? ''}
+            onSaveJournal={(note) => saveJournal(viewDow, note)}
+            onReplanPending={() =>
+              replanPendingToTomorrow(
+                dayTasks.filter((t) => !t.done).map((t) => t.id),
+                tomorrowIsoWeek,
+                tomorrowDow
+              )
+            }
+            onToggleTomorrowTop3={(id, next) => updateTask(id, { isTop3: next })}
+            onClose={() => setCloseRitualOpen(false)}
           />
         ) : null}
 

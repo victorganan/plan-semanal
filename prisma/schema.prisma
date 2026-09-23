@@ -190,10 +190,11 @@ model Week {
 }
 
 model Day {
-  id         String @id @default(cuid())
-  weekId     String
-  dayOfWeek  Int // 0=lunes ... 6=domingo
-  starRating Int? // 0-5
+  id          String  @id @default(cuid())
+  weekId      String
+  dayOfWeek   Int // 0=lunes ... 6=domingo
+  starRating  Int? // 0-5
+  journalNote String? @db.Text // una línea de diario del ritual de cierre del día
 
   week  Week   @relation(fields: [weekId], references: [id], onDelete: Cascade)
   tasks Task[]

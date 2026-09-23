@@ -48,7 +48,13 @@ const patchSchema = z.object({
   evalPostponedTaskIds: z.array(z.string()).optional(),
   evalDelegateTaskIds: z.array(z.string()).optional(),
   days: z
-    .array(z.object({ dayOfWeek: z.number().int().min(0).max(6), starRating: z.number().int().min(0).max(5).nullable() }))
+    .array(
+      z.object({
+        dayOfWeek: z.number().int().min(0).max(6),
+        starRating: z.number().int().min(0).max(5).nullable().optional(),
+        journalNote: z.string().max(2000).nullable().optional(),
+      })
+    )
     .optional(),
 });
 
@@ -65,10 +71,11 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ is
   await prisma.week.update({ where: { id: week.id }, data: weekFields });
 
   if (days) {
-    for (const d of days) {
+    for (const { dayOfWeek, ...fields } of days) {
+      if (Object.keys(fields).length === 0) continue;
       await prisma.day.updateMany({
-        where: { weekId: week.id, dayOfWeek: d.dayOfWeek },
-        data: { starRating: d.starRating },
+        where: { weekId: week.id, dayOfWeek },
+        data: fields,
       });
     }
   }
