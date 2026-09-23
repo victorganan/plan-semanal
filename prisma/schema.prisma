@@ -79,13 +79,6 @@ enum Priority {
   HIGH
 }
 
-enum Duration {
-  LT_HALF // <0,5h
-  HALF_TO_ONE // 0,5-1h
-  ONE_TO_TWO // 1-2h
-  GT_TWO // >2h
-}
-
 enum Recurrence {
   NONE
   WEEKLY
@@ -196,7 +189,7 @@ model Task {
   text     String
   done     Boolean  @default(false)
   priority Priority @default(MEDIUM)
-  duration Duration?
+  durationMinutes Int? // duración estimada en minutos (pasos de 15')
 
   projectId   String?
   scheduledAt DateTime?
@@ -305,7 +298,7 @@ model RecurringTaskTemplate {
   areaId    String
   text      String
   priority  Priority   @default(MEDIUM)
-  duration  Duration?
+  durationMinutes Int?
   recurrence Recurrence @default(WEEKLY) // WEEKLY | BIWEEKLY | FOUR_WEEKLY
   startIsoWeek String
   active    Boolean    @default(true)

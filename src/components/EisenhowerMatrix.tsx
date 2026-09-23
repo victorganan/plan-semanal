@@ -2,12 +2,27 @@
 
 import { useState } from 'react';
 import clsx from 'clsx';
-import { DURATION_LABELS } from '@/types';
 import type { TaskWithProject } from '@/types';
 
 const PRIORITY_ROWS = ['HIGH', 'MEDIUM', 'LOW'] as const;
 const PRIORITY_ROW_LABELS: Record<string, string> = { HIGH: 'Alta', MEDIUM: 'Media', LOW: 'Baja' };
+
 const DURATION_COLS = ['LT_HALF', 'HALF_TO_ONE', 'ONE_TO_TWO', 'GT_TWO', 'SIN_DEFINIR'] as const;
+const DURATION_COL_LABELS: Record<string, string> = {
+  LT_HALF: '<30min',
+  HALF_TO_ONE: '30-60min',
+  ONE_TO_TWO: '1-2h',
+  GT_TWO: '>2h',
+  SIN_DEFINIR: 'Sin definir',
+};
+
+function durationCol(minutes: number | null): (typeof DURATION_COLS)[number] {
+  if (!minutes) return 'SIN_DEFINIR';
+  if (minutes < 30) return 'LT_HALF';
+  if (minutes <= 60) return 'HALF_TO_ONE';
+  if (minutes <= 120) return 'ONE_TO_TWO';
+  return 'GT_TWO';
+}
 
 export function EisenhowerMatrix({ tasks }: { tasks: TaskWithProject[] }) {
   const [open, setOpen] = useState(false);
@@ -28,7 +43,7 @@ export function EisenhowerMatrix({ tasks }: { tasks: TaskWithProject[] }) {
                 <th className="w-24 text-left font-medium text-base-muted">Prioridad ↓ / Duración →</th>
                 {DURATION_COLS.map((c) => (
                   <th key={c} className="text-left font-medium text-base-muted">
-                    {c === 'SIN_DEFINIR' ? 'Sin definir' : DURATION_LABELS[c]}
+                    {DURATION_COL_LABELS[c]}
                   </th>
                 ))}
               </tr>
@@ -38,9 +53,7 @@ export function EisenhowerMatrix({ tasks }: { tasks: TaskWithProject[] }) {
                 <tr key={row}>
                   <td className="align-top font-semibold text-base-text">{PRIORITY_ROW_LABELS[row]}</td>
                   {DURATION_COLS.map((col) => {
-                    const cellTasks = relevant.filter(
-                      (t) => t.priority === row && (col === 'SIN_DEFINIR' ? !t.duration : t.duration === col)
-                    );
+                    const cellTasks = relevant.filter((t) => t.priority === row && durationCol(t.durationMinutes) === col);
                     return (
                       <td
                         key={col}

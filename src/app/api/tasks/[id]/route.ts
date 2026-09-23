@@ -4,12 +4,13 @@ import { prisma } from '@/lib/prisma';
 import { logActivity } from '@/lib/audit';
 import { requireUserId, isResponse } from '@/lib/api-auth';
 import { getOrCreateWeek } from '@/lib/recurring';
+import { durationMinutesSchema } from '@/lib/validation';
 
 const patchSchema = z.object({
   text: z.string().min(1).max(500).optional(),
   done: z.boolean().optional(),
   priority: z.enum(['LOW', 'MEDIUM', 'HIGH']).optional(),
-  duration: z.enum(['LT_HALF', 'HALF_TO_ONE', 'ONE_TO_TWO', 'GT_TWO']).nullable().optional(),
+  durationMinutes: durationMinutesSchema,
   projectId: z.string().nullable().optional(),
   scheduledAt: z.string().datetime().nullable().optional(),
   recurrence: z.enum(['NONE', 'WEEKLY', 'BIWEEKLY', 'FOUR_WEEKLY']).optional(),

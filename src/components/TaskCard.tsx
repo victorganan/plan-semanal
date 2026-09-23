@@ -4,7 +4,8 @@ import { useState } from 'react';
 import clsx from 'clsx';
 import { PriorityDot } from '@/components/PriorityDot';
 import { TimeSelect } from '@/components/TimeSelect';
-import { DURATION_LABELS, PRIORITY_LABELS, RECURRENCE_LABELS } from '@/types';
+import { DurationPicker } from '@/components/DurationPicker';
+import { PRIORITY_LABELS, RECURRENCE_LABELS, formatDurationMinutes } from '@/types';
 import { DAY_NAMES, isoWeekOf, mondayBasedDayOfWeek } from '@/lib/week';
 import type { Area, Project, TaskWithProject } from '@/types';
 
@@ -120,7 +121,7 @@ export function TaskCard({
             <span className="inline-flex items-center gap-1">
               <PriorityDot priority={task.priority} /> {PRIORITY_LABELS[task.priority]}
             </span>
-            {task.duration ? <span>· {DURATION_LABELS[task.duration]}</span> : null}
+            {task.durationMinutes ? <span>· {formatDurationMinutes(task.durationMinutes)}</span> : null}
             {task.project ? (
               <span className="rounded-full bg-base-border/50 px-2 py-0.5">{task.project.name}</span>
             ) : null}
@@ -192,19 +193,11 @@ export function TaskCard({
               </select>
             </label>
             <label className="space-y-1">
-              <span className="block text-xs text-base-muted">Duración</span>
-              <select
-                value={task.duration ?? ''}
-                onChange={(e) => onUpdate(task.id, { duration: e.target.value || null })}
-                className="w-full rounded-lg border border-base-border bg-base-bg px-2 py-1.5 text-sm"
-              >
-                <option value="">Sin definir</option>
-                {Object.entries(DURATION_LABELS).map(([v, l]) => (
-                  <option key={v} value={v}>
-                    {l}
-                  </option>
-                ))}
-              </select>
+              <span className="block text-xs text-base-muted">Duración estimada</span>
+              <DurationPicker
+                minutes={task.durationMinutes}
+                onChange={(durationMinutes) => onUpdate(task.id, { durationMinutes })}
+              />
             </label>
             <label className="space-y-1">
               <span className="block text-xs text-base-muted">Proyecto</span>

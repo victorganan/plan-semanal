@@ -50,12 +50,14 @@ export const PRIORITY_LABELS: Record<string, string> = {
   HIGH: 'Alta',
 };
 
-export const DURATION_LABELS: Record<string, string> = {
-  LT_HALF: '<0,5h',
-  HALF_TO_ONE: '0,5-1h',
-  ONE_TO_TWO: '1-2h',
-  GT_TWO: '>2h',
-};
+export function formatDurationMinutes(minutes: number | null | undefined): string {
+  if (!minutes) return 'Sin definir';
+  const h = Math.floor(minutes / 60);
+  const m = minutes % 60;
+  if (h === 0) return `${m}min`;
+  if (m === 0) return `${h}h`;
+  return `${h}h ${m}min`;
+}
 
 export const RECURRENCE_LABELS: Record<string, string> = {
   NONE: 'Sin recurrencia',

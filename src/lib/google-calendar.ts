@@ -74,17 +74,3 @@ export async function createCalendarEvent(
   return res.json();
 }
 
-export function durationEnumToMinutes(duration: string | null): number {
-  switch (duration) {
-    case 'LT_HALF':
-      return 30;
-    case 'HALF_TO_ONE':
-      return 60;
-    case 'ONE_TO_TWO':
-      return 120;
-    case 'GT_TWO':
-      return 180;
-    default:
-      return 30;
-  }
-}

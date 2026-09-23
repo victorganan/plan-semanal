@@ -3,7 +3,7 @@ import { z } from 'zod';
 import { prisma } from '@/lib/prisma';
 import { logActivity } from '@/lib/audit';
 import { requireUserId, isResponse } from '@/lib/api-auth';
-import { getValidGoogleAccessToken, createCalendarEvent, durationEnumToMinutes } from '@/lib/google-calendar';
+import { getValidGoogleAccessToken, createCalendarEvent } from '@/lib/google-calendar';
 
 const schema = z.object({ taskId: z.string() });
 
@@ -27,7 +27,7 @@ export async function POST(req: NextRequest) {
     summary: task.text,
     description: task.project ? `Proyecto: ${task.project.name}` : undefined,
     startISO: task.scheduledAt.toISOString(),
-    durationMinutes: durationEnumToMinutes(task.duration),
+    durationMinutes: task.durationMinutes ?? 30,
   });
 
   await logActivity(prisma, {
