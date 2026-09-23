@@ -1,6 +1,7 @@
 import { AreaColumn } from '@/components/AreaColumn';
 import { StarRating } from '@/components/StarRating';
 import { CapacityBar } from '@/components/CapacityBar';
+import { Top3Today } from '@/components/Top3Today';
 import { DAY_NAMES, dateForDayOfWeek } from '@/lib/week';
 import type { Area, Day, ProjectWithAreaAndCollaborators, TaskWithProject } from '@/types';
 import clsx from 'clsx';
@@ -54,6 +55,11 @@ export function DayCard({
           <StarRating value={day?.starRating ?? null} onChange={onStarChange} />
         </div>
       </div>
+      <Top3Today
+        tasks={tasks.filter((t) => t.isTop3)}
+        onToggleDone={(id, done) => onUpdateTask(id, { done })}
+        onUnstar={(id) => onUpdateTask(id, { isTop3: false })}
+      />
       {areas.length === 0 ? (
         <p className="text-sm text-base-muted">Crea un área en Tu espacio para empezar a añadir tareas del día.</p>
       ) : (

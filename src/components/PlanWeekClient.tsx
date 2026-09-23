@@ -2,7 +2,7 @@
 
 import { useCallback, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { api } from '@/lib/api-client';
+import { api, ApiError } from '@/lib/api-client';
 import { currentIsoWeek } from '@/lib/week';
 import { useToast } from '@/components/Toast';
 import type { WeekFull, Habit, ProjectWithAreaAndCollaborators, Area, TaskWithProject } from '@/types';
@@ -190,7 +190,7 @@ export function PlanWeekClient({
     try {
       await api.patch(`/api/tasks/${id}`, patch);
       if (promotedOut && patch.isoWeek === isoWeek) await hardRefresh();
-    } catch {
+    } catch (err) {
       if (promotedOut) {
         setInbox((prev) => [...prev, previous]);
         setWeek((w) => ({ ...w, tasks: w.tasks.filter((t) => t.id !== id) }));
@@ -199,7 +199,7 @@ export function PlanWeekClient({
       } else {
         setInbox((prev) => prev.map((t) => (t.id === id ? previous : t)));
       }
-      showToast('No se pudo guardar el cambio', 'error');
+      showToast(err instanceof ApiError ? err.message : 'No se pudo guardar el cambio', 'error');
     }
   }
 

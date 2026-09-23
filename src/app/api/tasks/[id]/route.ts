@@ -23,6 +23,7 @@ const patchSchema = z.object({
   areaId: z.string().nullable().optional(),
   quadrant: z.enum(['HACER', 'DECIDIR', 'DELEGAR', 'ALGUN_DIA']).nullable().optional(),
   assignedTo: z.string().max(100).nullable().optional(),
+  isTop3: z.boolean().optional(),
 });
 
 async function loadOwnedTask(userId: string, id: string) {
@@ -68,6 +69,22 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     } else {
       data.dayId = null;
       data.areaId = null;
+    }
+  }
+
+  // Si la tarea cambia de día (o sale de DAY_AREA), su marca de Top 3 ya no aplica.
+  if ('dayId' in data && data.dayId !== existing.dayId && body.isTop3 === undefined && existing.isTop3) {
+    data.isTop3 = false;
+  }
+
+  if (body.isTop3 === true) {
+    const effectiveDayId = 'dayId' in data ? (data.dayId as string | null) : existing.dayId;
+    if (!effectiveDayId) {
+      return NextResponse.json({ error: 'Solo se pueden destacar tareas asignadas a un día' }, { status: 400 });
+    }
+    const top3Count = await prisma.task.count({ where: { dayId: effectiveDayId, isTop3: true, id: { not: id } } });
+    if (top3Count >= 3) {
+      return NextResponse.json({ error: 'Ya tienes 3 tareas destacadas para ese día' }, { status: 400 });
     }
   }
 

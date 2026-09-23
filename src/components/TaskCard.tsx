@@ -241,6 +241,20 @@ export function TaskCard({
           ) : null}
         </div>
 
+        {task.kind === 'DAY_AREA' ? (
+          <button
+            onClick={() => onUpdate(task.id, { isTop3: !task.isTop3 })}
+            aria-label={task.isTop3 ? 'Quitar de Top 3 del día' : 'Marcar como Top 3 del día'}
+            title={task.isTop3 ? 'Quitar de Top 3 del día' : 'Marcar como Top 3 del día'}
+            className={clsx(
+              'shrink-0 rounded-full p-1.5 transition hover:bg-base-border/40',
+              task.isTop3 ? 'text-amber-500' : 'text-base-muted/50 hover:text-base-muted'
+            )}
+          >
+            {task.isTop3 ? '⭐' : '☆'}
+          </button>
+        ) : null}
+
         <button
           onClick={() => setOpen((v) => !v)}
           aria-label="Editar tarea"
