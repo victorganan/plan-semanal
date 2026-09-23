@@ -26,6 +26,7 @@ export default async function DiaPage({ params }: { params: Promise<{ iso: strin
       todayDow={todayDayOfWeek()}
       todoistConnected={data.todoistConnected}
       calendarConnected={data.calendarConnected}
+      dailyCapacityMinutes={data.dailyCapacityMinutes}
     />
   );
 }

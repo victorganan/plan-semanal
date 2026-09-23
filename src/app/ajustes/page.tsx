@@ -7,6 +7,7 @@ import { HabitsManager } from '@/components/settings/HabitsManager';
 import { RecurringTemplatesManager } from '@/components/settings/RecurringTemplatesManager';
 import { ActivityLogPanel } from '@/components/settings/ActivityLogPanel';
 import { PushReminderSettings } from '@/components/settings/PushReminderSettings';
+import { CapacitySettings } from '@/components/settings/CapacitySettings';
 
 export default async function AjustesPage({ searchParams }: { searchParams: Promise<{ todoist?: string }> }) {
   const session = await auth();
@@ -20,7 +21,10 @@ export default async function AjustesPage({ searchParams }: { searchParams: Prom
     getTodoistToken(userId),
     hasCalendarAccess(userId),
     prisma.activityLog.findMany({ where: { userId }, orderBy: { createdAt: 'desc' }, take: 50 }),
-    prisma.user.findUnique({ where: { id: userId }, select: { weeklyReminderDayOfWeek: true, weeklyReminderTime: true } }),
+    prisma.user.findUnique({
+      where: { id: userId },
+      select: { weeklyReminderDayOfWeek: true, weeklyReminderTime: true, dailyCapacityMinutes: true },
+    }),
   ]);
 
   return (
@@ -40,6 +44,7 @@ export default async function AjustesPage({ searchParams }: { searchParams: Prom
       ) : null}
 
       <IntegrationsPanel initialTodoistConnected={!!todoistToken} initialCalendarConnected={calendarConnected} />
+      <CapacitySettings initialMinutes={user?.dailyCapacityMinutes ?? 300} />
       <PushReminderSettings
         initialDayOfWeek={user?.weeklyReminderDayOfWeek ?? null}
         initialSlot={user?.weeklyReminderTime ?? null}

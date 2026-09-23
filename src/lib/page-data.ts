@@ -7,7 +7,7 @@ import type { WeekFull, TaskWithProject } from '@/types';
 export async function getWeekPageData(userId: string, isoWeek: string) {
   const weekRef = await getOrCreateWeek(userId, isoWeek);
 
-  const [week, habits, projects, areas, todoistToken, calendarConnected, inbox] = await Promise.all([
+  const [week, habits, projects, areas, todoistToken, calendarConnected, inbox, user] = await Promise.all([
     prisma.week.findUnique({
       where: { id: weekRef.id },
       include: {
@@ -40,6 +40,7 @@ export async function getWeekPageData(userId: string, isoWeek: string) {
         recurringTemplate: true,
       },
     }) as Promise<TaskWithProject[]>,
+    prisma.user.findUnique({ where: { id: userId }, select: { dailyCapacityMinutes: true } }),
   ]);
 
   return {
@@ -50,5 +51,6 @@ export async function getWeekPageData(userId: string, isoWeek: string) {
     todoistConnected: !!todoistToken,
     calendarConnected,
     inbox,
+    dailyCapacityMinutes: user?.dailyCapacityMinutes ?? 300,
   };
 }

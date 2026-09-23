@@ -32,6 +32,7 @@ interface Props {
   todayDow: number;
   todoistConnected: boolean;
   calendarConnected: boolean;
+  dailyCapacityMinutes: number;
 }
 
 function tempId() {
@@ -50,6 +51,7 @@ export function PlanWeekClient({
   todayDow,
   todoistConnected,
   calendarConnected,
+  dailyCapacityMinutes,
 }: Props) {
   const [week, setWeek] = useState(initialWeek);
   const [inbox, setInbox] = useState(initialInbox);
@@ -94,6 +96,7 @@ export function PlanWeekClient({
       durationMinutes: null,
       quadrant: null,
       assignedTo: null,
+      isTop3: false,
       projectId: null,
       project: null,
       scheduledAt: null,
@@ -137,6 +140,7 @@ export function PlanWeekClient({
       durationMinutes: null,
       quadrant: null,
       assignedTo: null,
+      isTop3: false,
       projectId: null,
       project: null,
       scheduledAt: null,
@@ -294,6 +298,7 @@ export function PlanWeekClient({
       durationMinutes: null,
       quadrant: null,
       assignedTo: null,
+      isTop3: false,
       projectId: null,
       project: null,
       scheduledAt: null,
@@ -408,6 +413,7 @@ export function PlanWeekClient({
           projects={projects}
           areas={areas}
           isToday={isViewingToday}
+          capacityMinutes={dailyCapacityMinutes}
           onAddTask={(areaId, text) => addTask('DAY_AREA', text, { dayOfWeek: viewDow, areaId })}
           onUpdateTask={updateTask}
           onDeleteTask={deleteTask}
@@ -509,6 +515,7 @@ export function PlanWeekClient({
               projects={projects}
               areas={areas}
               isToday={isoWeek === weekIsoOfToday && day.dayOfWeek === todayDow}
+              capacityMinutes={dailyCapacityMinutes}
               onAddTask={(areaId, text) => addTask('DAY_AREA', text, { dayOfWeek: day.dayOfWeek, areaId })}
               onUpdateTask={updateTask}
               onDeleteTask={deleteTask}

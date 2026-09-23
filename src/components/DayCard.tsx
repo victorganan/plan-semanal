@@ -1,5 +1,6 @@
 import { AreaColumn } from '@/components/AreaColumn';
 import { StarRating } from '@/components/StarRating';
+import { CapacityBar } from '@/components/CapacityBar';
 import { DAY_NAMES, dateForDayOfWeek } from '@/lib/week';
 import type { Area, Day, ProjectWithAreaAndCollaborators, TaskWithProject } from '@/types';
 import clsx from 'clsx';
@@ -12,6 +13,7 @@ interface Props {
   projects: ProjectWithAreaAndCollaborators[];
   areas: Area[];
   isToday: boolean;
+  capacityMinutes: number;
   onAddTask: (areaId: string, text: string) => Promise<void>;
   onUpdateTask: (id: string, patch: Record<string, unknown>) => Promise<void>;
   onDeleteTask: (id: string) => Promise<void>;
@@ -28,6 +30,7 @@ export function DayCard({
   projects,
   areas,
   isToday,
+  capacityMinutes,
   onAddTask,
   onUpdateTask,
   onDeleteTask,
@@ -37,15 +40,19 @@ export function DayCard({
 }: Props) {
   const date = dateForDayOfWeek(isoWeek, dayOfWeek);
   const dateLabel = date.toLocaleDateString('es-ES', { day: 'numeric', month: 'short', timeZone: 'UTC' });
+  const plannedMinutes = tasks.reduce((sum, t) => sum + (t.durationMinutes ?? 0), 0);
 
   return (
     <section className={clsx('rounded-card border p-4', isToday ? 'border-accent bg-accent/5' : 'border-base-border bg-base-surface')}>
-      <div className="mb-3 flex items-center justify-between">
+      <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
         <h2 className="text-base font-semibold">
           {DAY_NAMES[dayOfWeek]} <span className="font-normal text-base-muted">· {dateLabel}</span>
           {isToday ? <span className="ml-2 rounded-full bg-accent px-2 py-0.5 text-xs font-medium text-white">Hoy</span> : null}
         </h2>
-        <StarRating value={day?.starRating ?? null} onChange={onStarChange} />
+        <div className="flex items-center gap-3">
+          <CapacityBar plannedMinutes={plannedMinutes} capacityMinutes={capacityMinutes} />
+          <StarRating value={day?.starRating ?? null} onChange={onStarChange} />
+        </div>
       </div>
       {areas.length === 0 ? (
         <p className="text-sm text-base-muted">Crea un área en Tu espacio para empezar a añadir tareas del día.</p>
