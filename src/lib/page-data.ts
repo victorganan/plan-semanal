@@ -31,7 +31,8 @@ export async function getWeekPageData(userId: string, isoWeek: string) {
     getTodoistToken(userId),
     hasCalendarAccess(userId),
     prisma.task.findMany({
-      where: { userId, kind: 'BACKLOG' },
+      // parentTaskId: null excluye subtareas (también kind=BACKLOG, pero no son bandeja de entrada suelta)
+      where: { userId, kind: 'BACKLOG', parentTaskId: null },
       orderBy: [{ order: 'asc' }, { createdAt: 'asc' }],
       include: {
         project: { include: { area: true, collaborators: true } },

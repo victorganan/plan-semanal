@@ -7,7 +7,7 @@ export async function GET() {
   if (isResponse(userId)) return userId;
 
   const tasks = await prisma.task.findMany({
-    where: { userId, kind: 'BACKLOG' },
+    where: { userId, kind: 'BACKLOG', parentTaskId: null },
     orderBy: [{ order: 'asc' }, { createdAt: 'asc' }],
     include: { project: { include: { area: true, collaborators: true } }, area: true, subtasks: true, recurringTemplate: true },
   });
