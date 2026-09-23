@@ -18,6 +18,7 @@ interface Props {
   onAdd: (areaId: string, text: string) => Promise<void>;
   onUpdate: (id: string, patch: Record<string, unknown>) => Promise<void>;
   onDelete: (id: string) => Promise<void>;
+  onReorder: (orderedIds: string[]) => Promise<void>;
   onExportTodoist?: (id: string) => Promise<void>;
   onCreateCalendarEvent?: (id: string) => Promise<void>;
 }
@@ -32,10 +33,49 @@ export function AreaColumn({
   onAdd,
   onUpdate,
   onDelete,
+  onReorder,
   onExportTodoist,
   onCreateCalendarEvent,
 }: Props) {
   const [dragOver, setDragOver] = useState(false);
+  const [dropTarget, setDropTarget] = useState<{ id: string; position: 'before' | 'after' } | null>(null);
+
+  function handleDropOnColumn(e: React.DragEvent) {
+    e.preventDefault();
+    setDragOver(false);
+    setDropTarget(null);
+    const taskId = e.dataTransfer.getData('text/plain');
+    if (!taskId) return;
+    if (tasks.some((t) => t.id === taskId)) {
+      // Ya estaba en esta columna: soltarlo en el hueco vacío la manda al final.
+      onReorder([...tasks.filter((t) => t.id !== taskId).map((t) => t.id), taskId]);
+    } else {
+      onUpdate(taskId, { kind: 'DAY_AREA', isoWeek, dayOfWeek, areaId: area.id });
+    }
+  }
+
+  function handleDropOnTask(e: React.DragEvent, targetId: string) {
+    e.preventDefault();
+    e.stopPropagation();
+    setDragOver(false);
+    setDropTarget(null);
+    const taskId = e.dataTransfer.getData('text/plain');
+    if (!taskId || taskId === targetId) return;
+
+    if (!tasks.some((t) => t.id === taskId)) {
+      // Viene de otro día/área.
+      onUpdate(taskId, { kind: 'DAY_AREA', isoWeek, dayOfWeek, areaId: area.id });
+      return;
+    }
+
+    const rect = e.currentTarget.getBoundingClientRect();
+    const position = e.clientY - rect.top < rect.height / 2 ? 'before' : 'after';
+    const withoutDragged = tasks.filter((t) => t.id !== taskId).map((t) => t.id);
+    const targetIndex = withoutDragged.indexOf(targetId);
+    const insertAt = position === 'before' ? targetIndex : targetIndex + 1;
+    withoutDragged.splice(insertAt, 0, taskId);
+    onReorder(withoutDragged);
+  }
 
   return (
     <div
@@ -44,12 +84,7 @@ export function AreaColumn({
         setDragOver(true);
       }}
       onDragLeave={() => setDragOver(false)}
-      onDrop={(e) => {
-        e.preventDefault();
-        setDragOver(false);
-        const taskId = e.dataTransfer.getData('text/plain');
-        if (taskId) onUpdate(taskId, { kind: 'DAY_AREA', isoWeek, dayOfWeek, areaId: area.id });
-      }}
+      onDrop={handleDropOnColumn}
       className={clsx(
         'rounded-card border p-3 transition',
         dragOver ? 'border-accent bg-accent/5' : 'border-base-border bg-base-bg/50'
@@ -61,19 +96,39 @@ export function AreaColumn({
       </div>
       <div className="space-y-2">
         {tasks.map((t) => (
-          <TaskCard
+          <div
             key={t.id}
-            task={t}
-            projects={projects}
-            tags={tags}
-            referenceDate={dateForDayOfWeek(isoWeek, dayOfWeek)}
-            onUpdate={onUpdate}
-            onDelete={onDelete}
-            onExportTodoist={onExportTodoist}
-            onCreateCalendarEvent={onCreateCalendarEvent}
-            showRecurrence
-            currentIsoWeek={isoWeek}
-          />
+            onDragOver={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              const rect = e.currentTarget.getBoundingClientRect();
+              const position = e.clientY - rect.top < rect.height / 2 ? 'before' : 'after';
+              setDropTarget({ id: t.id, position });
+            }}
+            onDrop={(e) => handleDropOnTask(e, t.id)}
+            className={clsx(
+              'relative',
+              dropTarget?.id === t.id &&
+                dropTarget.position === 'before' &&
+                'before:absolute before:-top-1 before:left-0 before:right-0 before:h-0.5 before:rounded-full before:bg-accent',
+              dropTarget?.id === t.id &&
+                dropTarget.position === 'after' &&
+                'after:absolute after:-bottom-1 after:left-0 after:right-0 after:h-0.5 after:rounded-full after:bg-accent'
+            )}
+          >
+            <TaskCard
+              task={t}
+              projects={projects}
+              tags={tags}
+              referenceDate={dateForDayOfWeek(isoWeek, dayOfWeek)}
+              onUpdate={onUpdate}
+              onDelete={onDelete}
+              onExportTodoist={onExportTodoist}
+              onCreateCalendarEvent={onCreateCalendarEvent}
+              showRecurrence
+              currentIsoWeek={isoWeek}
+            />
+          </div>
         ))}
       </div>
       <div className="mt-2 border-t border-base-border pt-2">

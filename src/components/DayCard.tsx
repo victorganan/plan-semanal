@@ -19,6 +19,7 @@ interface Props {
   onAddTask: (areaId: string, text: string) => Promise<void>;
   onUpdateTask: (id: string, patch: Record<string, unknown>) => Promise<void>;
   onDeleteTask: (id: string) => Promise<void>;
+  onReorderTasks: (orderedIds: string[]) => Promise<void>;
   onStarChange: (v: number) => Promise<void>;
   onExportTodoist?: (id: string) => Promise<void>;
   onCreateCalendarEvent?: (id: string) => Promise<void>;
@@ -37,6 +38,7 @@ export function DayCard({
   onAddTask,
   onUpdateTask,
   onDeleteTask,
+  onReorderTasks,
   onStarChange,
   onExportTodoist,
   onCreateCalendarEvent,
@@ -78,6 +80,7 @@ export function DayCard({
               onAdd={onAddTask}
               onUpdate={onUpdateTask}
               onDelete={onDeleteTask}
+              onReorder={(orderedIds) => onReorderTasks(orderedIds)}
               onExportTodoist={onExportTodoist}
               onCreateCalendarEvent={onCreateCalendarEvent}
             />

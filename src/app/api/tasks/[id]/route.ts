@@ -6,6 +6,7 @@ import { requireUserId, isResponse } from '@/lib/api-auth';
 import { getOrCreateWeek } from '@/lib/recurring';
 import { durationMinutesSchema } from '@/lib/validation';
 import { syncParentCompletion } from '@/lib/subtasks';
+import { resortByScheduledTime } from '@/lib/task-order';
 
 const patchSchema = z.object({
   text: z.string().min(1).max(500).optional(),
@@ -95,7 +96,24 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     }
   }
 
-  const task = await prisma.task.update({ where: { id }, data, include: { tags: true } });
+  let task = await prisma.task.update({ where: { id }, data, include: { tags: true } });
+
+  // Por defecto, las tareas de un mismo día+área se ordenan por hora de
+  // ejecución: si cambia la hora, o si la tarea entra en un día/área nuevo,
+  // reordenamos ese grupo entero (las que no tienen hora mantienen su orden
+  // relativo, así una reordenación manual entre ellas no se pierde).
+  const scheduledAtChanging = scheduledAt !== undefined;
+  const dayOrAreaChanging = 'dayId' in data || 'areaId' in data;
+  if (task.kind === 'DAY_AREA' && task.dayId && task.areaId && (scheduledAtChanging || dayOrAreaChanging)) {
+    const bucket = await prisma.task.findMany({
+      where: { dayId: task.dayId, areaId: task.areaId, kind: 'DAY_AREA' },
+      orderBy: [{ order: 'asc' }, { createdAt: 'asc' }],
+      select: { id: true, scheduledAt: true, order: true },
+    });
+    const resorted = resortByScheduledTime(bucket);
+    await prisma.$transaction(resorted.map((t, i) => prisma.task.update({ where: { id: t.id }, data: { order: i } })));
+    task = await prisma.task.findUniqueOrThrow({ where: { id }, include: { tags: true } });
+  }
 
   if (body.done !== undefined) {
     // Si es un miniproyecto (tiene subtareas), marcar/desmarcar se aplica

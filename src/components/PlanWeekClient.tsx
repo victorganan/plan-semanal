@@ -198,6 +198,15 @@ export function PlanWeekClient({
 
     const optimisticTask = { ...previous, ...patch, project, dayId } as TaskWithProject;
 
+    // El servidor reordena por hora todo el grupo día+área cuando cambia la
+    // hora, el día o el área de una tarea; refrescamos para reflejar ese
+    // reordenado (afecta también a otras tareas, no solo a esta).
+    const needsOrderRefresh =
+      optimisticTask.kind === 'DAY_AREA' &&
+      !!optimisticTask.dayId &&
+      !!optimisticTask.areaId &&
+      ('scheduledAt' in patch || typeof patch.dayOfWeek === 'number' || 'areaId' in patch);
+
     if (promotedOut) {
       // Sale de la bandeja de entrada; si pertenece a la semana que se está viendo, se añade ahí.
       setInbox((prev) => prev.filter((t) => t.id !== id));
@@ -219,7 +228,7 @@ export function PlanWeekClient({
 
     try {
       await api.patch(`/api/tasks/${id}`, patch);
-      if (promotedOut && patch.isoWeek === isoWeek) await hardRefresh();
+      if ((promotedOut && patch.isoWeek === isoWeek) || needsOrderRefresh) await hardRefresh();
     } catch (err) {
       if (promotedOut) {
         setInbox((prev) => [...prev, previous]);
@@ -235,6 +244,27 @@ export function PlanWeekClient({
         setInbox((prev) => prev.map((t) => (t.id === id ? previous : t)));
       }
       showToast(err instanceof ApiError ? err.message : 'No se pudo guardar el cambio', 'error');
+    }
+  }
+
+  // Reordenación manual al arrastrar dentro de la misma lista día+área.
+  async function reorderTasks(orderedIds: string[]) {
+    const previousOrders = new Map(week.tasks.filter((t) => orderedIds.includes(t.id)).map((t) => [t.id, t.order]));
+    setWeek((w) => ({
+      ...w,
+      tasks: w.tasks.map((t) => {
+        const index = orderedIds.indexOf(t.id);
+        return index === -1 ? t : { ...t, order: index };
+      }),
+    }));
+    try {
+      await Promise.all(orderedIds.map((id, index) => api.patch(`/api/tasks/${id}`, { order: index })));
+    } catch {
+      setWeek((w) => ({
+        ...w,
+        tasks: w.tasks.map((t) => (previousOrders.has(t.id) ? { ...t, order: previousOrders.get(t.id)! } : t)),
+      }));
+      showToast('No se pudo reordenar', 'error');
     }
   }
 
@@ -509,6 +539,7 @@ export function PlanWeekClient({
           onAddTask={(areaId, text) => addTask('DAY_AREA', text, { dayOfWeek: viewDow, areaId })}
           onUpdateTask={updateTask}
           onDeleteTask={deleteTask}
+          onReorderTasks={reorderTasks}
           onStarChange={(v) => saveStar(viewDow, v)}
           {...exportProps}
           {...calendarProps}
@@ -615,6 +646,7 @@ export function PlanWeekClient({
               onAddTask={(areaId, text) => addTask('DAY_AREA', text, { dayOfWeek: day.dayOfWeek, areaId })}
               onUpdateTask={updateTask}
               onDeleteTask={deleteTask}
+              onReorderTasks={reorderTasks}
               onStarChange={(v) => saveStar(day.dayOfWeek, v)}
               {...exportProps}
               {...calendarProps}
