@@ -1,11 +1,11 @@
 import { AddTaskInline } from '@/components/AddTaskInline';
 import { TaskCard } from '@/components/TaskCard';
-import type { Project, TaskWithProject } from '@/types';
+import type { ProjectWithAreaAndCollaborators, TaskWithProject } from '@/types';
 
 interface Props {
   title: string;
   tasks: TaskWithProject[];
-  projects: Project[];
+  projects: ProjectWithAreaAndCollaborators[];
   onAdd: (text: string) => Promise<void>;
   onUpdate: (id: string, patch: Record<string, unknown>) => Promise<void>;
   onDelete: (id: string) => Promise<void>;

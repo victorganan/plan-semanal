@@ -6,14 +6,14 @@ import { AddTaskInline } from '@/components/AddTaskInline';
 import { TaskCard } from '@/components/TaskCard';
 import { areaBgClass } from '@/types';
 import { dateForDayOfWeek } from '@/lib/week';
-import type { Area, Project, TaskWithProject } from '@/types';
+import type { Area, ProjectWithAreaAndCollaborators, TaskWithProject } from '@/types';
 
 interface Props {
   area: Area;
   dayOfWeek: number;
   isoWeek: string;
   tasks: TaskWithProject[];
-  projects: Project[];
+  projects: ProjectWithAreaAndCollaborators[];
   onAdd: (areaId: string, text: string) => Promise<void>;
   onUpdate: (id: string, patch: Record<string, unknown>) => Promise<void>;
   onDelete: (id: string) => Promise<void>;

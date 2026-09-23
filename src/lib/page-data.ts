@@ -14,21 +14,31 @@ export async function getWeekPageData(userId: string, isoWeek: string) {
         days: { orderBy: { dayOfWeek: 'asc' } },
         tasks: {
           orderBy: [{ order: 'asc' }, { createdAt: 'asc' }],
-          include: { project: { include: { area: true } }, area: true, subtasks: true, recurringTemplate: true },
+          include: {
+            project: { include: { area: true, collaborators: true } },
+            area: true,
+            subtasks: true,
+            recurringTemplate: true,
+          },
         },
         habitCompletions: true,
         projectFocus: { include: { project: { include: { area: true } } } },
       },
     }) as Promise<WeekFull | null>,
     prisma.habit.findMany({ where: { userId, active: true }, orderBy: { order: 'asc' } }),
-    prisma.project.findMany({ where: { userId }, include: { area: true }, orderBy: { createdAt: 'desc' } }),
+    prisma.project.findMany({ where: { userId }, include: { area: true, collaborators: true }, orderBy: { createdAt: 'desc' } }),
     prisma.area.findMany({ where: { userId }, orderBy: { order: 'asc' } }),
     getTodoistToken(userId),
     hasCalendarAccess(userId),
     prisma.task.findMany({
       where: { userId, kind: 'BACKLOG' },
       orderBy: [{ order: 'asc' }, { createdAt: 'asc' }],
-      include: { project: { include: { area: true } }, area: true, subtasks: true, recurringTemplate: true },
+      include: {
+        project: { include: { area: true, collaborators: true } },
+        area: true,
+        subtasks: true,
+        recurringTemplate: true,
+      },
     }) as Promise<TaskWithProject[]>,
   ]);
 

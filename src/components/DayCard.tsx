@@ -1,7 +1,7 @@
 import { AreaColumn } from '@/components/AreaColumn';
 import { StarRating } from '@/components/StarRating';
 import { DAY_NAMES, dateForDayOfWeek } from '@/lib/week';
-import type { Area, Day, Project, TaskWithProject } from '@/types';
+import type { Area, Day, ProjectWithAreaAndCollaborators, TaskWithProject } from '@/types';
 import clsx from 'clsx';
 
 interface Props {
@@ -9,7 +9,7 @@ interface Props {
   dayOfWeek: number;
   day: Day | undefined;
   tasks: TaskWithProject[];
-  projects: Project[];
+  projects: ProjectWithAreaAndCollaborators[];
   areas: Area[];
   isToday: boolean;
   onAddTask: (areaId: string, text: string) => Promise<void>;

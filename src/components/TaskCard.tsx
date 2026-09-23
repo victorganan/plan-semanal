@@ -12,11 +12,11 @@ import { PRIORITY_LABELS, RECURRENCE_LABELS, formatDurationMinutes } from '@/typ
 import { describeRecurrence } from '@/lib/rrule-helpers';
 import type { RecurrenceValue } from '@/lib/rrule-helpers';
 import { DAY_NAMES, isoWeekOf, mondayBasedDayOfWeek } from '@/lib/week';
-import type { Area, Project, Task, TaskWithProject, RecurringTaskTemplate } from '@/types';
+import type { Area, ProjectWithAreaAndCollaborators, Task, TaskWithProject, RecurringTaskTemplate } from '@/types';
 
 interface Props {
   task: TaskWithProject;
-  projects: Project[];
+  projects: ProjectWithAreaAndCollaborators[];
   areas?: Area[];
   referenceDate?: Date;
   onUpdate: (id: string, patch: Record<string, unknown>) => Promise<void>;
@@ -63,6 +63,7 @@ export function TaskCard({
 }: Props) {
   const [open, setOpen] = useState(false);
   const [text, setText] = useState(task.text);
+  const [assignedTo, setAssignedTo] = useState(task.assignedTo ?? '');
   const [busy, setBusy] = useState(false);
   const initialSplit = splitScheduled(task.scheduledAt);
   const [date, setDate] = useState(initialSplit.date);
@@ -111,6 +112,11 @@ export function TaskCard({
     if (text.trim() && text !== task.text) await onUpdate(task.id, { text: text.trim() });
   }
 
+  async function saveAssignedTo() {
+    const next = assignedTo.trim() || null;
+    if (next !== (task.assignedTo ?? null)) await onUpdate(task.id, { assignedTo: next });
+  }
+
   async function toggleDone() {
     setBusy(true);
     await onUpdate(task.id, { done: !task.done });
@@ -136,6 +142,12 @@ export function TaskCard({
   const scheduledLabel = task.scheduledAt
     ? new Date(task.scheduledAt).toLocaleString('es-ES', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })
     : null;
+
+  const currentProject = projects.find((p) => p.id === task.projectId);
+  const collaboratorSuggestions = Array.from(
+    new Set((currentProject?.collaborators ?? projects.flatMap((p) => p.collaborators)).map((c) => c.name))
+  );
+  const assignedToListId = `assigned-to-${task.id}`;
 
   return (
     <div
@@ -182,6 +194,7 @@ export function TaskCard({
               <span className="rounded-full bg-base-border/50 px-2 py-0.5">{task.project.name}</span>
             ) : null}
             {scheduledLabel ? <span>📅 {scheduledLabel}</span> : null}
+            {task.assignedTo ? <span>👤 {task.assignedTo}</span> : null}
             {showRecurrence && task.recurrence !== 'NONE' ? <span>🔁 {RECURRENCE_LABELS[task.recurrence]}</span> : null}
             {task.parentTaskId ? <span>↳ subtarea</span> : null}
             {subtasks.length > 0 ? (
@@ -275,6 +288,24 @@ export function TaskCard({
                   </option>
                 ))}
               </select>
+            </label>
+            <label className="space-y-1">
+              <span className="block text-xs text-base-muted">Asignado a</span>
+              <input
+                value={assignedTo}
+                onChange={(e) => setAssignedTo(e.target.value)}
+                onBlur={saveAssignedTo}
+                placeholder="Tú mismo"
+                list={assignedToListId}
+                className="w-full rounded-lg border border-base-border bg-base-bg px-2 py-1.5 text-sm"
+              />
+              {collaboratorSuggestions.length > 0 ? (
+                <datalist id={assignedToListId}>
+                  {collaboratorSuggestions.map((name) => (
+                    <option key={name} value={name} />
+                  ))}
+                </datalist>
+              ) : null}
             </label>
             <div className="space-y-1">
               <span className="block text-xs text-base-muted">Fecha y hora</span>

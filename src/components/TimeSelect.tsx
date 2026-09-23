@@ -8,7 +8,7 @@ const ALL_SLOTS = Array.from({ length: 96 }, (_, i) => {
   return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
 });
 
-function nextQuarterHourFromNow(): string {
+export function nextQuarterHourFromNow(): string {
   const now = new Date();
   const rounded = Math.ceil(now.getMinutes() / 15) * 15;
   const hours = (now.getHours() + (rounded === 60 ? 1 : 0)) % 24;

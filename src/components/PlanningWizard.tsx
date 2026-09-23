@@ -6,12 +6,12 @@ import { ProjectFocusPicker } from '@/components/ProjectFocusPicker';
 import { PriorityListSection } from '@/components/PriorityListSection';
 import { InboxList } from '@/components/InboxList';
 import { ObjectivesForm } from '@/components/WeekMetaForm';
-import type { WeekFull, ProjectWithArea, Area, TaskWithProject } from '@/types';
+import type { WeekFull, ProjectWithAreaAndCollaborators, Area, TaskWithProject } from '@/types';
 
 interface Props {
   week: WeekFull;
   inbox: TaskWithProject[];
-  projects: ProjectWithArea[];
+  projects: ProjectWithAreaAndCollaborators[];
   areas: Area[];
   isoWeek: string;
   onSaveWeekMeta: (patch: Record<string, unknown>) => void;

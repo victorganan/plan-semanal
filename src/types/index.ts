@@ -14,7 +14,7 @@ import type {
 export type ProjectWithArea = Project & { area: Area };
 export type ProjectWithAreaAndCollaborators = ProjectWithArea & { collaborators: ProjectCollaborator[] };
 export type TaskWithProject = Task & {
-  project: ProjectWithArea | null;
+  project: ProjectWithAreaAndCollaborators | null;
   area: Area | null;
   subtasks: Task[];
   recurringTemplate: RecurringTaskTemplate | null;
@@ -81,4 +81,21 @@ export const RECURRENCE_LABELS: Record<string, string> = {
   WEEKLY: 'Semanal',
   MONTHLY: 'Mensual',
   YEARLY: 'Anual',
+};
+
+export const EISENHOWER_QUADRANTS = ['HACER', 'DECIDIR', 'DELEGAR', 'ALGUN_DIA'] as const;
+export type EisenhowerQuadrantValue = (typeof EISENHOWER_QUADRANTS)[number];
+
+export const EISENHOWER_LABELS: Record<EisenhowerQuadrantValue, string> = {
+  HACER: 'Hacer',
+  DECIDIR: 'Decidir',
+  DELEGAR: 'Delegar',
+  ALGUN_DIA: 'Algún día',
+};
+
+export const EISENHOWER_HINTS: Record<EisenhowerQuadrantValue, string> = {
+  HACER: 'Urgente e importante',
+  DECIDIR: 'Importante, no urgente',
+  DELEGAR: 'Urgente, no importante',
+  ALGUN_DIA: 'Ni urgente ni importante',
 };

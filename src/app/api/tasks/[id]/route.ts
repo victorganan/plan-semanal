@@ -21,6 +21,8 @@ const patchSchema = z.object({
   isoWeek: z.string().regex(/^\d{4}-W\d{2}$/).optional(),
   dayOfWeek: z.number().int().min(0).max(6).optional(),
   areaId: z.string().nullable().optional(),
+  quadrant: z.enum(['HACER', 'DECIDIR', 'DELEGAR', 'ALGUN_DIA']).nullable().optional(),
+  assignedTo: z.string().max(100).nullable().optional(),
 });
 
 async function loadOwnedTask(userId: string, id: string) {

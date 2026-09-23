@@ -1,10 +1,10 @@
 import { AddTaskInline } from '@/components/AddTaskInline';
 import { TaskCard } from '@/components/TaskCard';
-import type { Area, Project, TaskWithProject } from '@/types';
+import type { Area, ProjectWithAreaAndCollaborators, TaskWithProject } from '@/types';
 
 interface Props {
   tasks: TaskWithProject[];
-  projects: Project[];
+  projects: ProjectWithAreaAndCollaborators[];
   areas: Area[];
   currentIsoWeek: string;
   onAdd: (text: string) => Promise<void>;

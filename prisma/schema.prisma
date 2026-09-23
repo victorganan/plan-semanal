@@ -100,6 +100,13 @@ enum RecurrenceEndMode {
   AFTER_COUNT
 }
 
+enum EisenhowerQuadrant {
+  HACER
+  DECIDIR
+  DELEGAR
+  ALGUN_DIA
+}
+
 enum TaskKind {
   DAY_AREA
   PRIORITY_ACTION
@@ -204,6 +211,9 @@ model Task {
   done     Boolean  @default(false)
   priority Priority @default(MEDIUM)
   durationMinutes Int? // duración estimada en minutos (pasos de 15')
+
+  quadrant   EisenhowerQuadrant? // clasificación en la matriz de Eisenhower (urgente/importante)
+  assignedTo String?             // nombre de la persona asignada; vacío = tú mismo
 
   projectId   String?
   scheduledAt DateTime?

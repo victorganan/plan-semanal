@@ -19,6 +19,8 @@ const createSchema = z.object({
   scheduledAt: z.string().datetime().nullable().optional(),
   recurrence: z.enum(['NONE', 'DAILY', 'WEEKLY', 'MONTHLY', 'YEARLY']).optional(),
   parentTaskId: z.string().optional(),
+  quadrant: z.enum(['HACER', 'DECIDIR', 'DELEGAR', 'ALGUN_DIA']).nullable().optional(),
+  assignedTo: z.string().max(100).nullable().optional(),
 });
 
 export async function POST(req: NextRequest) {
@@ -83,6 +85,8 @@ export async function POST(req: NextRequest) {
       recurrence: body.recurrence ?? 'NONE',
       order: (maxOrder._max.order ?? -1) + 1,
       parentTaskId: body.parentTaskId,
+      quadrant: body.quadrant ?? undefined,
+      assignedTo: body.assignedTo ?? undefined,
     },
   });
 

@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { api } from '@/lib/api-client';
 import { currentIsoWeek } from '@/lib/week';
 import { useToast } from '@/components/Toast';
-import type { WeekFull, Habit, ProjectWithArea, Area, TaskWithProject } from '@/types';
+import type { WeekFull, Habit, ProjectWithAreaAndCollaborators, Area, TaskWithProject } from '@/types';
 import { DayCard } from '@/components/DayCard';
 import { HabitGrid } from '@/components/HabitGrid';
 import { MoodSliders } from '@/components/MoodSliders';
@@ -24,7 +24,7 @@ interface Props {
   initialWeek: WeekFull;
   initialInbox: TaskWithProject[];
   habits: Habit[];
-  projects: ProjectWithArea[];
+  projects: ProjectWithAreaAndCollaborators[];
   areas: Area[];
   isoWeek: string;
   mode: 'day' | 'week';
@@ -92,6 +92,8 @@ export function PlanWeekClient({
       done: false,
       priority: 'MEDIUM',
       durationMinutes: null,
+      quadrant: null,
+      assignedTo: null,
       projectId: null,
       project: null,
       scheduledAt: null,
@@ -133,6 +135,8 @@ export function PlanWeekClient({
       done: false,
       priority: 'MEDIUM',
       durationMinutes: null,
+      quadrant: null,
+      assignedTo: null,
       projectId: null,
       project: null,
       scheduledAt: null,
@@ -288,6 +292,8 @@ export function PlanWeekClient({
       done: false,
       priority: 'MEDIUM',
       durationMinutes: null,
+      quadrant: null,
+      assignedTo: null,
       projectId: null,
       project: null,
       scheduledAt: null,
@@ -480,7 +486,14 @@ export function PlanWeekClient({
 
       <MoodSliders mentalState={week.mentalState} physicalState={week.physicalState} onChange={saveWeekMeta} />
 
-      <EisenhowerMatrix tasks={week.tasks} />
+      <EisenhowerMatrix
+        tasks={week.tasks}
+        projects={projects}
+        calendarConnected={calendarConnected}
+        onUpdate={updateTask}
+        onDelete={deleteTask}
+        {...calendarProps}
+      />
 
       <div className="space-y-4">
         {week.days
