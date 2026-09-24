@@ -89,6 +89,8 @@ export async function POST(req: NextRequest) {
       parentTaskId: body.parentTaskId,
       quadrant: body.quadrant ?? undefined,
       assignedTo: body.assignedTo ?? undefined,
+      // Ya nace "procesada" si no entra en la Bandeja (no es BACKLOG suelta) o es una subtarea.
+      processedAt: body.kind !== 'BACKLOG' || body.parentTaskId ? new Date() : undefined,
     },
   });
 

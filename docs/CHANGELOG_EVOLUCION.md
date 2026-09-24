@@ -46,6 +46,22 @@ Registro de lo implementado, decisiones tomadas y pendientes durante la evoluci�
 - Sin cambios de modelo ni de lógica: commit de solo texto.
 - Verificado: `tsc --noEmit`, `eslint` y `next build` limpios; barrida final sin coincidencias de texto suelto en JSX; smoke test de `/login` en local confirmando el texto centralizado en runtime; revisión visual del Product Owner en claro y oscuro sobre Hoy/Semana, Bandeja, Cierre del día, Tu espacio, Ajustes, Dashboard y Herramientas.
 
+### Módulo 1.2 · Campos GTD de Task + migración
+
+**Completado y confirmado por el Product Owner.**
+
+- Nuevo enum `GtdStatus` (`ACTIVA` / `ESPERANDO` / `ALGUN_DIA`) y 9 campos nuevos en `Task`: `isPriority`, `firstStep`, `context` (contexto GTD con arroba: `@ordenador`, `@casa`, `@calle`…), `gtdStatus`, `processedAt`, `waitingOn`, `followUpDate`, `snoozeUntil`, `rescheduleCount`.
+- Migración de esquema puramente aditiva (`CREATE TYPE` + `ADD COLUMN` ×9), sin tocar datos existentes; se despliega sola con el build de Vercel sin riesgo.
+- `processedAt` (marca de "ya procesada", `null` = sigue en la Bandeja) se deriva en el backend, no es editable a mano: se rellena al crear una tarea que no sea BACKLOG suelta o que sea subtarea, y al salir de la Bandeja (se programa, cambia de `gtdStatus`, o se completa directamente).
+- `rescheduleCount` (contador de tarea atascada) solo se incrementa cuando se pospone una tarea **no completada** a una fecha **posterior** a la que ya tenía; no cuenta adelantar, asignar fecha por primera vez, cambiar solo la hora dentro del mismo día, ni mandar la tarea a Algún día/Esperando. Regla implementada como función pura en `src/lib/reschedule.ts`, con 7 casos cubiertos en `src/lib/reschedule.test.ts` (primer test suite del proyecto; se introduce `vitest`).
+- **Backfill de datos existentes** (no va en la migración de esquema, para poder revisarlo antes de aplicarlo en producción): endpoint temporal `GET /api/admin/backfill-task-gtd-fields`, protegido por login, alcance solo a las tareas del usuario que llama, idempotente (repetirlo no vuelve a tocar lo ya migrado). Sin `?apply=true` es un dry-run de solo lectura. Categoriza:
+  - BACKLOG de nivel superior sin procesar y con `quadrant = ALGUN_DIA` → `gtdStatus = ALGUN_DIA`, `processedAt = updatedAt`.
+  - Cualquier otra tarea sin procesar que no sea "BACKLOG de nivel superior sin subtareas" (incluye BACKLOG con subtareas ya organizado, subtareas, y tareas no-BACKLOG) → `processedAt = createdAt`.
+  - El resto (BACKLOG de nivel superior, sin subtareas, sin `quadrant = ALGUN_DIA`) se queda en la Bandeja sin procesar.
+- **Copia de seguridad**: sin acceso a la API de Neon ni a la conexión de producción desde el entorno de desarrollo, así que el Product Owner creó manualmente el branch de Neon `backup-antes-1-2` (a partir de production, auto-borrado en 7 días) antes de desplegar.
+- Verificado: `tsc --noEmit`, `eslint`, `vitest run` (7/7) y `next build` limpios; script de verificación contra Postgres local sembrando 5 casos representativos (Bandeja genuina, BACKLOG+Algún día, BACKLOG con subtareas, subtarea, tarea de día) confirmando dry-run, apply e idempotencia — descartado tras la verificación, no forma parte del repo.
+- Pendiente antes de cerrar el módulo: Product Owner visita el endpoint en producción (dry-run primero, revisa recuentos, luego `?apply=true`); una vez confirmado, se retira el endpoint `/api/admin/backfill-task-gtd-fields` en un commit aparte.
+
 ## Fase 2 · Beta: dirección, foco y aprendizaje
 
 _(sin empezar todavía)_

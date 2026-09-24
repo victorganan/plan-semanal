@@ -7,6 +7,8 @@ import { getOrCreateWeek } from '@/lib/recurring';
 import { durationMinutesSchema, executedMinutesSchema } from '@/lib/validation';
 import { syncParentCompletion } from '@/lib/subtasks';
 import { resortByScheduledTime } from '@/lib/task-order';
+import { shouldIncrementRescheduleCount } from '@/lib/reschedule';
+import { dateForDayOfWeek } from '@/lib/week';
 
 const patchSchema = z.object({
   text: z.string().min(1).max(500).optional(),
@@ -28,6 +30,13 @@ const patchSchema = z.object({
   assignedTo: z.string().max(100).nullable().optional(),
   isTop3: z.boolean().optional(),
   tagIds: z.array(z.string()).max(20).optional(),
+  isPriority: z.boolean().optional(),
+  firstStep: z.string().max(120).nullable().optional(),
+  context: z.string().max(50).nullable().optional(),
+  gtdStatus: z.enum(['ACTIVA', 'ESPERANDO', 'ALGUN_DIA']).optional(),
+  waitingOn: z.string().max(100).nullable().optional(),
+  followUpDate: z.string().datetime().nullable().optional(),
+  snoozeUntil: z.string().datetime().nullable().optional(),
 });
 
 async function loadOwnedTask(userId: string, id: string) {
@@ -45,12 +54,14 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   if (!existing) return NextResponse.json({ error: 'No encontrada' }, { status: 404 });
 
   const body = patchSchema.parse(await req.json());
-  const { dayOfWeek, isoWeek, kind, areaId, scheduledAt, tagIds, ...rest } = body;
+  const { dayOfWeek, isoWeek, kind, areaId, scheduledAt, tagIds, followUpDate, snoozeUntil, ...rest } = body;
 
   const nextKind = kind ?? existing.kind;
   const data: Record<string, unknown> = { ...rest };
   if (kind) data.kind = kind;
   if (scheduledAt !== undefined) data.scheduledAt = scheduledAt ? new Date(scheduledAt) : null;
+  if (followUpDate !== undefined) data.followUpDate = followUpDate ? new Date(followUpDate) : null;
+  if (snoozeUntil !== undefined) data.snoozeUntil = snoozeUntil ? new Date(snoozeUntil) : null;
   if (tagIds !== undefined) {
     // Solo etiquetas propias del usuario: evita asociar ids ajenos adivinados.
     const owned = await prisma.tag.findMany({ where: { id: { in: tagIds }, userId }, select: { id: true } });
@@ -94,6 +105,51 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     const top3Count = await prisma.task.count({ where: { dayId: effectiveDayId, isTop3: true, id: { not: id } } });
     if (top3Count >= 3) {
       return NextResponse.json({ error: 'Ya tienes 3 tareas destacadas para ese día' }, { status: 400 });
+    }
+  }
+
+  // La tarea sale de "bandeja sin procesar" (processedAt = null) la primera vez que:
+  // se programa a un día/prioritaria/llamada, se marca esperando/algún día, o se
+  // completa directamente (regla de los 2 minutos). No se expone como campo
+  // editable a mano: lo deriva el propio backend para que ninguna pantalla se
+  // olvide de marcarlo.
+  if (existing.processedAt === null) {
+    const leavesBacklog = nextKind !== 'BACKLOG' && existing.kind === 'BACKLOG';
+    const getsGtdStatus = body.gtdStatus !== undefined && body.gtdStatus !== existing.gtdStatus;
+    const getsCompleted = body.done === true;
+    if (leavesBacklog || getsGtdStatus || getsCompleted) {
+      data.processedAt = new Date();
+    }
+  }
+
+  // Contador de reprogramaciones (sección 8.3): solo cuenta posponer una tarea
+  // no completada a un día posterior; ver src/lib/reschedule.ts para la regla.
+  let nextEffectiveDate: Date | null | undefined;
+  if (data.scheduledAt !== undefined) {
+    nextEffectiveDate = data.scheduledAt as Date | null;
+  } else if (isoWeek !== undefined && dayOfWeek !== undefined) {
+    nextEffectiveDate = dateForDayOfWeek(isoWeek, dayOfWeek);
+  } else if (nextKind === 'BACKLOG' && existing.kind !== 'BACKLOG') {
+    nextEffectiveDate = null;
+  }
+  if (nextEffectiveDate !== undefined) {
+    let previousEffectiveDate: Date | null = existing.scheduledAt;
+    if (!previousEffectiveDate && existing.dayId) {
+      const previousDay = await prisma.day.findUnique({ where: { id: existing.dayId }, include: { week: true } });
+      if (previousDay) previousEffectiveDate = dateForDayOfWeek(previousDay.week.isoWeek, previousDay.dayOfWeek);
+    }
+    const nextGtdStatus = body.gtdStatus ?? existing.gtdStatus;
+    const movingToDeferred =
+      body.quadrant === 'ALGUN_DIA' || nextGtdStatus === 'ESPERANDO' || nextGtdStatus === 'ALGUN_DIA';
+    if (
+      shouldIncrementRescheduleCount({
+        done: body.done ?? existing.done,
+        previousEffectiveDate,
+        nextEffectiveDate,
+        movingToDeferred,
+      })
+    ) {
+      data.rescheduleCount = existing.rescheduleCount + 1;
     }
   }
 

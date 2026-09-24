@@ -118,6 +118,12 @@ enum TaskKind {
   BACKLOG
 }
 
+enum GtdStatus {
+  ACTIVA
+  ESPERANDO
+  ALGUN_DIA
+}
+
 enum ProjectStatus {
   ACTIVE
   COMPLETED
@@ -254,6 +260,18 @@ model Task {
   isTop3     Boolean             @default(false) // marcada como una de las 3 tareas clave del día (solo DAY_AREA)
 
   executedMinutes Int @default(0) // tiempo real invertido: manual o acumulado vía sesiones Pomodoro
+
+  isPriority Boolean @default(false) // Acción prioritaria: hace avanzar un Norte o es lo más importante del día/semana
+  firstStep  String? // Primer gesto: primer paso físico/digital inmediato (≤120 caracteres)
+  context    String? // contexto GTD, con arroba: @ordenador, @casa, @calle…
+
+  gtdStatus    GtdStatus @default(ACTIVA) // activa / esperando / algún día
+  processedAt  DateTime? // null = todavía en la Bandeja sin procesar
+  waitingOn    String? // persona de la que depende (gtdStatus = ESPERANDO)
+  followUpDate DateTime? // fecha de seguimiento (gtdStatus = ESPERANDO)
+  snoozeUntil  DateTime? // fecha de reaparición (gtdStatus = ALGUN_DIA)
+
+  rescheduleCount Int @default(0) // nº de veces que se ha pospuesto (no completada, se retrasa la fecha)
 
   projectId   String?
   scheduledAt DateTime?
