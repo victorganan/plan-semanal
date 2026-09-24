@@ -714,6 +714,7 @@ export function PlanWeekClient({
         onAdd={addBacklog}
         onUpdate={updateTask}
         onDelete={deleteTask}
+        {...calendarProps}
       />
 
       <div>

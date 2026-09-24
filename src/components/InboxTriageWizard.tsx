@@ -1,8 +1,10 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { api } from '@/lib/api-client';
 import type { Area, TaskWithProject } from '@/types';
-import { DAY_NAMES } from '@/lib/week';
+import { DAY_NAMES, dateForDayOfWeek } from '@/lib/week';
+import { TimeSelect } from '@/components/TimeSelect';
 import { text } from '@/i18n/es';
 
 interface Props {
@@ -11,10 +13,32 @@ interface Props {
   currentIsoWeek: string;
   onUpdate: (id: string, patch: Record<string, unknown>) => Promise<void>;
   onDelete: (id: string) => Promise<void>;
+  onCreateCalendarEvent?: (id: string) => Promise<void>;
   onClose: () => void;
 }
 
-type Step = 'actionable' | 'twoMinutes' | 'schedule' | 'notActionable';
+// Árbol de decisión de A.6.1. La cola se captura una sola vez al abrir:
+// `items` va encogiendo según se procesa cada tarea (sale de la Bandeja), y
+// si indexáramos sobre esa lista en vivo el índice se desalinearía y
+// saltaría elementos.
+type Step =
+  | 'actionable'
+  | 'notActionable'
+  | 'twoMinutes'
+  | 'timer'
+  | 'yourTurn'
+  | 'delegateChoice'
+  | 'waitForm'
+  | 'singleAction'
+  | 'schedule'
+  | 'calendarOffer'
+  | 'project';
+
+function dateStrFromDayOfWeek(isoWeek: string, dayOfWeek: number): string {
+  const d = dateForDayOfWeek(isoWeek, dayOfWeek);
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return `${d.getUTCFullYear()}-${pad(d.getUTCMonth() + 1)}-${pad(d.getUTCDate())}`;
+}
 
 function TwoMinuteTimer({ onDone }: { onDone: () => void }) {
   const [seconds, setSeconds] = useState(120);
@@ -38,51 +62,138 @@ function TwoMinuteTimer({ onDone }: { onDone: () => void }) {
   );
 }
 
-export function InboxTriageWizard({ items, areas, currentIsoWeek, onUpdate, onDelete, onClose }: Props) {
-  // La cola se captura una sola vez al abrir: `items` va encogiendo según se
-  // procesa cada tarea (sale de la bandeja), y si indexáramos sobre esa lista
-  // en vivo el índice se desalinearía y saltaría elementos.
+export function InboxTriageWizard({ items, areas, currentIsoWeek, onUpdate, onDelete, onCreateCalendarEvent, onClose }: Props) {
   const [queue] = useState(items);
   const [index, setIndex] = useState(0);
   const [step, setStep] = useState<Step>('actionable');
-  const [timerActive, setTimerActive] = useState(false);
+
   const [day, setDay] = useState(0);
   const [areaId, setAreaId] = useState(areas[0]?.id ?? '');
+  const [time, setTime] = useState('');
+  const [firstStep, setFirstStep] = useState('');
+  const [projectFirstStep, setProjectFirstStep] = useState('');
+  const [waitMode, setWaitMode] = useState<'wait' | 'delegate'>('wait');
+  const [waitPerson, setWaitPerson] = useState('');
+  const [waitFollowUp, setWaitFollowUp] = useState('');
+  const [busy, setBusy] = useState(false);
 
   const current = queue[index];
 
+  function resetFormState() {
+    setDay(0);
+    setAreaId(areas[0]?.id ?? '');
+    setTime('');
+    setFirstStep('');
+    setProjectFirstStep('');
+    setWaitPerson('');
+    setWaitFollowUp('');
+  }
+
   function advance() {
     setStep('actionable');
-    setTimerActive(false);
+    resetFormState();
+    setBusy(false);
     setIndex((i) => i + 1);
   }
 
+  async function run(action: () => Promise<void>) {
+    setBusy(true);
+    try {
+      await action();
+      advance();
+    } finally {
+      setBusy(false);
+    }
+  }
+
   async function markDone() {
-    await onUpdate(current.id, { done: true });
-    advance();
+    await run(() => onUpdate(current.id, { done: true }));
   }
 
   async function discard() {
-    await onDelete(current.id);
-    advance();
+    await run(() => onDelete(current.id));
   }
 
-  async function someday() {
-    await onUpdate(current.id, { quadrant: 'ALGUN_DIA' });
-    advance();
+  async function saveIdea() {
+    await run(async () => {
+      const tag = await api.post('/api/tags', { name: 'Idea' });
+      const tagIds = Array.from(new Set([...current.tags.map((t) => t.id), tag.id]));
+      await onUpdate(current.id, { gtdStatus: 'ALGUN_DIA', tagIds });
+    });
   }
 
-  async function schedule() {
+  async function saveSomeday() {
+    await run(() => onUpdate(current.id, { gtdStatus: 'ALGUN_DIA' }));
+  }
+
+  async function submitWaitForm() {
+    if (!waitPerson.trim() || !waitFollowUp) return;
+    await run(() =>
+      onUpdate(current.id, {
+        gtdStatus: 'ESPERANDO',
+        waitingOn: waitPerson.trim(),
+        followUpDate: new Date(waitFollowUp).toISOString(),
+        ...(waitMode === 'delegate' ? { assignedTo: waitPerson.trim() } : {}),
+      })
+    );
+  }
+
+  async function submitSchedule() {
+    // "Sin fecha todavía" (day === -1): la tarea se queda en Bandeja, solo
+    // organizada. No se le puede fijar área sin día (el modelo la limpia en
+    // cualquier tarea que no sea DAY_AREA), así que en ese caso no se pide.
+    if (day === -1) {
+      const patch: Record<string, unknown> = { markProcessed: true, processedAt: new Date() };
+      if (firstStep.trim()) patch.firstStep = firstStep.trim();
+      await run(() => onUpdate(current.id, patch));
+      return;
+    }
+
     if (!areaId) return;
-    await onUpdate(current.id, { kind: 'DAY_AREA', isoWeek: currentIsoWeek, dayOfWeek: day, areaId });
-    advance();
+    const patch: Record<string, unknown> = {
+      kind: 'DAY_AREA',
+      isoWeek: currentIsoWeek,
+      dayOfWeek: day,
+      areaId,
+    };
+    if (firstStep.trim()) patch.firstStep = firstStep.trim();
+    if (time) patch.scheduledAt = new Date(`${dateStrFromDayOfWeek(currentIsoWeek, day)}T${time}`).toISOString();
+    setBusy(true);
+    try {
+      await onUpdate(current.id, patch);
+      if (time) {
+        setStep('calendarOffer');
+        setBusy(false);
+      } else {
+        advance();
+      }
+    } catch {
+      setBusy(false);
+    }
+  }
+
+  async function createEventAndAdvance() {
+    setBusy(true);
+    try {
+      if (onCreateCalendarEvent) await onCreateCalendarEvent(current.id);
+    } finally {
+      advance();
+    }
+  }
+
+  async function submitProject() {
+    if (!projectFirstStep.trim()) return;
+    await run(async () => {
+      await api.post('/api/tasks', { kind: 'BACKLOG', text: projectFirstStep.trim(), parentTaskId: current.id });
+      await onUpdate(current.id, { markProcessed: true, processedAt: new Date() });
+    });
   }
 
   if (!current) {
     return (
       <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/40 p-4">
         <div className="w-full max-w-sm rounded-card bg-base-surface p-6 text-center shadow-xl">
-          <p className="mb-4 text-lg font-semibold">{text.inboxTriage.emptyTitle}</p>
+          <p className="mb-1 text-lg font-semibold">{text.inboxTriage.emptyTitle}</p>
           <p className="mb-4 text-sm text-base-muted">{text.inboxTriage.emptyBody}</p>
           <button onClick={onClose} className="rounded-full bg-accent px-5 py-2 text-sm font-semibold text-white">
             {text.inboxTriage.close}
@@ -130,46 +241,145 @@ export function InboxTriageWizard({ items, areas, currentIsoWeek, onUpdate, onDe
         ) : null}
 
         {step === 'notActionable' ? (
-          <div className="space-y-2">
-            <p className="mb-2 text-center text-sm text-base-muted">{text.inboxTriage.notActionableQuestion}</p>
-            <div className="flex gap-2">
-              <button
-                onClick={someday}
-                className="flex-1 rounded-full border border-base-border px-4 py-2 text-sm font-medium hover:bg-base-border/40"
-              >
-                {text.inboxTriage.someday}
-              </button>
-              <button
-                onClick={discard}
-                className="flex-1 rounded-full px-4 py-2 text-sm font-medium text-priority-high hover:bg-priority-high/10"
-              >
-                {text.inboxTriage.discard}
-              </button>
-            </div>
+          <div className="flex flex-col gap-2">
+            <button
+              disabled={busy}
+              onClick={saveIdea}
+              className="rounded-full border border-base-border px-4 py-2 text-sm font-medium hover:bg-base-border/40 disabled:opacity-40"
+            >
+              {text.inboxTriage.notActionableIdea}
+            </button>
+            <button
+              disabled={busy}
+              onClick={saveSomeday}
+              className="rounded-full border border-base-border px-4 py-2 text-sm font-medium hover:bg-base-border/40 disabled:opacity-40"
+            >
+              {text.inboxTriage.notActionableSomeday}
+            </button>
+            <button
+              disabled={busy}
+              onClick={discard}
+              className="rounded-full px-4 py-2 text-sm font-medium text-priority-high hover:bg-priority-high/10 disabled:opacity-40"
+            >
+              {text.inboxTriage.notActionableDiscard}
+            </button>
           </div>
         ) : null}
 
-        {step === 'twoMinutes' && !timerActive ? (
+        {step === 'twoMinutes' ? (
           <div className="space-y-2">
             <p className="mb-2 text-center text-sm text-base-muted">{text.inboxTriage.twoMinutesQuestion}</p>
             <div className="flex gap-2">
               <button
-                onClick={() => setTimerActive(true)}
+                onClick={() => setStep('timer')}
                 className="flex-1 rounded-full bg-accent px-4 py-2 text-sm font-semibold text-white"
               >
                 {text.inboxTriage.doItNow}
               </button>
               <button
-                onClick={() => setStep('schedule')}
+                onClick={() => setStep('yourTurn')}
                 className="flex-1 rounded-full border border-base-border px-4 py-2 text-sm font-medium hover:bg-base-border/40"
               >
-                {text.inboxTriage.reserveTime}
+                {text.inboxTriage.notTwoMinutes}
               </button>
             </div>
           </div>
         ) : null}
 
-        {step === 'twoMinutes' && timerActive ? <TwoMinuteTimer onDone={markDone} /> : null}
+        {step === 'timer' ? <TwoMinuteTimer onDone={markDone} /> : null}
+
+        {step === 'yourTurn' ? (
+          <div className="space-y-2">
+            <p className="mb-2 text-center text-sm text-base-muted">{text.inboxTriage.yourTurnQuestion}</p>
+            <div className="flex gap-2">
+              <button
+                onClick={() => setStep('singleAction')}
+                className="flex-1 rounded-full bg-accent px-4 py-2 text-sm font-semibold text-white"
+              >
+                {text.inboxTriage.yes}
+              </button>
+              <button
+                onClick={() => setStep('delegateChoice')}
+                className="flex-1 rounded-full border border-base-border px-4 py-2 text-sm font-medium hover:bg-base-border/40"
+              >
+                {text.inboxTriage.no}
+              </button>
+            </div>
+          </div>
+        ) : null}
+
+        {step === 'delegateChoice' ? (
+          <div className="flex gap-2">
+            <button
+              onClick={() => {
+                setWaitMode('wait');
+                setStep('waitForm');
+              }}
+              className="flex-1 rounded-full border border-base-border px-4 py-2 text-sm font-medium hover:bg-base-border/40"
+            >
+              {text.inboxTriage.waitForSomeone}
+            </button>
+            <button
+              onClick={() => {
+                setWaitMode('delegate');
+                setStep('waitForm');
+              }}
+              className="flex-1 rounded-full border border-base-border px-4 py-2 text-sm font-medium hover:bg-base-border/40"
+            >
+              {text.inboxTriage.delegate}
+            </button>
+          </div>
+        ) : null}
+
+        {step === 'waitForm' ? (
+          <div className="space-y-3">
+            <p className="text-center text-sm text-base-muted">
+              {waitMode === 'delegate' ? text.inboxTriage.waitFormTitleDelegate : text.inboxTriage.waitFormTitleWait}
+            </p>
+            <input
+              value={waitPerson}
+              onChange={(e) => setWaitPerson(e.target.value)}
+              placeholder={text.inboxTriage.waitFormPersonPlaceholder}
+              className="w-full rounded-lg border border-base-border bg-base-bg px-3 py-2 text-sm"
+            />
+            <label className="block text-xs text-base-muted">
+              {text.inboxTriage.waitFormFollowUpLabel}
+              <input
+                type="date"
+                value={waitFollowUp}
+                onChange={(e) => setWaitFollowUp(e.target.value)}
+                className="mt-1 w-full rounded-lg border border-base-border bg-base-bg px-3 py-2 text-sm"
+              />
+            </label>
+            <button
+              onClick={submitWaitForm}
+              disabled={!waitPerson.trim() || !waitFollowUp || busy}
+              className="w-full rounded-full bg-accent px-4 py-2 text-sm font-semibold text-white disabled:opacity-40"
+            >
+              {text.inboxTriage.waitFormSubmit}
+            </button>
+          </div>
+        ) : null}
+
+        {step === 'singleAction' ? (
+          <div className="space-y-2">
+            <p className="mb-2 text-center text-sm text-base-muted">{text.inboxTriage.singleActionQuestion}</p>
+            <div className="flex gap-2">
+              <button
+                onClick={() => setStep('schedule')}
+                className="flex-1 rounded-full bg-accent px-4 py-2 text-sm font-semibold text-white"
+              >
+                {text.inboxTriage.createTask}
+              </button>
+              <button
+                onClick={() => setStep('project')}
+                className="flex-1 rounded-full border border-base-border px-4 py-2 text-sm font-medium hover:bg-base-border/40"
+              >
+                {text.inboxTriage.createProject}
+              </button>
+            </div>
+          </div>
+        ) : null}
 
         {step === 'schedule' ? (
           <div className="space-y-3">
@@ -180,30 +390,91 @@ export function InboxTriageWizard({ items, areas, currentIsoWeek, onUpdate, onDe
                 onChange={(e) => setDay(Number(e.target.value))}
                 className="w-full rounded-lg border border-base-border bg-base-bg px-2 py-1.5 text-sm"
               >
+                <option value={-1}>{text.inboxTriage.noDateYet}</option>
                 {DAY_NAMES.map((d, i) => (
                   <option key={d} value={i}>
                     {d}
                   </option>
                 ))}
               </select>
-              <select
-                value={areaId}
-                onChange={(e) => setAreaId(e.target.value)}
-                className="w-full rounded-lg border border-base-border bg-base-bg px-2 py-1.5 text-sm"
-              >
-                {areas.map((a) => (
-                  <option key={a.id} value={a.id}>
-                    {a.name}
-                  </option>
-                ))}
-              </select>
+              {day !== -1 ? (
+                <select
+                  value={areaId}
+                  onChange={(e) => setAreaId(e.target.value)}
+                  className="w-full rounded-lg border border-base-border bg-base-bg px-2 py-1.5 text-sm"
+                >
+                  {areas.map((a) => (
+                    <option key={a.id} value={a.id}>
+                      {a.name}
+                    </option>
+                  ))}
+                </select>
+              ) : null}
             </div>
+            {day !== -1 ? (
+              <label className="block text-xs text-base-muted">
+                {text.inboxTriage.optionalTimeLabel}
+                <TimeSelect value={time} onChange={setTime} className="mt-1 w-full rounded-lg border border-base-border bg-base-bg px-2 py-1.5 text-sm" />
+              </label>
+            ) : null}
+            <label className="block text-xs text-base-muted">
+              {text.inboxTriage.optionalFirstStepLabel}
+              <input
+                value={firstStep}
+                onChange={(e) => setFirstStep(e.target.value)}
+                placeholder={text.inboxTriage.optionalFirstStepPlaceholder}
+                maxLength={120}
+                className="mt-1 w-full rounded-lg border border-base-border bg-base-bg px-3 py-2 text-sm"
+              />
+            </label>
             <button
-              onClick={schedule}
-              disabled={!areaId}
+              onClick={submitSchedule}
+              disabled={(day !== -1 && !areaId) || busy}
               className="w-full rounded-full bg-accent px-4 py-2 text-sm font-semibold text-white disabled:opacity-40"
             >
               {text.inboxTriage.scheduleButton}
+            </button>
+          </div>
+        ) : null}
+
+        {step === 'calendarOffer' ? (
+          <div className="space-y-3 text-center">
+            <p className="text-sm text-base-muted">{text.inboxTriage.fixedDateTimeQuestion}</p>
+            <div className="flex gap-2">
+              {onCreateCalendarEvent ? (
+                <button
+                  onClick={createEventAndAdvance}
+                  disabled={busy}
+                  className="flex-1 rounded-full bg-accent px-4 py-2 text-sm font-semibold text-white disabled:opacity-40"
+                >
+                  {text.inboxTriage.createEvent}
+                </button>
+              ) : null}
+              <button
+                onClick={advance}
+                className="flex-1 rounded-full border border-base-border px-4 py-2 text-sm font-medium hover:bg-base-border/40"
+              >
+                {text.inboxTriage.continueButton}
+              </button>
+            </div>
+          </div>
+        ) : null}
+
+        {step === 'project' ? (
+          <div className="space-y-3">
+            <p className="text-center text-sm text-base-muted">{text.inboxTriage.firstStepQuestion}</p>
+            <input
+              value={projectFirstStep}
+              onChange={(e) => setProjectFirstStep(e.target.value)}
+              placeholder={text.inboxTriage.firstStepPlaceholder}
+              className="w-full rounded-lg border border-base-border bg-base-bg px-3 py-2 text-sm"
+            />
+            <button
+              onClick={submitProject}
+              disabled={!projectFirstStep.trim() || busy}
+              className="w-full rounded-full bg-accent px-4 py-2 text-sm font-semibold text-white disabled:opacity-40"
+            >
+              {text.inboxTriage.firstStepSubmit}
             </button>
           </div>
         ) : null}

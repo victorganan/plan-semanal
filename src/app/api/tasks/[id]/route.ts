@@ -37,6 +37,11 @@ const patchSchema = z.object({
   waitingOn: z.string().max(100).nullable().optional(),
   followUpDate: z.string().datetime().nullable().optional(),
   snoozeUntil: z.string().datetime().nullable().optional(),
+  // Señal de intención, no un valor de columna: el propio backend calcula
+  // processedAt. La usa el asistente de Bandeja al crear un miniproyecto
+  // (BACKLOG con su primera subtarea), caso que no dispara ninguna de las
+  // otras condiciones de "sale de la Bandeja sin procesar".
+  markProcessed: z.literal(true).optional(),
 });
 
 async function loadOwnedTask(userId: string, id: string) {
@@ -54,7 +59,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   if (!existing) return NextResponse.json({ error: 'No encontrada' }, { status: 404 });
 
   const body = patchSchema.parse(await req.json());
-  const { dayOfWeek, isoWeek, kind, areaId, scheduledAt, tagIds, followUpDate, snoozeUntil, ...rest } = body;
+  const { dayOfWeek, isoWeek, kind, areaId, scheduledAt, tagIds, followUpDate, snoozeUntil, markProcessed, ...rest } = body;
 
   const nextKind = kind ?? existing.kind;
   const data: Record<string, unknown> = { ...rest };
@@ -117,7 +122,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     const leavesBacklog = nextKind !== 'BACKLOG' && existing.kind === 'BACKLOG';
     const getsGtdStatus = body.gtdStatus !== undefined && body.gtdStatus !== existing.gtdStatus;
     const getsCompleted = body.done === true;
-    if (leavesBacklog || getsGtdStatus || getsCompleted) {
+    if (leavesBacklog || getsGtdStatus || getsCompleted || markProcessed) {
       data.processedAt = new Date();
     }
   }

@@ -5,6 +5,7 @@ import { Footer } from '@/components/Footer';
 import { ThemeScript } from '@/components/ThemeScript';
 import { ToastProvider } from '@/components/Toast';
 import { RegisterServiceWorker } from '@/components/RegisterServiceWorker';
+import { QuickCapture } from '@/components/QuickCapture';
 import './globals.css';
 
 export const metadata: Metadata = {
@@ -38,6 +39,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
           {session?.user ? <NavBar userName={session.user.name} userImage={session.user.image} /> : null}
           <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-6 sm:px-6 sm:py-8">{children}</main>
           {session?.user ? <Footer /> : null}
+          {session?.user ? <QuickCapture /> : null}
         </ToastProvider>
       </body>
     </html>

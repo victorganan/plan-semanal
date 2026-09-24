@@ -28,6 +28,9 @@ interface Props {
   onCreateCalendarEvent?: (id: string) => Promise<void>;
   showRecurrence?: boolean;
   currentIsoWeek?: string;
+  // Permite arrastrar tarjetas que no son DAY_AREA (p.ej. tareas ya
+  // organizadas en la Bandeja, sin día todavía) a una columna de día+área.
+  dragEnabled?: boolean;
 }
 
 function templateToValue(t: RecurringTaskTemplate): RecurrenceValue {
@@ -64,6 +67,7 @@ export function TaskCard({
   onCreateCalendarEvent,
   showRecurrence,
   currentIsoWeek,
+  dragEnabled,
 }: Props) {
   const [open, setOpen] = useState(false);
   const [text, setText] = useState(task.text);
@@ -223,7 +227,7 @@ export function TaskCard({
 
   return (
     <div
-      draggable={task.kind === 'DAY_AREA'}
+      draggable={task.kind === 'DAY_AREA' || dragEnabled}
       onDragStart={(e) => {
         e.dataTransfer.setData('text/plain', task.id);
         e.dataTransfer.effectAllowed = 'move';
@@ -231,7 +235,7 @@ export function TaskCard({
       className={clsx(
         'rounded-card border border-base-border bg-base-surface transition',
         task.done && 'opacity-60',
-        task.kind === 'DAY_AREA' && 'cursor-grab active:cursor-grabbing'
+        (task.kind === 'DAY_AREA' || dragEnabled) && 'cursor-grab active:cursor-grabbing'
       )}
     >
       <div className="flex items-start gap-2 px-3 py-2.5">
