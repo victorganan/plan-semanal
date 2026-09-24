@@ -21,6 +21,7 @@ const HERRAMIENTAS_ITEMS = [
   { href: '/herramientas', label: 'Ver todas' },
   { href: '/herramientas/matriz', label: '🎯 Matriz de Eisenhower' },
   { href: '/herramientas/pomodoro', label: '🍅 Pomodoro' },
+  { href: '/herramientas/tiempo', label: '⏱️ Real vs. Estimado' },
 ];
 
 function HerramientasMenu() {

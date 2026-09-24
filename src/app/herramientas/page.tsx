@@ -30,6 +30,16 @@ export default function HerramientasPage() {
             Bloques de enfoque de 25 minutos con descansos, vinculados a tus tareas de hoy.
           </p>
         </Link>
+
+        <Link
+          href="/herramientas/tiempo"
+          className="block rounded-card border border-base-border bg-base-surface p-5 transition hover:border-accent"
+        >
+          <h2 className="text-lg font-semibold">⏱️ Real vs. Estimado</h2>
+          <p className="mt-1 text-sm text-base-muted">
+            Compara cuánto estimaste cada tarea con el tiempo que realmente le dedicaste.
+          </p>
+        </Link>
       </div>
     </div>
   );
