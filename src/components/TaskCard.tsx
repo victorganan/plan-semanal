@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import clsx from 'clsx';
 import { PriorityDot } from '@/components/PriorityDot';
 import { TimeSelect } from '@/components/TimeSelect';
@@ -80,6 +80,51 @@ export function TaskCard({
   const [recurrenceValue, setRecurrenceValue] = useState<RecurrenceValue | null>(() =>
     task.recurringTemplate ? templateToValue(task.recurringTemplate) : null
   );
+
+  // Cronómetro manual de tiempo ejecutado, desde la propia ficha de la tarea.
+  const [stopwatchRunning, setStopwatchRunning] = useState(false);
+  const [stopwatchAccumulatedSec, setStopwatchAccumulatedSec] = useState(0);
+  const [, forceTick] = useState(0);
+  const stopwatchStartRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    if (!stopwatchRunning) return;
+    const id = setInterval(() => forceTick((t) => t + 1), 1000);
+    return () => clearInterval(id);
+  }, [stopwatchRunning]);
+
+  const stopwatchElapsedSec =
+    stopwatchAccumulatedSec + (stopwatchRunning && stopwatchStartRef.current ? Math.floor((Date.now() - stopwatchStartRef.current) / 1000) : 0);
+
+  function formatElapsed(totalSeconds: number): string {
+    const h = Math.floor(totalSeconds / 3600);
+    const m = Math.floor((totalSeconds % 3600) / 60);
+    const s = totalSeconds % 60;
+    const pad = (n: number) => String(n).padStart(2, '0');
+    return h > 0 ? `${h}:${pad(m)}:${pad(s)}` : `${pad(m)}:${pad(s)}`;
+  }
+
+  function startStopwatch() {
+    stopwatchStartRef.current = Date.now();
+    setStopwatchRunning(true);
+  }
+
+  function pauseStopwatch() {
+    if (stopwatchStartRef.current) {
+      setStopwatchAccumulatedSec((s) => s + Math.floor((Date.now() - stopwatchStartRef.current!) / 1000));
+    }
+    stopwatchStartRef.current = null;
+    setStopwatchRunning(false);
+  }
+
+  async function stopStopwatch() {
+    const totalSec = stopwatchElapsedSec;
+    stopwatchStartRef.current = null;
+    setStopwatchRunning(false);
+    setStopwatchAccumulatedSec(0);
+    const minutes = Math.round(totalSec / 60);
+    await onUpdate(task.id, minutes > 0 ? { executedMinutes: task.executedMinutes + minutes, done: true } : { done: true });
+  }
 
   async function saveRecurrence(v: RecurrenceValue | null) {
     setRecurrenceBusy(true);
@@ -215,6 +260,7 @@ export function TaskCard({
               <PriorityDot priority={task.priority} /> {PRIORITY_LABELS[task.priority]}
             </span>
             {task.durationMinutes ? <span>· {formatDurationMinutes(task.durationMinutes)}</span> : null}
+            {task.executedMinutes > 0 ? <span>⏱ {formatDurationMinutes(task.executedMinutes)} ejecutado</span> : null}
             {task.description ? <span title={task.description}>📝</span> : null}
             {task.project ? (
               <span className="rounded-full bg-base-border/50 px-2 py-0.5">{task.project.name}</span>
@@ -384,6 +430,46 @@ export function TaskCard({
                   }}
                   className="rounded-lg border border-base-border bg-base-bg px-2 py-1.5 text-sm"
                 />
+              </div>
+            </div>
+          </div>
+
+          <div className="space-y-2 border-t border-base-border pt-3">
+            <span className="block text-xs text-base-muted">Tiempo ejecutado</span>
+            <div className="flex flex-wrap items-center gap-2">
+              <DurationPicker
+                minutes={task.executedMinutes}
+                maxHours={48}
+                onChange={(executedMinutes) => onUpdate(task.id, { executedMinutes: executedMinutes ?? 0 })}
+              />
+              {stopwatchRunning || stopwatchAccumulatedSec > 0 ? (
+                <span className="tabular-nums text-xs text-base-muted">⏱ {formatElapsed(stopwatchElapsedSec)}</span>
+              ) : null}
+              <div className="flex items-center gap-1.5">
+                <button
+                  type="button"
+                  onClick={startStopwatch}
+                  disabled={stopwatchRunning}
+                  className="rounded-full border border-base-border px-2.5 py-1 text-xs font-medium hover:bg-base-border/40 disabled:opacity-40"
+                >
+                  ● Grabar
+                </button>
+                <button
+                  type="button"
+                  onClick={pauseStopwatch}
+                  disabled={!stopwatchRunning}
+                  className="rounded-full border border-base-border px-2.5 py-1 text-xs font-medium hover:bg-base-border/40 disabled:opacity-40"
+                >
+                  ❚❚ Pausar
+                </button>
+                <button
+                  type="button"
+                  onClick={stopStopwatch}
+                  disabled={!stopwatchRunning && stopwatchAccumulatedSec === 0}
+                  className="rounded-full bg-accent px-2.5 py-1 text-xs font-medium text-white disabled:opacity-40"
+                >
+                  ■ Parar (completada)
+                </button>
               </div>
             </div>
           </div>

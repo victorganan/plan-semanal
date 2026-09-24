@@ -253,6 +253,8 @@ model Task {
   assignedTo String?             // nombre de la persona asignada; vacío = tú mismo
   isTop3     Boolean             @default(false) // marcada como una de las 3 tareas clave del día (solo DAY_AREA)
 
+  executedMinutes Int @default(0) // tiempo real invertido: manual o acumulado vía sesiones Pomodoro
+
   projectId   String?
   scheduledAt DateTime?
 

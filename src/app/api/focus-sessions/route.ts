@@ -52,14 +52,21 @@ export async function POST(req: NextRequest) {
     }
   }
 
-  const session = await prisma.focusSession.create({
-    data: {
-      userId,
-      taskId: body.taskId ?? undefined,
-      minutes: body.minutes,
-      startedAt: new Date(body.startedAt),
-    },
-    include: { task: { select: { id: true, text: true } } },
+  const session = await prisma.$transaction(async (tx) => {
+    const created = await tx.focusSession.create({
+      data: {
+        userId,
+        taskId: body.taskId ?? undefined,
+        minutes: body.minutes,
+        startedAt: new Date(body.startedAt),
+      },
+      include: { task: { select: { id: true, text: true } } },
+    });
+    // El tiempo ejecutado de la tarea acumula los minutos de cada pomodoro vinculado.
+    if (body.taskId) {
+      await tx.task.update({ where: { id: body.taskId }, data: { executedMinutes: { increment: body.minutes } } });
+    }
+    return created;
   });
 
   return NextResponse.json(session, { status: 201 });

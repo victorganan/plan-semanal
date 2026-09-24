@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import clsx from 'clsx';
 import { api } from '@/lib/api-client';
+import { useToast } from '@/components/Toast';
 
 type Phase = 'work' | 'short_break' | 'long_break';
 
@@ -53,7 +54,9 @@ function formatTime(totalSeconds: number): string {
   return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
 }
 
-export function PomodoroTimer({ todayTasks }: { todayTasks: TodayTask[] }) {
+export function PomodoroTimer({ todayTasks: initialTodayTasks }: { todayTasks: TodayTask[] }) {
+  const { showToast } = useToast();
+
   const [workMinutes, setWorkMinutes] = useState(25);
   const [shortBreakMinutes, setShortBreakMinutes] = useState(5);
   const [longBreakMinutes, setLongBreakMinutes] = useState(15);
@@ -64,9 +67,11 @@ export function PomodoroTimer({ todayTasks }: { todayTasks: TodayTask[] }) {
   const [running, setRunning] = useState(false);
   const [remaining, setRemaining] = useState(workMinutes * 60);
   const [cyclesCompleted, setCyclesCompleted] = useState(0);
+  const [todayTasks, setTodayTasks] = useState(initialTodayTasks);
   const [selectedTaskId, setSelectedTaskId] = useState('');
   const [pomodorosToday, setPomodorosToday] = useState(0);
   const [minutesToday, setMinutesToday] = useState(0);
+  const [taskCompletionPrompt, setTaskCompletionPrompt] = useState<TodayTask | null>(null);
 
   const endAtRef = useRef<number | null>(null);
   const phaseStartRef = useRef<string | null>(null);
@@ -123,47 +128,74 @@ export function PomodoroTimer({ todayTasks }: { todayTasks: TodayTask[] }) {
     endAtRef.current = null;
   }
 
-  async function handlePhaseComplete() {
+  // Registra el pomodoro trabajado (natural o adelantado) y pasa a descanso.
+  // Si hay una tarea vinculada, pregunta si ya se ha terminado.
+  async function finishWorkPhase(minutesWorked: number) {
     setRunning(false);
     playChime();
 
+    try {
+      await api.post('/api/focus-sessions', {
+        taskId: selectedTaskId || null,
+        minutes: minutesWorked,
+        startedAt: phaseStartRef.current ?? new Date(Date.now() - minutesWorked * 60000).toISOString(),
+      });
+      setPomodorosToday((n) => n + 1);
+      setMinutesToday((m) => m + minutesWorked);
+    } catch {
+      // si falla el registro, el temporizador sigue funcionando igualmente
+    }
+
+    const nextCycles = cyclesCompleted + 1;
+    setCyclesCompleted(nextCycles);
+    const nextPhase: Phase = nextCycles % cyclesBeforeLong === 0 ? 'long_break' : 'short_break';
+    setPhase(nextPhase);
+    setRemaining(durations[nextPhase] * 60);
+    endAtRef.current = null;
+    phaseStartRef.current = null;
+    notify('¡Pomodoro completado! 🍅', 'Toca descansar un momento.');
+
+    const linkedTask = selectedTaskId ? todayTasks.find((t) => t.id === selectedTaskId) : undefined;
+    if (linkedTask) setTaskCompletionPrompt(linkedTask);
+  }
+
+  async function handlePhaseComplete() {
     if (phase === 'work') {
-      const minutes = durations.work;
-      try {
-        await api.post('/api/focus-sessions', {
-          taskId: selectedTaskId || null,
-          minutes,
-          startedAt: phaseStartRef.current ?? new Date(Date.now() - minutes * 60000).toISOString(),
-        });
-        setPomodorosToday((n) => n + 1);
-        setMinutesToday((m) => m + minutes);
-      } catch {
-        // si falla el registro, el temporizador sigue funcionando igualmente
-      }
-      const nextCycles = cyclesCompleted + 1;
-      setCyclesCompleted(nextCycles);
-      const nextPhase: Phase = nextCycles % cyclesBeforeLong === 0 ? 'long_break' : 'short_break';
-      setPhase(nextPhase);
-      setRemaining(durations[nextPhase] * 60);
-      notify('¡Pomodoro completado! 🍅', 'Toca descansar un momento.');
+      await finishWorkPhase(durations.work);
     } else {
+      setRunning(false);
+      playChime();
       setPhase('work');
       setRemaining(durations.work * 60);
+      endAtRef.current = null;
       notify('Descanso terminado', 'A por el siguiente pomodoro cuando quieras.');
     }
   }
 
-  function skipPhase() {
+  // Botón manual: termina el enfoque antes de que suene el timer y arranca el descanso.
+  function startBreakNow() {
+    const elapsedMinutes = Math.max(1, Math.round((durations.work * 60 - remaining) / 60));
+    finishWorkPhase(elapsedMinutes);
+  }
+
+  function skipBreak() {
     setRunning(false);
-    if (phase === 'work') {
-      const nextCycles = cyclesCompleted + 1;
-      setCyclesCompleted(nextCycles);
-      const nextPhase: Phase = nextCycles % cyclesBeforeLong === 0 ? 'long_break' : 'short_break';
-      setPhase(nextPhase);
-      setRemaining(durations[nextPhase] * 60);
-    } else {
-      setPhase('work');
-      setRemaining(durations.work * 60);
+    setPhase('work');
+    setRemaining(durations.work * 60);
+    endAtRef.current = null;
+  }
+
+  async function confirmTaskDone(done: boolean) {
+    const task = taskCompletionPrompt;
+    setTaskCompletionPrompt(null);
+    if (!task || !done) return;
+    try {
+      await api.patch(`/api/tasks/${task.id}`, { done: true });
+      setTodayTasks((prev) => prev.filter((t) => t.id !== task.id));
+      if (selectedTaskId === task.id) setSelectedTaskId('');
+      showToast('Tarea marcada como completada');
+    } catch {
+      showToast('No se pudo marcar la tarea como completada', 'error');
     }
   }
 
@@ -171,6 +203,7 @@ export function PomodoroTimer({ todayTasks }: { todayTasks: TodayTask[] }) {
   const progress = total > 0 ? 1 - remaining / total : 0;
   const radius = 110;
   const circumference = 2 * Math.PI * radius;
+  const hasStartedWork = phase === 'work' && remaining !== durations.work * 60;
 
   return (
     <div className="mx-auto max-w-lg space-y-6">
@@ -206,6 +239,28 @@ export function PomodoroTimer({ todayTasks }: { todayTasks: TodayTask[] }) {
         <span className="text-5xl font-semibold tabular-nums">{formatTime(remaining)}</span>
       </div>
 
+      {taskCompletionPrompt ? (
+        <div className="mx-auto max-w-sm space-y-2 rounded-card border border-accent/40 bg-accent/5 p-3 text-center text-sm">
+          <p>
+            ¿Has terminado <strong>&ldquo;{taskCompletionPrompt.text}&rdquo;</strong>?
+          </p>
+          <div className="flex justify-center gap-2">
+            <button
+              onClick={() => confirmTaskDone(true)}
+              className="rounded-full bg-accent px-4 py-1.5 text-xs font-semibold text-white"
+            >
+              Sí, completada
+            </button>
+            <button
+              onClick={() => confirmTaskDone(false)}
+              className="rounded-full border border-base-border px-4 py-1.5 text-xs font-medium hover:bg-base-border/40"
+            >
+              No, sigue pendiente
+            </button>
+          </div>
+        </div>
+      ) : null}
+
       {phase === 'work' && todayTasks.length > 0 ? (
         <select
           value={selectedTaskId}
@@ -221,7 +276,7 @@ export function PomodoroTimer({ todayTasks }: { todayTasks: TodayTask[] }) {
         </select>
       ) : null}
 
-      <div className="flex items-center justify-center gap-3">
+      <div className="flex flex-wrap items-center justify-center gap-3">
         <button
           onClick={resetPhase}
           className="rounded-full border border-base-border px-4 py-2 text-sm font-medium hover:bg-base-border/40"
@@ -237,12 +292,22 @@ export function PomodoroTimer({ todayTasks }: { todayTasks: TodayTask[] }) {
             {remaining === total ? 'Empezar' : 'Continuar'}
           </button>
         )}
-        <button
-          onClick={skipPhase}
-          className="rounded-full border border-base-border px-4 py-2 text-sm font-medium hover:bg-base-border/40"
-        >
-          Saltar →
-        </button>
+        {phase === 'work' ? (
+          <button
+            onClick={startBreakNow}
+            disabled={!hasStartedWork}
+            className="rounded-full border border-base-border px-4 py-2 text-sm font-medium hover:bg-base-border/40 disabled:opacity-40"
+          >
+            Iniciar descanso →
+          </button>
+        ) : (
+          <button
+            onClick={skipBreak}
+            className="rounded-full border border-base-border px-4 py-2 text-sm font-medium hover:bg-base-border/40"
+          >
+            Saltar descanso →
+          </button>
+        )}
       </div>
 
       <div className="text-center">

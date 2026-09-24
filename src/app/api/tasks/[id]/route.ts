@@ -4,7 +4,7 @@ import { prisma } from '@/lib/prisma';
 import { logActivity } from '@/lib/audit';
 import { requireUserId, isResponse } from '@/lib/api-auth';
 import { getOrCreateWeek } from '@/lib/recurring';
-import { durationMinutesSchema } from '@/lib/validation';
+import { durationMinutesSchema, executedMinutesSchema } from '@/lib/validation';
 import { syncParentCompletion } from '@/lib/subtasks';
 import { resortByScheduledTime } from '@/lib/task-order';
 
@@ -14,6 +14,7 @@ const patchSchema = z.object({
   done: z.boolean().optional(),
   priority: z.enum(['LOW', 'MEDIUM', 'HIGH']).optional(),
   durationMinutes: durationMinutesSchema,
+  executedMinutes: executedMinutesSchema,
   projectId: z.string().nullable().optional(),
   scheduledAt: z.string().datetime().nullable().optional(),
   recurrence: z.enum(['NONE', 'DAILY', 'WEEKLY', 'MONTHLY', 'YEARLY']).optional(),

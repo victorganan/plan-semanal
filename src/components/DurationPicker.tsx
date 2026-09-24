@@ -1,17 +1,19 @@
 'use client';
 
 const MINUTE_OPTIONS = [0, 15, 30, 45];
-const HOUR_OPTIONS = Array.from({ length: 13 }, (_, i) => i); // 0-12h
 
 export function DurationPicker({
   minutes,
   onChange,
   className,
+  maxHours = 12,
 }: {
   minutes: number | null;
   onChange: (minutes: number | null) => void;
   className?: string;
+  maxHours?: number;
 }) {
+  const hourOptions = Array.from({ length: maxHours + 1 }, (_, i) => i);
   const hours = minutes ? Math.floor(minutes / 60) : 0;
   const mins = minutes ? minutes % 60 : 0;
 
@@ -29,7 +31,7 @@ export function DurationPicker({
           className="rounded-lg border border-base-border bg-base-bg px-2 py-1.5 text-sm"
           aria-label="Horas"
         >
-          {HOUR_OPTIONS.map((h) => (
+          {hourOptions.map((h) => (
             <option key={h} value={h}>
               {h}h
             </option>

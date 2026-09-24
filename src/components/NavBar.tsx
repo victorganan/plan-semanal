@@ -1,15 +1,67 @@
+'use client';
+
 import Link from 'next/link';
+import { useEffect, useRef, useState } from 'react';
+import clsx from 'clsx';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import { LogoutButton } from '@/components/LogoutButton';
 
-const LINKS = [
+const LINKS_BEFORE = [
   { href: '/hoy', label: 'Hoy' },
   { href: '/semana', label: 'Semana' },
   { href: '/tu-espacio', label: 'Tu espacio' },
-  { href: '/herramientas', label: 'Herramientas' },
+];
+
+const LINKS_AFTER = [
   { href: '/dashboard', label: 'Dashboard' },
   { href: '/ajustes', label: 'Ajustes' },
 ];
+
+const HERRAMIENTAS_ITEMS = [
+  { href: '/herramientas', label: 'Ver todas' },
+  { href: '/herramientas/matriz', label: '🎯 Matriz de Eisenhower' },
+  { href: '/herramientas/pomodoro', label: '🍅 Pomodoro' },
+];
+
+function HerramientasMenu() {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    function onClickOutside(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    }
+    document.addEventListener('mousedown', onClickOutside);
+    return () => document.removeEventListener('mousedown', onClickOutside);
+  }, [open]);
+
+  return (
+    <div ref={ref} className="relative shrink-0">
+      <button
+        onClick={() => setOpen((v) => !v)}
+        className="flex items-center gap-1 rounded-full px-3 py-1.5 text-sm font-medium text-base-muted transition hover:bg-base-border/40 hover:text-base-text"
+      >
+        Herramientas
+        <span className={clsx('text-[9px] transition-transform', open && 'rotate-180')}>▼</span>
+      </button>
+      {open ? (
+        <div className="absolute left-0 top-full z-50 mt-1 w-52 rounded-lg border border-base-border bg-base-bg py-1 shadow-lg">
+          {HERRAMIENTAS_ITEMS.map((item) => (
+            <Link
+              key={item.href}
+              href={item.href}
+              onClick={() => setOpen(false)}
+              className="block px-3 py-2 text-sm text-base-text hover:bg-base-border/40"
+            >
+              {item.label}
+            </Link>
+          ))}
+        </div>
+      ) : null}
+    </div>
+  );
+}
 
 export function NavBar({ userName, userImage }: { userName?: string | null; userImage?: string | null }) {
   return (
@@ -18,8 +70,18 @@ export function NavBar({ userName, userImage }: { userName?: string | null; user
         <Link href="/hoy" className="text-lg font-semibold tracking-tight">
           Nortvira
         </Link>
-        <nav className="hidden gap-1 sm:flex">
-          {LINKS.map((link) => (
+        <nav className="hidden items-center gap-1 sm:flex">
+          {LINKS_BEFORE.map((link) => (
+            <Link
+              key={link.href}
+              href={link.href}
+              className="rounded-full px-3 py-1.5 text-sm font-medium text-base-muted transition hover:bg-base-border/40 hover:text-base-text"
+            >
+              {link.label}
+            </Link>
+          ))}
+          <HerramientasMenu />
+          {LINKS_AFTER.map((link) => (
             <Link
               key={link.href}
               href={link.href}
@@ -38,8 +100,18 @@ export function NavBar({ userName, userImage }: { userName?: string | null; user
           <LogoutButton />
         </div>
       </div>
-      <nav className="flex gap-1 overflow-x-auto border-t border-base-border px-4 py-2 sm:hidden">
-        {LINKS.map((link) => (
+      <nav className="flex items-center gap-1 overflow-x-auto border-t border-base-border px-4 py-2 sm:hidden">
+        {LINKS_BEFORE.map((link) => (
+          <Link
+            key={link.href}
+            href={link.href}
+            className="shrink-0 rounded-full px-3 py-1.5 text-sm font-medium text-base-muted transition hover:bg-base-border/40 hover:text-base-text"
+          >
+            {link.label}
+          </Link>
+        ))}
+        <HerramientasMenu />
+        {LINKS_AFTER.map((link) => (
           <Link
             key={link.href}
             href={link.href}
