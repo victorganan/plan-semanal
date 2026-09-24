@@ -14,6 +14,7 @@ interface Props {
   onUpdate: (id: string, patch: Record<string, unknown>) => Promise<void>;
   onDelete: (id: string) => Promise<void>;
   onCreateCalendarEvent?: (id: string) => Promise<void>;
+  defaultOpen?: boolean;
 }
 
 function todayDateString(): string {
@@ -36,8 +37,8 @@ const QUADRANT_STYLES: Record<EisenhowerQuadrantValue, string> = {
   ALGUN_DIA: 'border-base-border bg-base-bg/50',
 };
 
-export function EisenhowerMatrix({ tasks, projects, calendarConnected, onUpdate, onDelete, onCreateCalendarEvent }: Props) {
-  const [open, setOpen] = useState(false);
+export function EisenhowerMatrix({ tasks, projects, calendarConnected, onUpdate, onDelete, onCreateCalendarEvent, defaultOpen }: Props) {
+  const [open, setOpen] = useState(defaultOpen ?? false);
   const [dragOverQuadrant, setDragOverQuadrant] = useState<EisenhowerQuadrantValue | null>(null);
   const [actionFor, setActionFor] = useState<{ taskId: string; quadrant: EisenhowerQuadrantValue } | null>(null);
   const [decideDate, setDecideDate] = useState('');

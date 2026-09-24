@@ -2,6 +2,7 @@ import { prisma } from '@/lib/prisma';
 import { getOrCreateWeek } from '@/lib/recurring';
 import { getTodoistToken } from '@/lib/todoist';
 import { hasCalendarAccess } from '@/lib/google-calendar';
+import { currentIsoWeek, todayDayOfWeek } from '@/lib/week';
 import type { WeekFull, TaskWithProject } from '@/types';
 
 export async function getWeekPageData(userId: string, isoWeek: string) {
@@ -58,4 +59,25 @@ export async function getWeekPageData(userId: string, isoWeek: string) {
     inbox,
     dailyCapacityMinutes: user?.dailyCapacityMinutes ?? 300,
   };
+}
+
+export async function getTodayPendingTasks(userId: string): Promise<{ id: string; text: string }[]> {
+  const week = await getOrCreateWeek(userId, currentIsoWeek());
+  const today = await prisma.day.findUnique({
+    where: { weekId_dayOfWeek: { weekId: week.id, dayOfWeek: todayDayOfWeek() } },
+  });
+
+  return prisma.task.findMany({
+    where: {
+      userId,
+      done: false,
+      parentTaskId: null,
+      OR: [
+        { kind: 'DAY_AREA', dayId: today?.id ?? '__none__' },
+        { kind: { in: ['PRIORITY_ACTION', 'CALL'] }, weekId: week.id },
+      ],
+    },
+    select: { id: true, text: true },
+    orderBy: [{ order: 'asc' }, { createdAt: 'asc' }],
+  });
 }

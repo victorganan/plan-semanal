@@ -13,7 +13,6 @@ import { ObjectivesForm, EvaluationForm } from '@/components/WeekMetaForm';
 import { PriorityListSection } from '@/components/PriorityListSection';
 import { ProjectFocusPicker } from '@/components/ProjectFocusPicker';
 import { InboxList } from '@/components/InboxList';
-import { EisenhowerMatrix } from '@/components/EisenhowerMatrix';
 import { PlanningWizard } from '@/components/PlanningWizard';
 import { DayCloseRitual } from '@/components/DayCloseRitual';
 import { WeekNav } from '@/components/WeekNav';
@@ -617,15 +616,6 @@ export function PlanWeekClient({
       ) : null}
 
       <MoodSliders mentalState={week.mentalState} physicalState={week.physicalState} onChange={saveWeekMeta} />
-
-      <EisenhowerMatrix
-        tasks={week.tasks}
-        projects={projects}
-        calendarConnected={calendarConnected}
-        onUpdate={updateTask}
-        onDelete={deleteTask}
-        {...calendarProps}
-      />
 
       <div className="space-y-4">
         {week.days

@@ -6,6 +6,7 @@ const LINKS = [
   { href: '/hoy', label: 'Hoy' },
   { href: '/semana', label: 'Semana' },
   { href: '/tu-espacio', label: 'Tu espacio' },
+  { href: '/herramientas', label: 'Herramientas' },
   { href: '/dashboard', label: 'Dashboard' },
   { href: '/ajustes', label: 'Ajustes' },
 ];

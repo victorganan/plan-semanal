@@ -29,6 +29,7 @@ model User {
   pushSubscriptions PushSubscription[]
   areas             Area[]
   tags              Tag[]
+  focusSessions     FocusSession[]
 
   weeklyReminderDayOfWeek Int? // 0=lunes .. 6=domingo
   weeklyReminderTime      String? // "HH:MM"
@@ -150,6 +151,22 @@ model Tag {
   @@index([userId])
 }
 
+model FocusSession {
+  id        String   @id @default(cuid())
+  userId    String
+  taskId    String? // ausente si el pomodoro se hizo sin vincular a una tarea
+  minutes   Int // duración real enfocada (normalmente 25, pero puede pararse antes)
+  startedAt DateTime
+
+  user User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  task Task? @relation(fields: [taskId], references: [id], onDelete: SetNull)
+
+  createdAt DateTime @default(now())
+
+  @@index([userId, startedAt])
+  @@index([taskId])
+}
+
 model Area {
   id          String  @id @default(cuid())
   userId      String
@@ -255,6 +272,7 @@ model Task {
   parentTask Task?  @relation("TaskSubtasks", fields: [parentTaskId], references: [id], onDelete: Cascade)
   subtasks   Task[] @relation("TaskSubtasks")
   tags       Tag[]
+  focusSessions FocusSession[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
