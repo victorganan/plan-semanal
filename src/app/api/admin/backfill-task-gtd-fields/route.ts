@@ -7,8 +7,24 @@ import { requireUserId, isResponse } from '@/lib/api-auth';
 // repetirlo no vuelve a tocar lo ya migrado). Sin ?apply=true es una
 // simulación de solo lectura: enseña los recuentos sin escribir nada.
 // Se retira en cuanto el Product Owner confirme el resultado en producción.
+//
+// Los tres primeros grupos son exactamente lo que se ve hoy en la Bandeja
+// (BACKLOG de nivel superior): quedan sin procesar, pasan a Algún día, o ya
+// cuentan como procesadas por tener subtareas. El cuarto grupo es todo lo
+// demás (tareas de día/prioridad/llamada y subtareas): no aparecen en la
+// Bandeja, pero también reciben processedAt = createdAt para que el módulo
+// 1.3 (que usará processedAt como marca general de "ya procesada") no las
+// trate como pendientes de triaje.
 
-const DEFERRED_WHERE = `
+const INBOX_STAYS_WHERE = `
+    t."kind" = 'BACKLOG'
+    AND t."parentTaskId" IS NULL
+    AND t."processedAt" IS NULL
+    AND (t."quadrant" IS NULL OR t."quadrant" != 'ALGUN_DIA')
+    AND NOT EXISTS (SELECT 1 FROM "Task" s WHERE s."parentTaskId" = t.id)
+`;
+
+const INBOX_TO_ALGUN_DIA_WHERE = `
     t."kind" = 'BACKLOG'
     AND t."parentTaskId" IS NULL
     AND t."quadrant" = 'ALGUN_DIA'
@@ -16,25 +32,28 @@ const DEFERRED_WHERE = `
     AND NOT EXISTS (SELECT 1 FROM "Task" s WHERE s."parentTaskId" = t.id)
 `;
 
-// Solo tareas de la Bandeja (BACKLOG de nivel superior) que ya tienen
-// subtareas: un miniproyecto ya organizado, no algo pendiente de decidir.
-// El resto de tipos de tarea (día, prioridad, llamada) y las subtareas en
-// sí no se tocan: processedAt solo tiene sentido para distinguir qué sigue
-// sin procesar en la Bandeja, no se usa en ningún otro sitio de la app.
-const PROCESSED_WHERE = `
+const INBOX_TO_PROCESADA_WHERE = `
     t."kind" = 'BACKLOG'
     AND t."parentTaskId" IS NULL
     AND t."processedAt" IS NULL
     AND EXISTS (SELECT 1 FROM "Task" s WHERE s."parentTaskId" = t.id)
 `;
 
-const STILL_INBOX_WHERE = `
-    t."kind" = 'BACKLOG'
-    AND t."parentTaskId" IS NULL
-    AND t."processedAt" IS NULL
-    AND (t."quadrant" IS NULL OR t."quadrant" != 'ALGUN_DIA')
-    AND NOT EXISTS (SELECT 1 FROM "Task" s WHERE s."parentTaskId" = t.id)
+// Todo lo que no es BACKLOG de nivel superior: tareas de día/prioridad/
+// llamada, y subtareas (de cualquier kind). Nunca aparecen en la Bandeja,
+// así que no importa si ya tenían quadrant o no.
+const OTHER_TASKS_WHERE = `
+    t."processedAt" IS NULL
+    AND NOT (t."kind" = 'BACKLOG' AND t."parentTaskId" IS NULL)
 `;
+
+async function countFor(userId: string, where: string) {
+  const rows = await prisma.$queryRawUnsafe<{ count: number }[]>(
+    `SELECT COUNT(*)::int AS count FROM "Task" t WHERE t."userId" = $1 AND ${where}`,
+    userId
+  );
+  return rows[0].count;
+}
 
 export async function GET(req: NextRequest) {
   const userId = await requireUserId();
@@ -43,49 +62,46 @@ export async function GET(req: NextRequest) {
   const apply = req.nextUrl.searchParams.get('apply') === 'true';
 
   if (!apply) {
-    const [deferred, processed, stillInbox] = await Promise.all([
-      prisma.$queryRawUnsafe<{ count: number }[]>(
-        `SELECT COUNT(*)::int AS count FROM "Task" t WHERE t."userId" = $1 AND ${DEFERRED_WHERE}`,
-        userId
-      ),
-      prisma.$queryRawUnsafe<{ count: number }[]>(
-        `SELECT COUNT(*)::int AS count FROM "Task" t WHERE t."userId" = $1 AND ${PROCESSED_WHERE}`,
-        userId
-      ),
-      prisma.$queryRawUnsafe<{ count: number }[]>(
-        `SELECT COUNT(*)::int AS count FROM "Task" t WHERE t."userId" = $1 AND ${STILL_INBOX_WHERE}`,
-        userId
-      ),
+    const [inboxStays, inboxToAlgunDia, inboxToProcesada, otherTasksToProcesada, totalTasks] = await Promise.all([
+      countFor(userId, INBOX_STAYS_WHERE),
+      countFor(userId, INBOX_TO_ALGUN_DIA_WHERE),
+      countFor(userId, INBOX_TO_PROCESADA_WHERE),
+      countFor(userId, OTHER_TASKS_WHERE),
+      prisma.task.count({ where: { userId } }),
     ]);
     return NextResponse.json({
       dryRun: true,
-      wouldMarkAlgunDia: deferred[0].count,
-      wouldMarkProcesada: processed[0].count,
-      staysInInbox: stillInbox[0].count,
+      inboxStays,
+      inboxToAlgunDia,
+      inboxToProcesada,
+      otherTasksToProcesada,
+      totalTasks,
       hint: 'Repite la llamada con ?apply=true para aplicar de verdad.',
     });
   }
 
-  const [deferredCount, processedCount] = await Promise.all([
+  const [algunDiaCount, inboxProcesadaCount, otherProcesadaCount] = await Promise.all([
     prisma.$executeRawUnsafe(
-      `UPDATE "Task" t SET "gtdStatus" = 'ALGUN_DIA', "processedAt" = t."updatedAt" WHERE t."userId" = $1 AND ${DEFERRED_WHERE}`,
+      `UPDATE "Task" t SET "gtdStatus" = 'ALGUN_DIA', "processedAt" = t."updatedAt" WHERE t."userId" = $1 AND ${INBOX_TO_ALGUN_DIA_WHERE}`,
       userId
     ),
     prisma.$executeRawUnsafe(
-      `UPDATE "Task" t SET "processedAt" = t."createdAt" WHERE t."userId" = $1 AND ${PROCESSED_WHERE}`,
+      `UPDATE "Task" t SET "processedAt" = t."createdAt" WHERE t."userId" = $1 AND ${INBOX_TO_PROCESADA_WHERE}`,
+      userId
+    ),
+    prisma.$executeRawUnsafe(
+      `UPDATE "Task" t SET "processedAt" = t."createdAt" WHERE t."userId" = $1 AND ${OTHER_TASKS_WHERE}`,
       userId
     ),
   ]);
 
-  const stillInbox = await prisma.$queryRawUnsafe<{ count: number }[]>(
-    `SELECT COUNT(*)::int AS count FROM "Task" t WHERE t."userId" = $1 AND ${STILL_INBOX_WHERE}`,
-    userId
-  );
+  const inboxStays = await countFor(userId, INBOX_STAYS_WHERE);
 
   return NextResponse.json({
     ok: true,
-    markedAlgunDia: deferredCount,
-    markedProcesada: processedCount,
-    staysInInbox: stillInbox[0].count,
+    markedAlgunDia: algunDiaCount,
+    markedInboxProcesada: inboxProcesadaCount,
+    markedOtherProcesada: otherProcesadaCount,
+    inboxStays,
   });
 }
