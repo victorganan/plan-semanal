@@ -16,13 +16,16 @@ const DEFERRED_WHERE = `
     AND NOT EXISTS (SELECT 1 FROM "Task" s WHERE s."parentTaskId" = t.id)
 `;
 
+// Solo tareas de la Bandeja (BACKLOG de nivel superior) que ya tienen
+// subtareas: un miniproyecto ya organizado, no algo pendiente de decidir.
+// El resto de tipos de tarea (día, prioridad, llamada) y las subtareas en
+// sí no se tocan: processedAt solo tiene sentido para distinguir qué sigue
+// sin procesar en la Bandeja, no se usa en ningún otro sitio de la app.
 const PROCESSED_WHERE = `
-    t."processedAt" IS NULL
-    AND NOT (
-      t."kind" = 'BACKLOG'
-      AND t."parentTaskId" IS NULL
-      AND NOT EXISTS (SELECT 1 FROM "Task" s WHERE s."parentTaskId" = t.id)
-    )
+    t."kind" = 'BACKLOG'
+    AND t."parentTaskId" IS NULL
+    AND t."processedAt" IS NULL
+    AND EXISTS (SELECT 1 FROM "Task" s WHERE s."parentTaskId" = t.id)
 `;
 
 const STILL_INBOX_WHERE = `
