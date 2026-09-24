@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import clsx from 'clsx';
+import { text } from '@/i18n/es';
 
 interface Option {
   id: string;
@@ -24,9 +25,9 @@ export function MultiSelectDropdown({
   options,
   selectedIds,
   onToggle,
-  placeholder = 'Buscar…',
-  emptyLabel = 'Sin resultados.',
-  noSelectionLabel = 'Nada seleccionado todavía.',
+  placeholder = text.multiSelect.searchPlaceholder,
+  emptyLabel = text.multiSelect.noResults,
+  noSelectionLabel = text.multiSelect.noSelection,
 }: Props) {
   const [open, setOpen] = useState(false);
   const [openUpward, setOpenUpward] = useState(false);
@@ -68,7 +69,7 @@ export function MultiSelectDropdown({
         {selected.map((o) => (
           <span key={o.id} className="inline-flex items-center gap-1 rounded-full bg-accent/10 px-2.5 py-1 text-xs text-accent">
             {o.label}
-            <button type="button" onClick={() => onToggle(o.id, false)} aria-label={`Quitar ${o.label}`} className="hover:opacity-70">
+            <button type="button" onClick={() => onToggle(o.id, false)} aria-label={text.multiSelect.removeAriaLabel(o.label)} className="hover:opacity-70">
               ✕
             </button>
           </span>
@@ -82,7 +83,7 @@ export function MultiSelectDropdown({
         onClick={toggleOpen}
         className="w-full rounded-lg border border-base-border bg-base-bg px-3 py-1.5 text-left text-sm text-base-muted hover:border-accent"
       >
-        + Añadir…
+        {text.multiSelect.addTrigger}
       </button>
 
       {open ? (

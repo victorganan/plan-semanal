@@ -1,6 +1,7 @@
 'use client';
 
 import { Bar, BarChart, CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
+import { text } from '@/i18n/es';
 
 interface Stats {
   completionByArea: { areaId: string; areaName: string; areaColorIndex: number; done: number; total: number; rate: number }[];
@@ -56,29 +57,29 @@ export function DashboardClient({ stats }: { stats: Stats }) {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-semibold">Dashboard</h1>
-        <p className="text-sm text-base-muted">Productividad de las últimas semanas.</p>
+        <h1 className="text-2xl font-semibold">{text.dashboard.title}</h1>
+        <p className="text-sm text-base-muted">{text.dashboard.subtitle}</p>
       </div>
 
       <div className="grid gap-4 sm:grid-cols-3">
         <div className="rounded-card border border-base-border bg-base-surface p-4">
-          <p className="text-xs text-base-muted">Racha de hábitos</p>
+          <p className="text-xs text-base-muted">{text.dashboard.habitStreak}</p>
           <p className="mt-1 text-3xl font-semibold text-accent">{stats.streak}</p>
-          <p className="text-xs text-base-muted">días consecutivos con todos los hábitos cumplidos</p>
+          <p className="text-xs text-base-muted">{text.dashboard.habitStreakSuffix}</p>
         </div>
         <div className="rounded-card border border-base-border bg-base-surface p-4">
-          <p className="text-xs text-base-muted">Cumplimiento general (última semana)</p>
+          <p className="text-xs text-base-muted">{text.dashboard.overallCompletion}</p>
           <p className="mt-1 text-3xl font-semibold">
             {trendData.length ? `${trendData[trendData.length - 1].rate}%` : '—'}
           </p>
         </div>
         <div className="rounded-card border border-base-border bg-base-surface p-4">
-          <p className="text-xs text-base-muted">Hábitos activos</p>
+          <p className="text-xs text-base-muted">{text.dashboard.activeHabits}</p>
           <p className="mt-1 text-3xl font-semibold">{stats.habitAdherence.length}</p>
         </div>
       </div>
 
-      <ChartCard title="Cumplimiento por área">
+      <ChartCard title={text.dashboard.completionByArea}>
         <div className="h-64">
           <ResponsiveContainer width="100%" height="100%">
             <BarChart data={areaData} margin={{ top: 8, right: 8, left: -16, bottom: 0 }}>
@@ -92,7 +93,7 @@ export function DashboardClient({ stats }: { stats: Stats }) {
                 tickLine={false}
               />
               <Tooltip
-                formatter={(value: number, _name, item) => [`${value}% (${item.payload.done}/${item.payload.total})`, 'Cumplimiento']}
+                formatter={(value: number, _name, item) => [`${value}% (${item.payload.done}/${item.payload.total})`, text.dashboard.tooltipCompliance]}
                 contentStyle={{ background: 'rgb(var(--color-surface))', border: '1px solid rgb(var(--color-border))', borderRadius: 8, fontSize: 12 }}
               />
               <Bar dataKey="rate" radius={[4, 4, 0, 0]}>
@@ -105,7 +106,7 @@ export function DashboardClient({ stats }: { stats: Stats }) {
         </div>
       </ChartCard>
 
-      <ChartCard title="Tendencia de cumplimiento (semanas)">
+      <ChartCard title={text.dashboard.completionTrend}>
         <div className="h-64">
           <ResponsiveContainer width="100%" height="100%">
             <LineChart data={trendData} margin={{ top: 8, right: 8, left: -16, bottom: 0 }}>
@@ -119,7 +120,7 @@ export function DashboardClient({ stats }: { stats: Stats }) {
                 tickLine={false}
               />
               <Tooltip
-                formatter={(value: number) => [`${value}%`, 'Cumplimiento']}
+                formatter={(value: number) => [`${value}%`, text.dashboard.tooltipCompliance]}
                 contentStyle={{ background: 'rgb(var(--color-surface))', border: '1px solid rgb(var(--color-border))', borderRadius: 8, fontSize: 12 }}
               />
               <Line type="monotone" dataKey="rate" stroke="rgb(var(--color-accent))" strokeWidth={2} dot={{ r: 4 }} />
@@ -128,9 +129,9 @@ export function DashboardClient({ stats }: { stats: Stats }) {
         </div>
       </ChartCard>
 
-      <ChartCard title="Cumplimiento por nivel (Miniproyectos, subtareas, tareas sueltas)">
+      <ChartCard title={text.dashboard.completionByLevel}>
         {stats.completionByLevel.every((l) => l.total === 0) ? (
-          <p className="text-sm text-base-muted">Sin tareas en este periodo.</p>
+          <p className="text-sm text-base-muted">{text.dashboard.noTasksInPeriod}</p>
         ) : (
           <div className="space-y-3">
             {stats.completionByLevel.map((l) => (
@@ -150,9 +151,9 @@ export function DashboardClient({ stats }: { stats: Stats }) {
         )}
       </ChartCard>
 
-      <ChartCard title="Adherencia a hábitos">
+      <ChartCard title={text.dashboard.habitAdherence}>
         {stats.habitAdherence.length === 0 ? (
-          <p className="text-sm text-base-muted">Sin hábitos activos todavía.</p>
+          <p className="text-sm text-base-muted">{text.dashboard.noActiveHabits}</p>
         ) : (
           <div className="space-y-3">
             {stats.habitAdherence.map((h) => (

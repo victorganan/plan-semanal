@@ -10,19 +10,20 @@ import {
   describeRecurrence,
 } from '@/lib/rrule-helpers';
 import type { Preset, RecurrenceValue, RecurrenceFreq } from '@/lib/rrule-helpers';
+import { text } from '@/i18n/es';
 
 const WEEKDAY_INITIALS = ['L', 'M', 'X', 'J', 'V', 'S', 'D'];
 
 function unitLabel(freq: RecurrenceFreq, n: number): string {
   switch (freq) {
     case 'DAILY':
-      return n === 1 ? 'día' : 'días';
+      return text.recurrenceEditor.unitDay(n);
     case 'WEEKLY':
-      return n === 1 ? 'semana' : 'semanas';
+      return text.recurrenceEditor.unitWeek(n);
     case 'MONTHLY':
-      return n === 1 ? 'mes' : 'meses';
+      return text.recurrenceEditor.unitMonth(n);
     case 'YEARLY':
-      return n === 1 ? 'año' : 'años';
+      return text.recurrenceEditor.unitYear(n);
   }
 }
 
@@ -87,7 +88,7 @@ export function RecurrenceEditor({
       {preset === 'CUSTOM' ? (
         <div className="space-y-3 rounded-lg border border-base-border bg-base-surface p-3">
           <div className="flex flex-wrap items-center gap-2 text-sm">
-            <span className="text-xs text-base-muted">Repetir cada</span>
+            <span className="text-xs text-base-muted">{text.recurrenceEditor.repeatEvery}</span>
             <input
               type="number"
               min={1}
@@ -111,7 +112,7 @@ export function RecurrenceEditor({
 
           {custom.freq === 'WEEKLY' ? (
             <div>
-              <span className="mb-1.5 block text-xs text-base-muted">Se repite el</span>
+              <span className="mb-1.5 block text-xs text-base-muted">{text.recurrenceEditor.repeatsOn}</span>
               <div className="flex gap-1.5">
                 {WEEKDAY_INITIALS.map((label, d) => (
                   <button
@@ -140,16 +141,16 @@ export function RecurrenceEditor({
                 onChange={(e) => updateCustom({ monthlyByNthWeekday: e.target.checked })}
                 className="mt-0.5"
               />
-              El mismo día de la semana cada mes (en vez del mismo número de día)
+              {text.recurrenceEditor.monthlyByNthWeekday}
             </label>
           ) : null}
 
           <div>
-            <span className="mb-1.5 block text-xs text-base-muted">Termina</span>
+            <span className="mb-1.5 block text-xs text-base-muted">{text.recurrenceEditor.endsLabel}</span>
             <div className="space-y-1.5 text-xs">
               <label className="flex items-center gap-2">
                 <input type="radio" checked={custom.endMode === 'NEVER'} onChange={() => updateCustom({ endMode: 'NEVER' })} />
-                Nunca
+                {text.recurrenceEditor.endsNever}
               </label>
               <label className="flex items-center gap-2">
                 <input
@@ -157,7 +158,7 @@ export function RecurrenceEditor({
                   checked={custom.endMode === 'ON_DATE'}
                   onChange={() => updateCustom({ endMode: 'ON_DATE', endDate: custom.endDate ?? defaultEndDate(referenceDate) })}
                 />
-                El
+                {text.recurrenceEditor.endsOn}
                 <input
                   type="date"
                   value={custom.endDate ?? defaultEndDate(referenceDate)}
@@ -172,7 +173,7 @@ export function RecurrenceEditor({
                   checked={custom.endMode === 'AFTER_COUNT'}
                   onChange={() => updateCustom({ endMode: 'AFTER_COUNT', endCount: custom.endCount ?? 13 })}
                 />
-                Después de
+                {text.recurrenceEditor.endsAfter}
                 <input
                   type="number"
                   min={1}
@@ -182,7 +183,7 @@ export function RecurrenceEditor({
                   disabled={custom.endMode !== 'AFTER_COUNT'}
                   className="w-16 rounded-lg border border-base-border bg-base-bg px-2 py-1 text-xs disabled:opacity-40"
                 />
-                repeticiones
+                {text.recurrenceEditor.endsAfterSuffix}
               </label>
             </div>
           </div>

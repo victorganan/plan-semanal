@@ -19,6 +19,8 @@ import { WeekNav } from '@/components/WeekNav';
 import { DayNav } from '@/components/DayNav';
 import { ViewSwitcher } from '@/components/ViewSwitcher';
 import { DAY_NAMES, dateForDayOfWeek, addWeeks } from '@/lib/week';
+// Alias: muchos callbacks locales de este componente usan `text` como nombre de parámetro.
+import { text as t } from '@/i18n/es';
 
 interface Props {
   initialWeek: WeekFull;
@@ -127,7 +129,7 @@ export function PlanWeekClient({
       }));
     } catch {
       setWeek((w) => ({ ...w, tasks: w.tasks.filter((t) => t.id !== optimistic.id) }));
-      showToast('No se pudo crear la tarea', 'error');
+      showToast(t.planWeekClient.createTaskError, 'error');
     }
   }
 
@@ -171,7 +173,7 @@ export function PlanWeekClient({
       );
     } catch {
       setInbox((prev) => prev.filter((t) => t.id !== optimistic.id));
-      showToast('No se pudo guardar en la bandeja de entrada', 'error');
+      showToast(t.planWeekClient.saveInboxError, 'error');
     }
   }
 
@@ -244,7 +246,7 @@ export function PlanWeekClient({
       } else {
         setInbox((prev) => prev.map((t) => (t.id === id ? previous : t)));
       }
-      showToast(err instanceof ApiError ? err.message : 'No se pudo guardar el cambio', 'error');
+      showToast(err instanceof ApiError ? err.message : t.planWeekClient.saveChangeError, 'error');
     }
   }
 
@@ -265,7 +267,7 @@ export function PlanWeekClient({
         ...w,
         tasks: w.tasks.map((t) => (previousOrders.has(t.id) ? { ...t, order: previousOrders.get(t.id)! } : t)),
       }));
-      showToast('No se pudo reordenar', 'error');
+      showToast(t.planWeekClient.reorderError, 'error');
     }
   }
 
@@ -282,25 +284,25 @@ export function PlanWeekClient({
     } catch {
       if (location === 'week') setWeek((w) => ({ ...w, tasks: [...w.tasks, previous] }));
       else setInbox((prev) => [...prev, previous]);
-      showToast('No se pudo eliminar la tarea', 'error');
+      showToast(t.planWeekClient.deleteTaskError, 'error');
     }
   }
 
   async function exportTodoist(id: string) {
     try {
       await api.post('/api/integrations/todoist/export', { taskId: id });
-      showToast('Tarea exportada a Todoist');
+      showToast(t.planWeekClient.exportedTodoist);
     } catch {
-      showToast('No se pudo exportar a Todoist', 'error');
+      showToast(t.planWeekClient.exportTodoistError, 'error');
     }
   }
 
   async function createCalendarEvent(id: string) {
     try {
       await api.post('/api/integrations/calendar/create-event', { taskId: id });
-      showToast('Evento creado correctamente en Google Calendar');
+      showToast(t.planWeekClient.calendarEventCreated);
     } catch {
-      showToast('No se pudo crear el evento en Calendar', 'error');
+      showToast(t.planWeekClient.calendarEventError, 'error');
     }
   }
 
@@ -318,7 +320,7 @@ export function PlanWeekClient({
       await api.patch(`/api/habits/${habitId}/completions`, { isoWeek, dayOfWeek, done });
     } catch {
       setWeek((w) => ({ ...w, habitCompletions: previous }));
-      showToast('No se pudo guardar el hábito', 'error');
+      showToast(t.planWeekClient.saveHabitError, 'error');
     }
   }
 
@@ -329,7 +331,7 @@ export function PlanWeekClient({
     try {
       await api.patch(`/api/weeks/${isoWeek}`, patch);
     } catch {
-      showToast('No se pudo guardar', 'error');
+      showToast(t.planWeekClient.saveGenericError, 'error');
       await hardRefresh();
     }
   }
@@ -343,7 +345,7 @@ export function PlanWeekClient({
     try {
       await api.patch(`/api/weeks/${isoWeek}`, { days: [{ dayOfWeek, starRating: value }] });
     } catch {
-      showToast('No se pudo guardar la valoración', 'error');
+      showToast(t.planWeekClient.saveRatingError, 'error');
       await hardRefresh();
     }
   }
@@ -357,7 +359,7 @@ export function PlanWeekClient({
     try {
       await api.patch(`/api/weeks/${isoWeek}`, { days: [{ dayOfWeek, journalNote: value }] });
     } catch {
-      showToast('No se pudo guardar el diario', 'error');
+      showToast(t.planWeekClient.saveJournalError, 'error');
       await hardRefresh();
     }
   }
@@ -413,7 +415,7 @@ export function PlanWeekClient({
     } catch {
       setInbox((prev) => prev.filter((t) => t.id !== id));
       setWeek((w) => ({ ...w, [field]: (w[field] ?? []).filter((x: string) => x !== id) }));
-      showToast('No se pudo crear la tarea', 'error');
+      showToast(t.planWeekClient.createTaskError, 'error');
     }
   }
 
@@ -435,7 +437,7 @@ export function PlanWeekClient({
       else await api.delete(`/api/weeks/${isoWeek}/project-focus`, { projectId });
     } catch {
       setWeek((w) => ({ ...w, projectFocus: previous }));
-      showToast('No se pudo actualizar el foco de proyectos', 'error');
+      showToast(t.planWeekClient.saveProjectFocusError, 'error');
     }
   }
 
@@ -463,7 +465,7 @@ export function PlanWeekClient({
       <div className="space-y-6">
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div>
-            <h1 className="text-2xl font-semibold">{isViewingToday ? 'Hoy' : DAY_NAMES[viewDow]}</h1>
+            <h1 className="text-2xl font-semibold">{isViewingToday ? t.planWeekClient.todayTitle : DAY_NAMES[viewDow]}</h1>
             <p className="text-sm text-base-muted">
               {viewDate.toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long', timeZone: 'UTC' })}
             </p>
@@ -473,13 +475,13 @@ export function PlanWeekClient({
               onClick={() => setWizardOpen(true)}
               className="rounded-full border border-accent px-3 py-1.5 text-sm font-medium text-accent hover:bg-accent/10"
             >
-              ✨ Planificar la semana
+              {t.planWeekClient.openReflectionMoment}
             </button>
             <button
               onClick={() => setCloseRitualOpen(true)}
               className="rounded-full border border-base-border px-3 py-1.5 text-sm font-medium hover:bg-base-border/40"
             >
-              🌙 Cerrar el día
+              {t.planWeekClient.closeDayButton}
             </button>
             <ViewSwitcher mode="day" isoWeek={isoWeek} />
             <DayNav isoWeek={isoWeek} dayOfWeek={viewDow} />
@@ -510,7 +512,7 @@ export function PlanWeekClient({
 
         {closeRitualOpen ? (
           <DayCloseRitual
-            dayLabel={isViewingToday ? 'hoy' : `el ${DAY_NAMES[viewDow].toLowerCase()}`}
+            dayLabel={isViewingToday ? t.planWeekClient.dayLabelToday : t.planWeekClient.dayLabelOther(DAY_NAMES[viewDow])}
             tasks={dayTasks}
             tomorrowLabel={DAY_NAMES[tomorrowDow]}
             tomorrowTasks={tomorrowTasks}
@@ -550,13 +552,13 @@ export function PlanWeekClient({
         <div className="grid gap-4 lg:grid-cols-2">
           <div>
             <h3 className="mb-2 text-sm font-semibold text-base-muted">
-              {isViewingToday ? 'Hábitos de hoy' : `Hábitos del ${DAY_NAMES[viewDow].toLowerCase()}`}
+              {isViewingToday ? t.planWeekClient.todayHabits : t.planWeekClient.dayHabits(DAY_NAMES[viewDow])}
             </h3>
             <HabitGrid habits={habits} completions={week.habitCompletions} onToggle={toggleHabit} mode="today" todayDow={viewDow} />
           </div>
           <div className="space-y-4">
             <PriorityListSection
-              title="Acciones prioritarias / No olvidar"
+              title={t.planWeekClient.priorityActionsTitle}
               tasks={priorityTasks}
               projects={projects}
               tags={tags}
@@ -567,7 +569,7 @@ export function PlanWeekClient({
               {...calendarProps}
             />
             <PriorityListSection
-              title="Llamadas"
+              title={t.planWeekClient.callsTitle}
               tasks={callTasks}
               projects={projects}
               tags={tags}
@@ -586,13 +588,13 @@ export function PlanWeekClient({
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-4">
-        <h1 className="text-2xl font-semibold">Semana</h1>
+        <h1 className="text-2xl font-semibold">{t.planWeekClient.weekTitle}</h1>
         <div className="flex flex-wrap items-center gap-2">
           <button
             onClick={() => setWizardOpen(true)}
             className="rounded-full border border-accent px-3 py-1.5 text-sm font-medium text-accent hover:bg-accent/10"
           >
-            ✨ Asistente de planificación
+            {t.planWeekClient.openReflectionMoment}
           </button>
           <ViewSwitcher mode="week" isoWeek={isoWeek} />
           <WeekNav isoWeek={isoWeek} />
@@ -649,7 +651,7 @@ export function PlanWeekClient({
 
       <div className="grid gap-4 lg:grid-cols-2">
         <PriorityListSection
-          title="Acciones prioritarias / No olvidar"
+          title={t.planWeekClient.priorityActionsTitle}
           tasks={priorityTasks}
           projects={projects}
           tags={tags}
@@ -660,7 +662,7 @@ export function PlanWeekClient({
           {...calendarProps}
         />
         <PriorityListSection
-          title="Llamadas"
+          title={t.planWeekClient.callsTitle}
           tasks={callTasks}
           projects={projects}
           tags={tags}
@@ -688,7 +690,7 @@ export function PlanWeekClient({
       />
 
       <div>
-        <h3 className="mb-2 text-sm font-semibold text-base-muted">Hábitos (lunes a viernes)</h3>
+        <h3 className="mb-2 text-sm font-semibold text-base-muted">{t.planWeekClient.weekHabits}</h3>
         <div className="rounded-card border border-base-border bg-base-surface p-4">
           <HabitGrid habits={habits} completions={week.habitCompletions} onToggle={toggleHabit} mode="week" todayDow={todayDow} />
         </div>

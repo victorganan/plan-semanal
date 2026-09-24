@@ -1,11 +1,12 @@
 import Link from 'next/link';
+import { text } from '@/i18n/es';
 
 const LINKS = [
-  { href: '/hoy', label: 'Hoy' },
-  { href: '/semana', label: 'Semana' },
-  { href: '/tu-espacio', label: 'Tu espacio' },
-  { href: '/dashboard', label: 'Dashboard' },
-  { href: '/ajustes', label: 'Ajustes' },
+  { href: '/hoy', label: text.nav.hoy },
+  { href: '/semana', label: text.nav.semana },
+  { href: '/tu-espacio', label: text.nav.tuEspacio },
+  { href: '/dashboard', label: text.nav.dashboard },
+  { href: '/ajustes', label: text.nav.ajustes },
 ];
 
 export function Footer() {
@@ -20,7 +21,7 @@ export function Footer() {
           ))}
         </nav>
         <p>
-          <span className="font-medium text-base-text">Nortvira</span> · tu semana, con rumbo
+          <span className="font-medium text-base-text">Nortvira</span> · {text.footer.tagline}
         </p>
       </div>
     </footer>

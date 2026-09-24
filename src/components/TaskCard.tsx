@@ -13,6 +13,8 @@ import { describeRecurrence } from '@/lib/rrule-helpers';
 import type { RecurrenceValue } from '@/lib/rrule-helpers';
 import { DAY_NAMES, isoWeekOf, mondayBasedDayOfWeek } from '@/lib/week';
 import type { Area, ProjectWithAreaAndCollaborators, Task, TaskWithProject, RecurringTaskTemplate, Tag } from '@/types';
+// Alias: el estado local de este componente ya usa el nombre `text` para el título de la tarea.
+import { text as t } from '@/i18n/es';
 
 interface Props {
   task: TaskWithProject;
@@ -236,7 +238,7 @@ export function TaskCard({
         <button
           onClick={toggleDone}
           disabled={busy}
-          aria-label={task.done ? 'Marcar como pendiente' : 'Marcar como hecha'}
+          aria-label={t.taskCard.toggleDoneAriaLabel(task.done)}
           className={clsx(
             'mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full border-2 text-xs transition',
             task.done ? 'border-accent bg-accent text-white' : 'border-base-border text-transparent hover:border-accent'
@@ -260,7 +262,7 @@ export function TaskCard({
               <PriorityDot priority={task.priority} /> {PRIORITY_LABELS[task.priority]}
             </span>
             {task.durationMinutes ? <span>· {formatDurationMinutes(task.durationMinutes)}</span> : null}
-            {task.executedMinutes > 0 ? <span>⏱ {formatDurationMinutes(task.executedMinutes)} ejecutado</span> : null}
+            {task.executedMinutes > 0 ? <span>⏱ {formatDurationMinutes(task.executedMinutes)} {t.taskCard.executedSuffix}</span> : null}
             {task.description ? <span title={task.description}>📝</span> : null}
             {task.project ? (
               <span className="rounded-full bg-base-border/50 px-2 py-0.5">{task.project.name}</span>
@@ -312,7 +314,7 @@ export function TaskCard({
                 disabled={!moveArea}
                 className="rounded-full bg-accent px-3 py-1 text-xs font-medium text-white disabled:opacity-40"
               >
-                Mover a esta semana →
+                {t.taskCard.moveToWeek}
               </button>
             </div>
           ) : null}
@@ -321,8 +323,8 @@ export function TaskCard({
         {task.kind === 'DAY_AREA' ? (
           <button
             onClick={() => onUpdate(task.id, { isTop3: !task.isTop3 })}
-            aria-label={task.isTop3 ? 'Quitar de Top 3 del día' : 'Marcar como Top 3 del día'}
-            title={task.isTop3 ? 'Quitar de Top 3 del día' : 'Marcar como Top 3 del día'}
+            aria-label={t.taskCard.top3AriaLabel(task.isTop3)}
+            title={t.taskCard.top3AriaLabel(task.isTop3)}
             className={clsx(
               'shrink-0 rounded-full p-1.5 transition hover:bg-base-border/40',
               task.isTop3 ? 'text-amber-500' : 'text-base-muted/50 hover:text-base-muted'
@@ -334,7 +336,7 @@ export function TaskCard({
 
         <button
           onClick={() => setOpen((v) => !v)}
-          aria-label="Editar tarea"
+          aria-label={t.taskCard.editAriaLabel}
           className="shrink-0 rounded-full p-1.5 text-base-muted transition hover:bg-base-border/40 hover:text-base-text"
         >
           ✏️
@@ -344,20 +346,20 @@ export function TaskCard({
       {open ? (
         <div className="space-y-3 border-t border-base-border px-3 py-3 text-sm">
           <label className="block space-y-1">
-            <span className="block text-xs text-base-muted">Descripción</span>
+            <span className="block text-xs text-base-muted">{t.taskCard.description}</span>
             <textarea
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               onBlur={saveDescription}
               rows={3}
-              placeholder="Notas, contexto o detalles de esta tarea…"
+              placeholder={t.taskCard.descriptionPlaceholder}
               className="w-full rounded-lg border border-base-border bg-base-bg px-2 py-1.5 text-sm"
             />
           </label>
 
           <div className="grid grid-cols-2 gap-3">
             <label className="space-y-1">
-              <span className="block text-xs text-base-muted">Prioridad</span>
+              <span className="block text-xs text-base-muted">{t.taskCard.priority}</span>
               <select
                 value={task.priority}
                 onChange={(e) => onUpdate(task.id, { priority: e.target.value })}
@@ -371,20 +373,20 @@ export function TaskCard({
               </select>
             </label>
             <label className="space-y-1">
-              <span className="block text-xs text-base-muted">Duración estimada</span>
+              <span className="block text-xs text-base-muted">{t.taskCard.estimatedDuration}</span>
               <DurationPicker
                 minutes={task.durationMinutes}
                 onChange={(durationMinutes) => onUpdate(task.id, { durationMinutes })}
               />
             </label>
             <label className="space-y-1">
-              <span className="block text-xs text-base-muted">Proyecto</span>
+              <span className="block text-xs text-base-muted">{t.taskCard.project}</span>
               <select
                 value={task.projectId ?? ''}
                 onChange={(e) => onUpdate(task.id, { projectId: e.target.value || null })}
                 className="w-full rounded-lg border border-base-border bg-base-bg px-2 py-1.5 text-sm"
               >
-                <option value="">Sin proyecto</option>
+                <option value="">{t.taskCard.noProject}</option>
                 {projects.map((p) => (
                   <option key={p.id} value={p.id}>
                     {p.name}
@@ -393,12 +395,12 @@ export function TaskCard({
               </select>
             </label>
             <label className="space-y-1">
-              <span className="block text-xs text-base-muted">Asignado a</span>
+              <span className="block text-xs text-base-muted">{t.taskCard.assignedTo}</span>
               <input
                 value={assignedTo}
                 onChange={(e) => setAssignedTo(e.target.value)}
                 onBlur={saveAssignedTo}
-                placeholder="Tú mismo"
+                placeholder={t.taskCard.assignedToPlaceholder}
                 list={assignedToListId}
                 className="w-full rounded-lg border border-base-border bg-base-bg px-2 py-1.5 text-sm"
               />
@@ -411,7 +413,7 @@ export function TaskCard({
               ) : null}
             </label>
             <div className="space-y-1">
-              <span className="block text-xs text-base-muted">Fecha y hora</span>
+              <span className="block text-xs text-base-muted">{t.taskCard.dateAndTime}</span>
               <div className="flex gap-1">
                 <input
                   type="date"
@@ -435,7 +437,7 @@ export function TaskCard({
           </div>
 
           <div className="space-y-2 border-t border-base-border pt-3">
-            <span className="block text-xs text-base-muted">Tiempo ejecutado</span>
+            <span className="block text-xs text-base-muted">{t.taskCard.executedTime}</span>
             <div className="flex flex-wrap items-center gap-2">
               <DurationPicker
                 minutes={task.executedMinutes}
@@ -452,7 +454,7 @@ export function TaskCard({
                   disabled={stopwatchRunning}
                   className="rounded-full border border-base-border px-2.5 py-1 text-xs font-medium hover:bg-base-border/40 disabled:opacity-40"
                 >
-                  ● Grabar
+                  {t.taskCard.recordButton}
                 </button>
                 <button
                   type="button"
@@ -460,7 +462,7 @@ export function TaskCard({
                   disabled={!stopwatchRunning}
                   className="rounded-full border border-base-border px-2.5 py-1 text-xs font-medium hover:bg-base-border/40 disabled:opacity-40"
                 >
-                  ❚❚ Pausar
+                  {t.taskCard.pauseButton}
                 </button>
                 <button
                   type="button"
@@ -468,22 +470,22 @@ export function TaskCard({
                   disabled={!stopwatchRunning && stopwatchAccumulatedSec === 0}
                   className="rounded-full bg-accent px-2.5 py-1 text-xs font-medium text-white disabled:opacity-40"
                 >
-                  ■ Parar (completada)
+                  {t.taskCard.stopButton}
                 </button>
               </div>
             </div>
           </div>
 
           <div className="space-y-2 border-t border-base-border pt-3">
-            <span className="block text-xs text-base-muted">Etiquetas</span>
+            <span className="block text-xs text-base-muted">{t.taskCard.tags}</span>
             <div className="flex flex-wrap items-center gap-1.5">
-              {task.tags.map((t) => (
+              {task.tags.map((tag) => (
                 <span
-                  key={t.id}
-                  className={clsx('flex items-center gap-1 rounded-full px-2 py-0.5 text-xs text-white', areaBgClass(t.colorIndex))}
+                  key={tag.id}
+                  className={clsx('flex items-center gap-1 rounded-full px-2 py-0.5 text-xs text-white', areaBgClass(tag.colorIndex))}
                 >
-                  #{t.name}
-                  <button onClick={() => removeTag(t.id)} aria-label={`Quitar etiqueta ${t.name}`} className="hover:opacity-70">
+                  #{tag.name}
+                  <button onClick={() => removeTag(tag.id)} aria-label={t.taskCard.removeTagAriaLabel(tag.name)} className="hover:opacity-70">
                     ✕
                   </button>
                 </span>
@@ -497,7 +499,7 @@ export function TaskCard({
                     addTag(newTagName);
                   }
                 }}
-                placeholder="Añadir etiqueta…"
+                placeholder={t.taskCard.addTagPlaceholder}
                 list="task-tag-suggestions"
                 className="min-w-0 flex-1 rounded-full border border-base-border bg-base-bg px-2 py-0.5 text-xs"
               />
@@ -511,7 +513,7 @@ export function TaskCard({
 
           {task.kind === 'DAY_AREA' && referenceDate ? (
             <div className="space-y-2 border-t border-base-border pt-3">
-              <span className="block text-xs text-base-muted">Repetir</span>
+              <span className="block text-xs text-base-muted">{t.taskCard.repeat}</span>
               {recurrenceOpen ? (
                 <div className="space-y-2">
                   <RecurrenceEditor value={recurrenceValue} referenceDate={referenceDate} onChange={setRecurrenceValue} />
@@ -521,26 +523,26 @@ export function TaskCard({
                       disabled={recurrenceBusy}
                       className="rounded-full bg-accent px-3 py-1 text-xs font-medium text-white disabled:opacity-40"
                     >
-                      Guardar
+                      {t.common.save}
                     </button>
                     <button
                       onClick={() => setRecurrenceOpen(false)}
                       className="rounded-full border border-base-border px-3 py-1 text-xs"
                     >
-                      Cancelar
+                      {t.common.cancel}
                     </button>
                   </div>
                 </div>
               ) : (
                 <div className="flex items-center justify-between gap-2">
                   <span className="text-xs text-base-muted">
-                    {recurrenceValue ? describeRecurrence(recurrenceValue, referenceDate) : 'No se repite'}
+                    {recurrenceValue ? describeRecurrence(recurrenceValue, referenceDate) : t.taskCard.noRecurrence}
                   </span>
                   <button
                     onClick={() => setRecurrenceOpen(true)}
                     className="rounded-full border border-base-border px-3 py-1 text-xs hover:bg-base-border/40"
                   >
-                    {recurrenceValue ? 'Cambiar' : 'Repetir'}
+                    {recurrenceValue ? t.taskCard.repeatChange : t.taskCard.repeatSet}
                   </button>
                 </div>
               )}
@@ -550,7 +552,7 @@ export function TaskCard({
           {!task.parentTaskId ? (
             <div className="space-y-2 border-t border-base-border pt-3">
               <span className="block text-xs text-base-muted">
-                Subtareas{subtasks.length > 0 ? ` (${subtasks.filter((s) => s.done).length}/${subtasks.length})` : ''}
+                {t.taskCard.subtasks}{subtasks.length > 0 ? ` (${subtasks.filter((s) => s.done).length}/${subtasks.length})` : ''}
               </span>
               {subtasks.length > 0 ? (
                 <div className="space-y-1.5">
@@ -558,7 +560,7 @@ export function TaskCard({
                     <div key={s.id} className="flex items-center gap-2">
                       <button
                         onClick={() => toggleSubtask(s)}
-                        aria-label={s.done ? 'Marcar subtarea como pendiente' : 'Marcar subtarea como hecha'}
+                        aria-label={t.taskCard.toggleSubtaskAriaLabel(s.done)}
                         className={clsx(
                           'flex h-4 w-4 shrink-0 items-center justify-center rounded-full border-2 text-[10px] transition',
                           s.done ? 'border-accent bg-accent text-white' : 'border-base-border text-transparent hover:border-accent'
@@ -569,7 +571,7 @@ export function TaskCard({
                       <span className={clsx('flex-1 truncate text-sm', s.done && 'text-base-muted line-through')}>{s.text}</span>
                       <button
                         onClick={() => deleteSubtask(s)}
-                        aria-label={`Eliminar subtarea ${s.text}`}
+                        aria-label={t.taskCard.removeSubtaskAriaLabel(s.text)}
                         className="text-xs text-priority-high hover:underline"
                       >
                         ✕
@@ -578,7 +580,7 @@ export function TaskCard({
                   ))}
                 </div>
               ) : null}
-              <AddTaskInline onAdd={addSubtask} placeholder="Añadir subtarea…" />
+              <AddTaskInline onAdd={addSubtask} placeholder={t.taskCard.addSubtaskPlaceholder} />
             </div>
           ) : null}
 
@@ -588,7 +590,7 @@ export function TaskCard({
                 onClick={() => onCreateCalendarEvent(task.id)}
                 className="rounded-full border border-base-border px-3 py-1 text-xs font-medium hover:bg-base-border/40"
               >
-                Crear evento en Calendar
+                {t.taskCard.createCalendarEvent}
               </button>
             ) : null}
             {onExportTodoist ? (
@@ -596,20 +598,20 @@ export function TaskCard({
                 onClick={() => onExportTodoist(task.id)}
                 className="rounded-full border border-base-border px-3 py-1 text-xs font-medium hover:bg-base-border/40"
               >
-                Exportar a Todoist
+                {t.taskCard.exportTodoist}
               </button>
             ) : null}
             <button
               onClick={() => onDelete(task.id)}
               className="rounded-full px-3 py-1 text-xs font-medium text-priority-high hover:bg-priority-high/10"
             >
-              Eliminar
+              {t.taskCard.delete}
             </button>
             <button
               onClick={() => setOpen(false)}
               className="ml-auto rounded-full bg-accent px-4 py-1.5 text-xs font-semibold text-white"
             >
-              Guardar
+              {t.taskCard.saveClose}
             </button>
           </div>
         </div>

@@ -38,7 +38,13 @@ Registro de lo implementado, decisiones tomadas y pendientes durante la evoluci�
 
 ### Módulo 1.1 · Textos centralizados + glosario aplicado a lo existente
 
-_(en curso)_
+**Completado y confirmado por el Product Owner.**
+
+- Nuevo `src/i18n/es.ts`: fichero único con todo el texto de UI (títulos, botones, placeholders, aria-labels, mensajes de toast), organizado por componente/pantalla. Sustituye el texto que antes vivía incrustado en ~45 componentes y páginas.
+- Las etiquetas de dominio ya centralizadas fuera de componentes (`PRIORITY_LABELS`, `RECURRENCE_LABELS`, `EISENHOWER_LABELS/HINTS` en `@/types`, y los generadores de texto de `@/lib/rrule-helpers`) se dejan donde están — no estaban incrustadas en un componente, solo se habría movido el mismo texto de un sitio centralizado a otro.
+- Glosario aplicado donde el documento ya da un mapeo claro (sección 7): "Asistente de planificación semanal" → **Momento de reflexión**; "Top 3 de hoy/del día" → **Las 3 del día**. El resto de términos (P) se deja para cuando el módulo correspondiente los active con su nueva capacidad (p.ej. "Foco semanal" no se renombra a "Viaje semanal" hasta que exista el Viaje semanal real, en Fase 2).
+- Sin cambios de modelo ni de lógica: commit de solo texto.
+- Verificado: `tsc --noEmit`, `eslint` y `next build` limpios; barrida final sin coincidencias de texto suelto en JSX; smoke test de `/login` en local confirmando el texto centralizado en runtime; revisión visual del Product Owner en claro y oscuro sobre Hoy/Semana, Bandeja, Cierre del día, Tu espacio, Ajustes, Dashboard y Herramientas.
 
 ## Fase 2 · Beta: dirección, foco y aprendizaje
 

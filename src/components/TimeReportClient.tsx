@@ -5,6 +5,7 @@ import clsx from 'clsx';
 import { Bar, BarChart, CartesianGrid, Legend, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import { formatDurationMinutes } from '@/types';
 import type { TimeReportScope } from '@/lib/time-report';
+import { text } from '@/i18n/es';
 
 interface Props {
   week: TimeReportScope;
@@ -59,7 +60,7 @@ export function TimeReportClient({ week, all }: Props) {
             scope === 'week' ? 'bg-accent text-white' : 'text-base-muted hover:bg-base-border/40'
           )}
         >
-          Esta semana
+          {text.timeReport.scopeWeek}
         </button>
         <button
           onClick={() => setScope('all')}
@@ -68,40 +69,38 @@ export function TimeReportClient({ week, all }: Props) {
             scope === 'all' ? 'bg-accent text-white' : 'text-base-muted hover:bg-base-border/40'
           )}
         >
-          Todo
+          {text.timeReport.scopeAll}
         </button>
       </div>
 
       {data.estimatedTaskCount === 0 ? (
         <div className="rounded-card border border-base-border bg-base-surface p-4 text-sm text-base-muted">
-          Todavía no hay tareas con duración estimada y tiempo ejecutado que comparar
-          {scope === 'week' ? ' esta semana' : ''}. Pon una duración estimada a una tarea y registra tiempo con el
-          Pomodoro o el cronómetro de su ficha.
+          {text.timeReport.emptyState(scope === 'week')}
         </div>
       ) : (
         <>
           <div className="grid gap-4 sm:grid-cols-3">
             <div className="rounded-card border border-base-border bg-base-surface p-4">
-              <p className="text-xs text-base-muted">Estimado</p>
+              <p className="text-xs text-base-muted">{text.timeReport.estimatedLabel}</p>
               <p className="mt-1 text-2xl font-semibold">{formatDurationMinutes(data.totalEstimatedMinutes)}</p>
-              <p className="text-xs text-base-muted">{data.estimatedTaskCount} tareas con estimación</p>
+              <p className="text-xs text-base-muted">{text.timeReport.estimatedTaskCount(data.estimatedTaskCount)}</p>
             </div>
             <div className="rounded-card border border-base-border bg-base-surface p-4">
-              <p className="text-xs text-base-muted">Ejecutado (de esas mismas tareas)</p>
+              <p className="text-xs text-base-muted">{text.timeReport.executedFromSame}</p>
               <p className="mt-1 text-2xl font-semibold">{formatDurationMinutes(data.totalExecutedMinutes)}</p>
               <p className={clsx('text-xs font-medium', deviationClass(globalDeviationPct))}>
-                {pctLabel(globalDeviationPct)} frente a lo estimado
+                {pctLabel(globalDeviationPct)} {text.timeReport.deviationVsEstimated}
               </p>
             </div>
             <div className="rounded-card border border-base-border bg-base-surface p-4">
-              <p className="text-xs text-base-muted">Tiempo total ejecutado</p>
+              <p className="text-xs text-base-muted">{text.timeReport.totalExecuted}</p>
               <p className="mt-1 text-2xl font-semibold text-accent">{formatDurationMinutes(data.totalExecutedMinutesAll)}</p>
-              <p className="text-xs text-base-muted">incluye tareas sin estimación previa</p>
+              <p className="text-xs text-base-muted">{text.timeReport.totalExecutedHint}</p>
             </div>
           </div>
 
           {areaData.length > 0 ? (
-            <ChartCard title="Estimado vs. ejecutado por área (horas)">
+            <ChartCard title={text.timeReport.chartTitle}>
               <div className="h-64">
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={areaData} margin={{ top: 8, right: 8, left: -16, bottom: 0 }}>
@@ -118,23 +117,26 @@ export function TimeReportClient({ week, all }: Props) {
                       contentStyle={{ background: 'rgb(var(--color-surface))', border: '1px solid rgb(var(--color-border))', borderRadius: 8, fontSize: 12 }}
                     />
                     <Legend wrapperStyle={{ fontSize: 12 }} />
-                    <Bar dataKey="estimadoH" name="Estimado" fill="rgb(var(--color-border))" radius={[4, 4, 0, 0]} />
-                    <Bar dataKey="ejecutadoH" name="Ejecutado" fill="rgb(var(--color-accent))" radius={[4, 4, 0, 0]} />
+                    <Bar dataKey="estimadoH" name={text.timeReport.chartEstimated} fill="rgb(var(--color-border))" radius={[4, 4, 0, 0]} />
+                    <Bar dataKey="ejecutadoH" name={text.timeReport.chartExecuted} fill="rgb(var(--color-accent))" radius={[4, 4, 0, 0]} />
                   </BarChart>
                 </ResponsiveContainer>
               </div>
             </ChartCard>
           ) : null}
 
-          <ChartCard title="Tareas con mayor desviación">
+          <ChartCard title={text.timeReport.mostDeviatedTitle}>
             <div className="space-y-2">
               {data.mostDeviatedTasks.map((t) => (
                 <div key={t.id} className="flex items-center justify-between gap-3 border-t border-base-border pt-2 text-sm first:border-t-0 first:pt-0">
                   <div className="min-w-0">
                     <p className="truncate">{t.text}</p>
                     <p className="text-xs text-base-muted">
-                      {t.areaName ?? 'Sin área'} · {formatDurationMinutes(t.estimatedMinutes)} estimado ·{' '}
-                      {formatDurationMinutes(t.executedMinutes)} ejecutado
+                      {text.timeReport.taskMeta(
+                        t.areaName ?? text.timeReport.noArea,
+                        formatDurationMinutes(t.estimatedMinutes),
+                        formatDurationMinutes(t.executedMinutes)
+                      )}
                     </p>
                   </div>
                   <span className={clsx('shrink-0 text-sm font-semibold', deviationClass(t.deviationPct))}>

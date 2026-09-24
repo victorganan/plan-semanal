@@ -1,5 +1,7 @@
 'use client';
 
+import { text } from '@/i18n/es';
+
 const MINUTE_OPTIONS = [0, 15, 30, 45];
 
 export function DurationPicker({
@@ -29,7 +31,7 @@ export function DurationPicker({
           value={hours}
           onChange={(e) => update(Number(e.target.value), mins)}
           className="rounded-lg border border-base-border bg-base-bg px-2 py-1.5 text-sm"
-          aria-label="Horas"
+          aria-label={text.durationPicker.hoursAriaLabel}
         >
           {hourOptions.map((h) => (
             <option key={h} value={h}>
@@ -41,7 +43,7 @@ export function DurationPicker({
           value={mins}
           onChange={(e) => update(hours, Number(e.target.value))}
           className="rounded-lg border border-base-border bg-base-bg px-2 py-1.5 text-sm"
-          aria-label="Minutos"
+          aria-label={text.durationPicker.minutesAriaLabel}
         >
           {MINUTE_OPTIONS.map((m) => (
             <option key={m} value={m}>

@@ -7,6 +7,7 @@ import { PriorityListSection } from '@/components/PriorityListSection';
 import { InboxList } from '@/components/InboxList';
 import { ObjectivesForm } from '@/components/WeekMetaForm';
 import type { WeekFull, ProjectWithAreaAndCollaborators, Area, Tag, TaskWithProject } from '@/types';
+import { text } from '@/i18n/es';
 
 interface Props {
   week: WeekFull;
@@ -25,7 +26,7 @@ interface Props {
   onClose: () => void;
 }
 
-const STEPS = ['Cómo llegas', 'Objetivos', 'Proyectos en foco', 'Acciones y llamadas', 'Bandeja de entrada'];
+const STEPS = text.planningWizard.steps;
 
 export function PlanningWizard({
   week,
@@ -54,8 +55,8 @@ export function PlanningWizard({
     <div className="fixed inset-0 z-40 flex items-end justify-center bg-black/40 p-0 sm:items-center sm:p-4">
       <div className="max-h-[92vh] w-full max-w-2xl overflow-y-auto rounded-t-2xl bg-base-surface p-6 shadow-xl sm:rounded-card">
         <div className="mb-4 flex items-center justify-between">
-          <h2 className="text-lg font-semibold">Planificación semanal — {isoWeek}</h2>
-          <button onClick={onClose} aria-label="Cerrar" className="rounded-full p-1.5 text-base-muted hover:bg-base-border/40">
+          <h2 className="text-lg font-semibold">{text.planningWizard.heading(isoWeek)}</h2>
+          <button onClick={onClose} aria-label={text.planningWizard.closeAriaLabel} className="rounded-full p-1.5 text-base-muted hover:bg-base-border/40">
             ✕
           </button>
         </div>
@@ -67,36 +68,36 @@ export function PlanningWizard({
         </div>
 
         <p className="mb-4 text-xs font-medium uppercase tracking-wide text-base-muted">
-          Paso {step + 1} de {STEPS.length} · {STEPS[step]}
+          {text.planningWizard.stepLabel(step + 1, STEPS.length, STEPS[step])}
         </p>
 
         <div className="min-h-[220px]">
           {step === 0 ? (
             <div>
-              <p className="mb-3 text-sm text-base-muted">¿Cómo llegas a esta semana? Un chequeo rápido, mental y físico.</p>
+              <p className="mb-3 text-sm text-base-muted">{text.planningWizard.step0Body}</p>
               <MoodSliders mentalState={week.mentalState} physicalState={week.physicalState} onChange={onSaveWeekMeta} />
             </div>
           ) : null}
 
           {step === 1 ? (
             <div>
-              <p className="mb-3 text-sm text-base-muted">¿Qué 1-3 cosas necesitan pasar sí o sí esta semana?</p>
+              <p className="mb-3 text-sm text-base-muted">{text.planningWizard.step1Body}</p>
               <ObjectivesForm week={week} onSave={onSaveWeekMeta} />
             </div>
           ) : null}
 
           {step === 2 ? (
             <div>
-              <p className="mb-3 text-sm text-base-muted">De tus proyectos activos, ¿cuáles tienen prioridad esta semana?</p>
+              <p className="mb-3 text-sm text-base-muted">{text.planningWizard.step2Body}</p>
               <ProjectFocusPicker projects={projects} focusedIds={focusIds} onToggle={onToggleProjectFocus} />
             </div>
           ) : null}
 
           {step === 3 ? (
             <div className="space-y-4">
-              <p className="text-sm text-base-muted">Reuniones, llamadas y cosas que no puedes olvidar esta semana.</p>
+              <p className="text-sm text-base-muted">{text.planningWizard.step3Body}</p>
               <PriorityListSection
-                title="Acciones prioritarias / No olvidar"
+                title={text.planningWizard.priorityActionsTitle}
                 tasks={priorityTasks}
                 projects={projects}
                 tags={tags}
@@ -105,7 +106,7 @@ export function PlanningWizard({
                 onDelete={onDeleteTask}
               />
               <PriorityListSection
-                title="Llamadas"
+                title={text.planningWizard.callsTitle}
                 tasks={callTasks}
                 projects={projects}
                 tags={tags}
@@ -118,9 +119,7 @@ export function PlanningWizard({
 
           {step === 4 ? (
             <div>
-              <p className="mb-3 text-sm text-base-muted">
-                Revisa lo que dejaste anotado. Muévelo a un día si ya sabes cuándo, o déjalo aquí si aún no.
-              </p>
+              <p className="mb-3 text-sm text-base-muted">{text.planningWizard.step4Body}</p>
               <InboxList
                 tasks={inbox}
                 projects={projects}
@@ -141,18 +140,18 @@ export function PlanningWizard({
             disabled={step === 0}
             className="rounded-full border border-base-border px-4 py-2 text-sm disabled:opacity-40"
           >
-            ← Anterior
+            {text.planningWizard.prevButton}
           </button>
           {isLast ? (
             <button onClick={onClose} className="rounded-full bg-accent px-5 py-2 text-sm font-semibold text-white">
-              Ir a la semana →
+              {text.planningWizard.finishButton}
             </button>
           ) : (
             <button
               onClick={() => setStep((s) => Math.min(STEPS.length - 1, s + 1))}
               className="rounded-full bg-accent px-5 py-2 text-sm font-semibold text-white"
             >
-              Siguiente →
+              {text.planningWizard.nextButton}
             </button>
           )}
         </div>

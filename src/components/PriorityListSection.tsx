@@ -1,6 +1,7 @@
 import { AddTaskInline } from '@/components/AddTaskInline';
 import { TaskCard } from '@/components/TaskCard';
 import type { ProjectWithAreaAndCollaborators, Tag, TaskWithProject } from '@/types';
+import { text } from '@/i18n/es';
 
 interface Props {
   title: string;
@@ -41,10 +42,10 @@ export function PriorityListSection({
             onCreateCalendarEvent={onCreateCalendarEvent}
           />
         ))}
-        {tasks.length === 0 ? <p className="text-sm text-base-muted">Nada por aquí todavía.</p> : null}
+        {tasks.length === 0 ? <p className="text-sm text-base-muted">{text.priorityListSection.empty}</p> : null}
       </div>
       <div className="mt-2 border-t border-base-border pt-2">
-        <AddTaskInline onAdd={onAdd} placeholder="Añadir…" />
+        <AddTaskInline onAdd={onAdd} placeholder={text.priorityListSection.addPlaceholder} />
       </div>
     </div>
   );

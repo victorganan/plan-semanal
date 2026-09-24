@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import clsx from 'clsx';
 import type { TaskWithProject } from '@/types';
+import { text } from '@/i18n/es';
 
 interface Props {
   dayLabel: string;
@@ -48,28 +49,26 @@ export function DayCloseRitual({
     <div className="fixed inset-0 z-40 flex items-end justify-center bg-black/40 p-0 sm:items-center sm:p-4">
       <div className="max-h-[92vh] w-full max-w-lg overflow-y-auto rounded-t-2xl bg-base-surface p-6 shadow-xl sm:rounded-card">
         <div className="mb-4 flex items-center justify-between">
-          <h2 className="text-lg font-semibold">🌙 Cerrar {dayLabel.toLowerCase()}</h2>
-          <button onClick={onClose} aria-label="Cerrar" className="rounded-full p-1.5 text-base-muted hover:bg-base-border/40">
+          <h2 className="text-lg font-semibold">{text.dayCloseRitual.heading(dayLabel)}</h2>
+          <button onClick={onClose} aria-label={text.dayCloseRitual.closeAriaLabel} className="rounded-full p-1.5 text-base-muted hover:bg-base-border/40">
             ✕
           </button>
         </div>
 
         <div className="space-y-5 text-sm">
           <section>
-            <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-base-muted">Lo hecho hoy</h3>
+            <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-base-muted">{text.dayCloseRitual.doneTodaySection}</h3>
             {tasks.length === 0 ? (
-              <p className="text-base-muted">No había tareas de día planificadas.</p>
+              <p className="text-base-muted">{text.dayCloseRitual.noPlannedTasks}</p>
             ) : (
-              <p>
-                <strong className="text-accent">{done.length}</strong> de {tasks.length} completadas.
-              </p>
+              <p>{text.dayCloseRitual.doneOfTotal(done.length, tasks.length)}</p>
             )}
           </section>
 
           {pending.length > 0 ? (
             <section>
               <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-base-muted">
-                Pendientes ({pending.length})
+                {text.dayCloseRitual.pendingSection(pending.length)}
               </h3>
               <ul className="mb-2 space-y-1">
                 {pending.map((t) => (
@@ -83,40 +82,40 @@ export function DayCloseRitual({
                 disabled={replanning || replanned}
                 className="rounded-full bg-accent px-3 py-1.5 text-xs font-medium text-white disabled:opacity-40"
               >
-                {replanned ? `Movidas a ${tomorrowLabel.toLowerCase()} ✓` : `Replanificar todo a ${tomorrowLabel.toLowerCase()} →`}
+                {replanned ? text.dayCloseRitual.replanDone(tomorrowLabel) : text.dayCloseRitual.replanButton(tomorrowLabel)}
               </button>
             </section>
           ) : null}
 
           <section>
             <label className="mb-2 block text-xs font-semibold uppercase tracking-wide text-base-muted">
-              Una línea de diario
+              {text.dayCloseRitual.journalLabel}
             </label>
             <textarea
               value={journal}
               onChange={(e) => setJournal(e.target.value)}
               onBlur={() => onSaveJournal(journal)}
               rows={2}
-              placeholder="¿Qué te llevas de hoy?"
+              placeholder={text.dayCloseRitual.journalPlaceholder}
               className="w-full rounded-lg border border-base-border bg-base-bg px-3 py-2 text-sm"
             />
           </section>
 
           <section>
             <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-base-muted">
-              Top 3 de {tomorrowLabel.toLowerCase()}
+              {text.dayCloseRitual.tomorrowTop3Section(tomorrowLabel)}
             </h3>
             {tomorrowTasks === null ? (
-              <p className="text-base-muted">Mañana empieza una semana nueva — repásalo desde la vista Semana.</p>
+              <p className="text-base-muted">{text.dayCloseRitual.tomorrowIsNewWeek}</p>
             ) : tomorrowTasks.length === 0 ? (
-              <p className="text-base-muted">Todavía no hay tareas planificadas para {tomorrowLabel.toLowerCase()}.</p>
+              <p className="text-base-muted">{text.dayCloseRitual.tomorrowEmpty(tomorrowLabel)}</p>
             ) : (
               <div className="space-y-1.5">
                 {tomorrowTasks.map((t) => (
                   <div key={t.id} className="flex items-center gap-2">
                     <button
                       onClick={() => onToggleTomorrowTop3(t.id, !t.isTop3)}
-                      aria-label={t.isTop3 ? 'Quitar de Top 3' : 'Marcar como Top 3'}
+                      aria-label={text.dayCloseRitual.toggleTop3AriaLabel(t.isTop3)}
                       className={clsx('shrink-0', t.isTop3 ? 'text-amber-500' : 'text-base-muted/50')}
                     >
                       {t.isTop3 ? '⭐' : '☆'}
@@ -131,7 +130,7 @@ export function DayCloseRitual({
 
         <div className="mt-6 flex justify-end border-t border-base-border pt-4">
           <button onClick={onClose} className="rounded-full bg-accent px-5 py-2 text-sm font-semibold text-white">
-            Listo por hoy
+            {text.dayCloseRitual.finishButton}
           </button>
         </div>
       </div>

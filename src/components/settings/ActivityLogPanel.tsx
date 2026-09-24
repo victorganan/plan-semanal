@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { api } from '@/lib/api-client';
+import { text } from '@/i18n/es';
 
 interface LogItem {
   id: string;
@@ -25,7 +26,7 @@ export function ActivityLogPanel({ initialItems }: { initialItems: LogItem[] }) 
   return (
     <div className="rounded-card border border-base-border bg-base-surface p-4">
       <button onClick={load} className="flex w-full items-center justify-between text-sm font-semibold">
-        Registro de actividad
+        {text.activityLog.title}
         <span className="text-base-muted">{open ? '▲' : '▼'}</span>
       </button>
       {open ? (
@@ -36,7 +37,7 @@ export function ActivityLogPanel({ initialItems }: { initialItems: LogItem[] }) 
               <p className="text-xs text-base-muted">{new Date(i.createdAt).toLocaleString('es-ES')}</p>
             </li>
           ))}
-          {items.length === 0 ? <p className="text-sm text-base-muted">Sin actividad registrada todavía.</p> : null}
+          {items.length === 0 ? <p className="text-sm text-base-muted">{text.activityLog.empty}</p> : null}
         </ul>
       ) : null}
     </div>

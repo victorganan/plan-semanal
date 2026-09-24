@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { AddTaskInline } from '@/components/AddTaskInline';
 import { MultiSelectDropdown } from '@/components/MultiSelectDropdown';
 import type { WeekFull, ProjectWithArea, TaskWithProject } from '@/types';
+import { text } from '@/i18n/es';
 
 function TextField({
   label,
@@ -35,11 +36,11 @@ function TextField({
 export function ObjectivesForm({ week, onSave }: { week: WeekFull; onSave: (patch: Record<string, unknown>) => void }) {
   return (
     <div className="rounded-card border border-base-border bg-base-surface p-4">
-      <h3 className="mb-3 text-sm font-semibold">Objetivos de la semana</h3>
+      <h3 className="mb-3 text-sm font-semibold">{text.weekMetaForm.objectivesTitle}</h3>
       <div className="space-y-3">
-        <TextField label="Objetivo 1" defaultValue={week.objective1 ?? ''} onSave={(v) => onSave({ objective1: v })} />
-        <TextField label="Objetivo 2" defaultValue={week.objective2 ?? ''} onSave={(v) => onSave({ objective2: v })} />
-        <TextField label="Objetivo 3" defaultValue={week.objective3 ?? ''} onSave={(v) => onSave({ objective3: v })} />
+        <TextField label={text.weekMetaForm.objective1} defaultValue={week.objective1 ?? ''} onSave={(v) => onSave({ objective1: v })} />
+        <TextField label={text.weekMetaForm.objective2} defaultValue={week.objective2 ?? ''} onSave={(v) => onSave({ objective2: v })} />
+        <TextField label={text.weekMetaForm.objective3} defaultValue={week.objective3 ?? ''} onSave={(v) => onSave({ objective3: v })} />
       </div>
     </div>
   );
@@ -55,13 +56,13 @@ function ProjectMultiSelect({
   onToggle: (id: string, selected: boolean) => void;
 }) {
   const active = projects.filter((p) => p.status === 'ACTIVE');
-  if (active.length === 0) return <p className="text-sm text-base-muted">No hay proyectos activos.</p>;
+  if (active.length === 0) return <p className="text-sm text-base-muted">{text.weekMetaForm.noActiveProjects}</p>;
   return (
     <MultiSelectDropdown
       options={active.map((p) => ({ id: p.id, label: p.name, sublabel: p.area.name }))}
       selectedIds={selectedIds}
       onToggle={onToggle}
-      placeholder="Buscar proyecto…"
+      placeholder={text.weekMetaForm.searchProjectPlaceholder}
     />
   );
 }
@@ -80,18 +81,18 @@ function TaskMultiSelect({
   return (
     <div>
       {tasks.length === 0 ? (
-        <p className="mb-2 text-sm text-base-muted">No hay tareas pendientes esta semana.</p>
+        <p className="mb-2 text-sm text-base-muted">{text.weekMetaForm.noPendingTasks}</p>
       ) : (
         <MultiSelectDropdown
           options={tasks.map((t) => ({ id: t.id, label: t.text }))}
           selectedIds={selectedIds}
           onToggle={onToggle}
-          placeholder="Buscar tarea…"
-          noSelectionLabel="Ninguna marcada todavía."
+          placeholder={text.weekMetaForm.searchTaskPlaceholder}
+          noSelectionLabel={text.weekMetaForm.noSelectionMarked}
         />
       )}
       <div className="mt-2">
-        <AddTaskInline onAdd={onAddNew} placeholder="Crear tarea nueva y marcarla…" />
+        <AddTaskInline onAdd={onAddNew} placeholder={text.weekMetaForm.addNewTaskPlaceholder} />
       </div>
     </div>
   );
@@ -114,34 +115,34 @@ export function EvaluationForm({ week, projects, pendingTasks, onSave, onAddAndT
 
   return (
     <div className="rounded-card border border-base-border bg-base-surface p-4">
-      <h3 className="mb-1 text-sm font-semibold">Evaluación de la semana</h3>
-      <p className="mb-3 text-xs text-base-muted">Complétala al finalizar la semana, antes de planificar la siguiente.</p>
+      <h3 className="mb-1 text-sm font-semibold">{text.weekMetaForm.evaluationTitle}</h3>
+      <p className="mb-3 text-xs text-base-muted">{text.weekMetaForm.evaluationSubtitle}</p>
       <div className="grid gap-4 sm:grid-cols-2">
         <div>
-          <span className="mb-1 block text-xs text-base-muted">Foco próxima semana (proyectos)</span>
+          <span className="mb-1 block text-xs text-base-muted">{text.weekMetaForm.nextWeekFocus}</span>
           <ProjectMultiSelect
             projects={projects}
             selectedIds={week.evalNextWeekFocusProjectIds ?? []}
             onToggle={(id, sel) => toggleInArray('evalNextWeekFocusProjectIds', id, sel)}
           />
         </div>
-        <TextField label="A mejorar" defaultValue={week.evalToImprove ?? ''} onSave={(v) => onSave({ evalToImprove: v })} rows={3} />
+        <TextField label={text.weekMetaForm.toImprove} defaultValue={week.evalToImprove ?? ''} onSave={(v) => onSave({ evalToImprove: v })} rows={3} />
         <div>
-          <span className="mb-1 block text-xs text-base-muted">Aplazado</span>
+          <span className="mb-1 block text-xs text-base-muted">{text.weekMetaForm.postponed}</span>
           <TaskMultiSelect
             tasks={pendingTasks}
             selectedIds={week.evalPostponedTaskIds ?? []}
             onToggle={(id, sel) => toggleInArray('evalPostponedTaskIds', id, sel)}
-            onAddNew={(text) => onAddAndTag(text, 'evalPostponedTaskIds')}
+            onAddNew={(value) => onAddAndTag(value, 'evalPostponedTaskIds')}
           />
         </div>
         <div>
-          <span className="mb-1 block text-xs text-base-muted">Delegar</span>
+          <span className="mb-1 block text-xs text-base-muted">{text.weekMetaForm.delegate}</span>
           <TaskMultiSelect
             tasks={pendingTasks}
             selectedIds={week.evalDelegateTaskIds ?? []}
             onToggle={(id, sel) => toggleInArray('evalDelegateTaskIds', id, sel)}
-            onAddNew={(text) => onAddAndTag(text, 'evalDelegateTaskIds')}
+            onAddNew={(value) => onAddAndTag(value, 'evalDelegateTaskIds')}
           />
         </div>
       </div>

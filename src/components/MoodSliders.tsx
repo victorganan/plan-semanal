@@ -1,9 +1,10 @@
 'use client';
 
 import clsx from 'clsx';
+import { text } from '@/i18n/es';
 
 const FACES = ['😞', '🙁', '😐', '🙂', '😄'];
-const LABELS = ['Muy mal', 'Mal', 'Regular', 'Bien', 'Muy bien'];
+const LABELS = text.moodSliders.faceLabels;
 
 function Scale({ label, value, onChange }: { label: string; value: number | null; onChange: (v: number) => void }) {
   return (
@@ -43,8 +44,8 @@ export function MoodSliders({
 }) {
   return (
     <div className="flex flex-wrap gap-6">
-      <Scale label="Estado mental" value={mentalState} onChange={(v) => onChange({ mentalState: v })} />
-      <Scale label="Estado físico" value={physicalState} onChange={(v) => onChange({ physicalState: v })} />
+      <Scale label={text.moodSliders.mentalState} value={mentalState} onChange={(v) => onChange({ mentalState: v })} />
+      <Scale label={text.moodSliders.physicalState} value={physicalState} onChange={(v) => onChange({ physicalState: v })} />
     </div>
   );
 }

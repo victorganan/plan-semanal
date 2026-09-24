@@ -2,6 +2,7 @@
 
 import clsx from 'clsx';
 import type { Habit, HabitCompletion } from '@/types';
+import { text } from '@/i18n/es';
 
 const DAYS_LV = ['L', 'M', 'X', 'J', 'V'];
 
@@ -15,7 +16,7 @@ interface Props {
 
 export function HabitGrid({ habits, completions, onToggle, mode, todayDow }: Props) {
   if (habits.length === 0) {
-    return <p className="text-sm text-base-muted">Añade hábitos desde Ajustes para hacerles seguimiento aquí.</p>;
+    return <p className="text-sm text-base-muted">{text.habitGrid.empty}</p>;
   }
 
   const isDone = (habitId: string, dow: number) => completions.some((c) => c.habitId === habitId && c.dayOfWeek === dow && c.done);
@@ -52,7 +53,7 @@ export function HabitGrid({ habits, completions, onToggle, mode, todayDow }: Pro
   }
 
   if (mode === 'today') {
-    return <p className="text-sm text-base-muted">Los hábitos se siguen de lunes a viernes.</p>;
+    return <p className="text-sm text-base-muted">{text.habitGrid.weekdaysOnly}</p>;
   }
 
   return (
@@ -60,7 +61,7 @@ export function HabitGrid({ habits, completions, onToggle, mode, todayDow }: Pro
       <table className="w-full text-sm">
         <thead>
           <tr className="text-left text-xs text-base-muted">
-            <th className="pb-2 pr-2 font-medium">Hábito</th>
+            <th className="pb-2 pr-2 font-medium">{text.habitGrid.columnHeader}</th>
             {DAYS_LV.map((d) => (
               <th key={d} className="px-1 pb-2 text-center font-medium">
                 {d}
@@ -78,7 +79,7 @@ export function HabitGrid({ habits, completions, onToggle, mode, todayDow }: Pro
                   <td key={dow} className="px-1 py-2 text-center">
                     <button
                       onClick={() => onToggle(h.id, dow, !done)}
-                      aria-label={`${h.name} día ${dow}`}
+                      aria-label={text.habitGrid.toggleAriaLabel(h.name, dow)}
                       className={clsx(
                         'mx-auto flex h-6 w-6 items-center justify-center rounded-full border-2 text-xs',
                         done ? 'border-accent bg-accent text-white' : 'border-base-border hover:border-accent'

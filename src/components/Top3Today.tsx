@@ -1,5 +1,6 @@
 import clsx from 'clsx';
 import type { TaskWithProject } from '@/types';
+import { text } from '@/i18n/es';
 
 interface Props {
   tasks: TaskWithProject[];
@@ -8,7 +9,7 @@ interface Props {
   onUnstar: (id: string) => void;
 }
 
-export function Top3Today({ tasks, title = 'Top 3 de hoy', onToggleDone, onUnstar }: Props) {
+export function Top3Today({ tasks, title = text.top3.title, onToggleDone, onUnstar }: Props) {
   if (tasks.length === 0) return null;
 
   return (
@@ -19,7 +20,7 @@ export function Top3Today({ tasks, title = 'Top 3 de hoy', onToggleDone, onUnsta
           <div key={t.id} className="flex items-center gap-2">
             <button
               onClick={() => onToggleDone(t.id, !t.done)}
-              aria-label={t.done ? 'Marcar como pendiente' : 'Marcar como hecha'}
+              aria-label={text.top3.toggleDoneAriaLabel(t.done)}
               className={clsx(
                 'flex h-4 w-4 shrink-0 items-center justify-center rounded-full border-2 text-[10px] transition',
                 t.done ? 'border-accent bg-accent text-white' : 'border-base-border text-transparent hover:border-accent'
@@ -28,7 +29,7 @@ export function Top3Today({ tasks, title = 'Top 3 de hoy', onToggleDone, onUnsta
               ✓
             </button>
             <span className={clsx('flex-1 truncate text-sm', t.done && 'text-base-muted line-through')}>{t.text}</span>
-            <button onClick={() => onUnstar(t.id)} aria-label="Quitar de Top 3" className="text-xs text-base-muted hover:text-priority-high">
+            <button onClick={() => onUnstar(t.id)} aria-label={text.top3.unstarAriaLabel} className="text-xs text-base-muted hover:text-priority-high">
               ✕
             </button>
           </div>

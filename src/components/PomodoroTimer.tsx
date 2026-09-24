@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import clsx from 'clsx';
 import { api } from '@/lib/api-client';
 import { useToast } from '@/components/Toast';
+import { text } from '@/i18n/es';
 
 type Phase = 'work' | 'short_break' | 'long_break';
 
@@ -13,9 +14,9 @@ interface TodayTask {
 }
 
 const PHASE_LABELS: Record<Phase, string> = {
-  work: 'Enfoque',
-  short_break: 'Descanso corto',
-  long_break: 'Descanso largo',
+  work: text.pomodoro.phaseWork,
+  short_break: text.pomodoro.phaseShortBreak,
+  long_break: text.pomodoro.phaseLongBreak,
 };
 
 function playChime() {
@@ -153,7 +154,7 @@ export function PomodoroTimer({ todayTasks: initialTodayTasks }: { todayTasks: T
     setRemaining(durations[nextPhase] * 60);
     endAtRef.current = null;
     phaseStartRef.current = null;
-    notify('¡Pomodoro completado! 🍅', 'Toca descansar un momento.');
+    notify(text.pomodoro.completedNotifTitle, text.pomodoro.completedNotifBody);
 
     const linkedTask = selectedTaskId ? todayTasks.find((t) => t.id === selectedTaskId) : undefined;
     if (linkedTask) setTaskCompletionPrompt(linkedTask);
@@ -168,7 +169,7 @@ export function PomodoroTimer({ todayTasks: initialTodayTasks }: { todayTasks: T
       setPhase('work');
       setRemaining(durations.work * 60);
       endAtRef.current = null;
-      notify('Descanso terminado', 'A por el siguiente pomodoro cuando quieras.');
+      notify(text.pomodoro.breakOverNotifTitle, text.pomodoro.breakOverNotifBody);
     }
   }
 
@@ -193,9 +194,9 @@ export function PomodoroTimer({ todayTasks: initialTodayTasks }: { todayTasks: T
       await api.patch(`/api/tasks/${task.id}`, { done: true });
       setTodayTasks((prev) => prev.filter((t) => t.id !== task.id));
       if (selectedTaskId === task.id) setSelectedTaskId('');
-      showToast('Tarea marcada como completada');
+      showToast(text.pomodoro.taskMarkedDone);
     } catch {
-      showToast('No se pudo marcar la tarea como completada', 'error');
+      showToast(text.pomodoro.taskMarkDoneError, 'error');
     }
   }
 
@@ -216,7 +217,7 @@ export function PomodoroTimer({ todayTasks: initialTodayTasks }: { todayTasks: T
         >
           {PHASE_LABELS[phase]}
         </span>
-        <span>· 🍅 {pomodorosToday} hoy · {minutesToday} min</span>
+        <span>{text.pomodoro.todayStats(pomodorosToday, minutesToday)}</span>
       </div>
 
       <div className="relative mx-auto flex h-64 w-64 items-center justify-center">
@@ -241,21 +242,19 @@ export function PomodoroTimer({ todayTasks: initialTodayTasks }: { todayTasks: T
 
       {taskCompletionPrompt ? (
         <div className="mx-auto max-w-sm space-y-2 rounded-card border border-accent/40 bg-accent/5 p-3 text-center text-sm">
-          <p>
-            ¿Has terminado <strong>&ldquo;{taskCompletionPrompt.text}&rdquo;</strong>?
-          </p>
+          <p>{text.pomodoro.taskDoneQuestion(taskCompletionPrompt.text)}</p>
           <div className="flex justify-center gap-2">
             <button
               onClick={() => confirmTaskDone(true)}
               className="rounded-full bg-accent px-4 py-1.5 text-xs font-semibold text-white"
             >
-              Sí, completada
+              {text.pomodoro.taskDoneYes}
             </button>
             <button
               onClick={() => confirmTaskDone(false)}
               className="rounded-full border border-base-border px-4 py-1.5 text-xs font-medium hover:bg-base-border/40"
             >
-              No, sigue pendiente
+              {text.pomodoro.taskDoneNo}
             </button>
           </div>
         </div>
@@ -267,7 +266,7 @@ export function PomodoroTimer({ todayTasks: initialTodayTasks }: { todayTasks: T
           onChange={(e) => setSelectedTaskId(e.target.value)}
           className="mx-auto block w-full rounded-lg border border-base-border bg-base-bg px-3 py-2 text-sm"
         >
-          <option value="">Sin vincular a una tarea</option>
+          <option value="">{text.pomodoro.noTaskLinked}</option>
           {todayTasks.map((t) => (
             <option key={t.id} value={t.id}>
               {t.text}
@@ -281,15 +280,15 @@ export function PomodoroTimer({ todayTasks: initialTodayTasks }: { todayTasks: T
           onClick={resetPhase}
           className="rounded-full border border-base-border px-4 py-2 text-sm font-medium hover:bg-base-border/40"
         >
-          Reiniciar
+          {text.pomodoro.reset}
         </button>
         {running ? (
           <button onClick={pause} className="rounded-full bg-accent px-8 py-3 text-base font-semibold text-white">
-            Pausar
+            {text.pomodoro.pause}
           </button>
         ) : (
           <button onClick={start} className="rounded-full bg-accent px-8 py-3 text-base font-semibold text-white">
-            {remaining === total ? 'Empezar' : 'Continuar'}
+            {remaining === total ? text.pomodoro.start : text.pomodoro.resume}
           </button>
         )}
         {phase === 'work' ? (
@@ -298,28 +297,28 @@ export function PomodoroTimer({ todayTasks: initialTodayTasks }: { todayTasks: T
             disabled={!hasStartedWork}
             className="rounded-full border border-base-border px-4 py-2 text-sm font-medium hover:bg-base-border/40 disabled:opacity-40"
           >
-            Iniciar descanso →
+            {text.pomodoro.startBreak}
           </button>
         ) : (
           <button
             onClick={skipBreak}
             className="rounded-full border border-base-border px-4 py-2 text-sm font-medium hover:bg-base-border/40"
           >
-            Saltar descanso →
+            {text.pomodoro.skipBreak}
           </button>
         )}
       </div>
 
       <div className="text-center">
         <button onClick={() => setSettingsOpen((v) => !v)} className="text-xs text-base-muted hover:underline">
-          {settingsOpen ? 'Ocultar ajustes' : 'Ajustar duraciones'}
+          {settingsOpen ? text.pomodoro.settingsHide : text.pomodoro.settingsShow}
         </button>
       </div>
 
       {settingsOpen ? (
         <div className="grid grid-cols-2 gap-3 rounded-card border border-base-border bg-base-surface p-4 text-sm">
           <label className="space-y-1">
-            <span className="block text-xs text-base-muted">Enfoque (min)</span>
+            <span className="block text-xs text-base-muted">{text.pomodoro.workMinutesLabel}</span>
             <input
               type="number"
               min={1}
@@ -330,7 +329,7 @@ export function PomodoroTimer({ todayTasks: initialTodayTasks }: { todayTasks: T
             />
           </label>
           <label className="space-y-1">
-            <span className="block text-xs text-base-muted">Descanso corto (min)</span>
+            <span className="block text-xs text-base-muted">{text.pomodoro.shortBreakMinutesLabel}</span>
             <input
               type="number"
               min={1}
@@ -341,7 +340,7 @@ export function PomodoroTimer({ todayTasks: initialTodayTasks }: { todayTasks: T
             />
           </label>
           <label className="space-y-1">
-            <span className="block text-xs text-base-muted">Descanso largo (min)</span>
+            <span className="block text-xs text-base-muted">{text.pomodoro.longBreakMinutesLabel}</span>
             <input
               type="number"
               min={1}
@@ -352,7 +351,7 @@ export function PomodoroTimer({ todayTasks: initialTodayTasks }: { todayTasks: T
             />
           </label>
           <label className="space-y-1">
-            <span className="block text-xs text-base-muted">Pomodoros hasta descanso largo</span>
+            <span className="block text-xs text-base-muted">{text.pomodoro.cyclesLabel}</span>
             <input
               type="number"
               min={2}

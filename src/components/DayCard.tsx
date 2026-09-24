@@ -4,6 +4,7 @@ import { CapacityBar } from '@/components/CapacityBar';
 import { Top3Today } from '@/components/Top3Today';
 import { DAY_NAMES, dateForDayOfWeek } from '@/lib/week';
 import type { Area, Day, ProjectWithAreaAndCollaborators, Tag, TaskWithProject } from '@/types';
+import { text } from '@/i18n/es';
 import clsx from 'clsx';
 
 interface Props {
@@ -52,7 +53,7 @@ export function DayCard({
       <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
         <h2 className="text-base font-semibold">
           {DAY_NAMES[dayOfWeek]} <span className="font-normal text-base-muted">· {dateLabel}</span>
-          {isToday ? <span className="ml-2 rounded-full bg-accent px-2 py-0.5 text-xs font-medium text-white">Hoy</span> : null}
+          {isToday ? <span className="ml-2 rounded-full bg-accent px-2 py-0.5 text-xs font-medium text-white">{text.dayCard.todayBadge}</span> : null}
         </h2>
         <div className="flex items-center gap-3">
           <CapacityBar plannedMinutes={plannedMinutes} capacityMinutes={capacityMinutes} />
@@ -65,7 +66,7 @@ export function DayCard({
         onUnstar={(id) => onUpdateTask(id, { isTop3: false })}
       />
       {areas.length === 0 ? (
-        <p className="text-sm text-base-muted">Crea un área en Tu espacio para empezar a añadir tareas del día.</p>
+        <p className="text-sm text-base-muted">{text.dayCard.noAreas}</p>
       ) : (
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {areas.map((area) => (

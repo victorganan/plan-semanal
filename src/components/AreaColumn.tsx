@@ -6,6 +6,7 @@ import { AddTaskInline } from '@/components/AddTaskInline';
 import { TaskCard } from '@/components/TaskCard';
 import { areaBgClass } from '@/types';
 import { dateForDayOfWeek } from '@/lib/week';
+import { text } from '@/i18n/es';
 import type { Area, ProjectWithAreaAndCollaborators, Tag, TaskWithProject } from '@/types';
 
 interface Props {
@@ -132,7 +133,7 @@ export function AreaColumn({
         ))}
       </div>
       <div className="mt-2 border-t border-base-border pt-2">
-        <AddTaskInline onAdd={(text) => onAdd(area.id, text)} placeholder="Añadir tarea…" />
+        <AddTaskInline onAdd={(value) => onAdd(area.id, value)} placeholder={text.areaColumn.addPlaceholder} />
       </div>
     </div>
   );

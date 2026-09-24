@@ -5,12 +5,9 @@ import clsx from 'clsx';
 import { api, ApiError } from '@/lib/api-client';
 import { areaBgClass, AREA_PALETTE_SIZE } from '@/types';
 import type { Area, ProjectWithAreaAndCollaborators } from '@/types';
+import { text } from '@/i18n/es';
 
-const STATUS_LABELS: Record<string, string> = {
-  ACTIVE: 'Activo',
-  COMPLETED: 'Completado',
-  ARCHIVED: 'Archivado',
-};
+const STATUS_LABELS: Record<string, string> = text.tuEspacio.statusLabels;
 
 function ColorSwatchPicker({ value, onChange }: { value: number; onChange: (i: number) => void }) {
   return (
@@ -20,7 +17,7 @@ function ColorSwatchPicker({ value, onChange }: { value: number; onChange: (i: n
           key={i}
           type="button"
           onClick={() => onChange(i)}
-          aria-label={`Color ${i + 1}`}
+          aria-label={text.tuEspacio.colorSwatchAriaLabel(i + 1)}
           className={clsx(
             'h-6 w-6 rounded-full border-2',
             areaBgClass(i),
@@ -55,7 +52,7 @@ function ChipInput({
         {values.map((v) => (
           <span key={v} className="inline-flex items-center gap-1 rounded-full bg-accent/10 px-2.5 py-1 text-xs text-accent">
             {v}
-            <button type="button" onClick={() => onChange(values.filter((x) => x !== v))} aria-label={`Quitar ${v}`}>
+            <button type="button" onClick={() => onChange(values.filter((x) => x !== v))} aria-label={text.tuEspacio.removeChipAriaLabel(v)}>
               ✕
             </button>
           </span>
@@ -105,7 +102,7 @@ function AreaBlockers({
     <div className="mt-2 space-y-2 rounded-lg border border-priority-high/30 bg-priority-high/5 p-3">
       <div className="flex items-center justify-between gap-2">
         <div className="flex items-center gap-2 text-xs">
-          <span className="text-base-muted">Mover a:</span>
+          <span className="text-base-muted">{text.tuEspacio.moveTo}</span>
           <select
             value={target}
             onChange={(e) => setTarget(e.target.value)}
@@ -119,7 +116,7 @@ function AreaBlockers({
           </select>
         </div>
         <button onClick={onCancel} className="rounded-full border border-base-border px-2.5 py-1 text-xs hover:bg-base-border/40">
-          Cancelar
+          {text.tuEspacio.moveCancel}
         </button>
       </div>
       <ul className="space-y-1">
@@ -127,7 +124,7 @@ function AreaBlockers({
           <li key={p.id} className="flex items-center justify-between text-xs">
             <span>📁 {p.name}</span>
             <button onClick={() => move('project', p.id)} className="rounded-full bg-accent px-2.5 py-1 text-xs font-medium text-white">
-              Mover
+              {text.tuEspacio.moveButton}
             </button>
           </li>
         ))}
@@ -135,7 +132,7 @@ function AreaBlockers({
           <li key={t.id} className="flex items-center justify-between text-xs">
             <span>🔁 {t.name}</span>
             <button onClick={() => move('template', t.id)} className="rounded-full bg-accent px-2.5 py-1 text-xs font-medium text-white">
-              Mover
+              {text.tuEspacio.moveButton}
             </button>
           </li>
         ))}
@@ -220,17 +217,17 @@ function AreaRow({
             value={name}
             onChange={(e) => setName(e.target.value)}
             className="rounded-lg border border-base-border bg-base-bg px-3 py-2 text-sm"
-            placeholder="Nombre del área"
+            placeholder={text.tuEspacio.areaNamePlaceholder}
           />
           <input
             value={description}
             onChange={(e) => setDescription(e.target.value)}
             className="rounded-lg border border-base-border bg-base-bg px-3 py-2 text-sm"
-            placeholder="Descripción (opcional)"
+            placeholder={text.tuEspacio.areaDescriptionOptionalLabel}
           />
         </div>
         <div className="mt-3">
-          <span className="mb-1.5 block text-xs text-base-muted">Color</span>
+          <span className="mb-1.5 block text-xs text-base-muted">{text.tuEspacio.colorLabel}</span>
           <ColorSwatchPicker value={colorIndex} onChange={setColorIndex} />
         </div>
         {error ? <p className="mt-2 text-xs text-priority-high">{error}</p> : null}
@@ -240,7 +237,7 @@ function AreaRow({
             disabled={busy}
             className="rounded-full bg-accent px-4 py-1.5 text-xs font-semibold text-white disabled:opacity-40"
           >
-            Guardar
+            {text.common.save}
           </button>
           <button
             onClick={() => {
@@ -252,7 +249,7 @@ function AreaRow({
             }}
             className="rounded-full border border-base-border px-4 py-1.5 text-xs"
           >
-            Cancelar
+            {text.common.cancel}
           </button>
         </div>
       </div>
@@ -272,10 +269,10 @@ function AreaRow({
         </div>
         <div className="flex shrink-0 gap-2">
           <button onClick={() => setEditing(true)} className="rounded-full border border-base-border px-3 py-1 text-xs hover:bg-base-border/40">
-            Editar
+            {text.common.edit}
           </button>
           <button onClick={remove} disabled={busy} className="rounded-full px-3 py-1 text-xs text-priority-high hover:bg-priority-high/10">
-            Eliminar
+            {text.common.delete}
           </button>
         </div>
       </div>
@@ -312,7 +309,7 @@ function AreasSection({ areas, onRefresh }: { areas: Area[]; onRefresh: () => Pr
       setError(null);
       await onRefresh();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'No se pudo crear el área');
+      setError(err instanceof Error ? err.message : text.tuEspacio.createAreaError);
     }
   }
 
@@ -322,7 +319,7 @@ function AreasSection({ areas, onRefresh }: { areas: Area[]; onRefresh: () => Pr
       await onRefresh();
       return null;
     } catch (err) {
-      return err instanceof Error ? err.message : 'No se pudo guardar';
+      return err instanceof Error ? err.message : text.tuEspacio.saveAreaError;
     }
   }
 
@@ -335,43 +332,43 @@ function AreasSection({ areas, onRefresh }: { areas: Area[]; onRefresh: () => Pr
       if (err instanceof ApiError) {
         return { error: err.message, blockers: err.data.blockers as { projects: { id: string; name: string }[]; templates: { id: string; name: string }[] } | undefined };
       }
-      return { error: 'No se pudo eliminar' };
+      return { error: text.tuEspacio.deleteAreaError };
     }
   }
 
   return (
     <div className="space-y-3">
       <div>
-        <h2 className="text-lg font-semibold">Áreas</h2>
-        <p className="text-sm text-base-muted">Tus espacios de gestión. Organizan el día, los proyectos y el dashboard.</p>
+        <h2 className="text-lg font-semibold">{text.tuEspacio.areasTitle}</h2>
+        <p className="text-sm text-base-muted">{text.tuEspacio.areasSubtitle}</p>
       </div>
 
       <form onSubmit={createArea} className="space-y-3 rounded-card border border-base-border bg-base-surface p-4">
         <div className="flex flex-wrap items-end gap-3">
           <label className="min-w-[160px] flex-1">
-            <span className="mb-1 block text-xs text-base-muted">Nombre</span>
+            <span className="mb-1 block text-xs text-base-muted">{text.tuEspacio.nameLabel}</span>
             <input
               value={name}
               onChange={(e) => setName(e.target.value)}
               className="w-full rounded-lg border border-base-border bg-base-bg px-3 py-2 text-sm"
-              placeholder="Nombre del área"
+              placeholder={text.tuEspacio.areaNamePlaceholder}
             />
           </label>
           <label className="min-w-[200px] flex-1">
-            <span className="mb-1 block text-xs text-base-muted">Descripción (opcional)</span>
+            <span className="mb-1 block text-xs text-base-muted">{text.tuEspacio.areaDescriptionOptionalLabel}</span>
             <input
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               className="w-full rounded-lg border border-base-border bg-base-bg px-3 py-2 text-sm"
-              placeholder="Para qué usas este área"
+              placeholder={text.tuEspacio.areaDescriptionPlaceholder}
             />
           </label>
           <button type="submit" className="rounded-full bg-accent px-4 py-2 text-sm font-medium text-white">
-            Añadir área
+            {text.tuEspacio.addAreaButton}
           </button>
         </div>
         <div>
-          <span className="mb-1.5 block text-xs text-base-muted">Color</span>
+          <span className="mb-1.5 block text-xs text-base-muted">{text.tuEspacio.colorLabel}</span>
           <ColorSwatchPicker value={colorIndex} onChange={setColorIndex} />
         </div>
       </form>
@@ -381,7 +378,7 @@ function AreasSection({ areas, onRefresh }: { areas: Area[]; onRefresh: () => Pr
         {areas.map((a) => (
           <AreaRow key={a.id} area={a} areas={areas} onSave={saveArea} onDelete={deleteArea} />
         ))}
-        {areas.length === 0 ? <p className="text-sm text-base-muted">Aún no tienes áreas. Crea la primera arriba.</p> : null}
+        {areas.length === 0 ? <p className="text-sm text-base-muted">{text.tuEspacio.noAreasYet}</p> : null}
       </div>
     </div>
   );
@@ -432,7 +429,7 @@ function ProjectCard({
             value={name}
             onChange={(e) => setName(e.target.value)}
             className="w-full rounded-lg border border-base-border bg-base-bg px-3 py-2 text-sm"
-            placeholder="Nombre del proyecto"
+            placeholder={text.tuEspacio.projectNamePlaceholder}
           />
           <div className="grid gap-2 sm:grid-cols-3">
             <select value={areaId} onChange={(e) => setAreaId(e.target.value)} className="rounded-lg border border-base-border bg-base-bg px-2 py-1.5 text-sm">
@@ -461,16 +458,16 @@ function ProjectCard({
             />
           </div>
           <div>
-            <span className="mb-1 block text-xs text-base-muted">Personas que participan</span>
-            <ChipInput values={collaboratorNames} onChange={setCollaboratorNames} placeholder="Añadir persona y pulsar Enter…" />
+            <span className="mb-1 block text-xs text-base-muted">{text.tuEspacio.collaboratorsLabel}</span>
+            <ChipInput values={collaboratorNames} onChange={setCollaboratorNames} placeholder={text.tuEspacio.collaboratorsPlaceholder} />
           </div>
         </div>
         <div className="mt-3 flex gap-2">
           <button onClick={save} disabled={busy} className="rounded-full bg-accent px-4 py-1.5 text-xs font-semibold text-white disabled:opacity-40">
-            Guardar
+            {text.common.save}
           </button>
           <button onClick={() => setEditing(false)} className="rounded-full border border-base-border px-4 py-1.5 text-xs">
-            Cancelar
+            {text.common.cancel}
           </button>
         </div>
       </div>
@@ -496,7 +493,7 @@ function ProjectCard({
         </span>
       </div>
       {project.dueDate ? (
-        <p className="mt-1 text-xs text-base-muted">Vence: {new Date(project.dueDate).toLocaleDateString('es-ES')}</p>
+        <p className="mt-1 text-xs text-base-muted">{text.tuEspacio.dueLabel(new Date(project.dueDate).toLocaleDateString('es-ES'))}</p>
       ) : null}
       {project.collaborators.length > 0 ? (
         <div className="mt-2 flex flex-wrap gap-1">
@@ -509,10 +506,10 @@ function ProjectCard({
       ) : null}
       <div className="mt-3 flex gap-2">
         <button onClick={() => setEditing(true)} className="rounded-full border border-base-border px-3 py-1 text-xs hover:bg-base-border/40">
-          Editar
+          {text.common.edit}
         </button>
         <button onClick={remove} className="rounded-full px-3 py-1 text-xs text-priority-high hover:bg-priority-high/10">
-          Eliminar
+          {text.common.delete}
         </button>
       </div>
     </div>
@@ -559,25 +556,25 @@ function ProjectsSection({
   return (
     <div className="space-y-3">
       <div>
-        <h2 className="text-lg font-semibold">Proyectos</h2>
-        <p className="text-sm text-base-muted">Registro global de proyectos por área.</p>
+        <h2 className="text-lg font-semibold">{text.tuEspacio.projectsTitle}</h2>
+        <p className="text-sm text-base-muted">{text.tuEspacio.projectsSubtitle}</p>
       </div>
 
       {areas.length === 0 ? (
-        <p className="text-sm text-priority-high">Crea al menos un área arriba antes de añadir proyectos.</p>
+        <p className="text-sm text-priority-high">{text.tuEspacio.createAreaFirst}</p>
       ) : (
         <form onSubmit={createProject} className="flex flex-wrap items-end gap-3 rounded-card border border-base-border bg-base-surface p-4">
           <label className="flex-1 min-w-[200px]">
-            <span className="mb-1 block text-xs text-base-muted">Nombre</span>
+            <span className="mb-1 block text-xs text-base-muted">{text.tuEspacio.nameLabel}</span>
             <input
               value={name}
               onChange={(e) => setName(e.target.value)}
               className="w-full rounded-lg border border-base-border bg-base-bg px-3 py-2 text-sm"
-              placeholder="Nombre del proyecto"
+              placeholder={text.tuEspacio.projectNamePlaceholder}
             />
           </label>
           <label>
-            <span className="mb-1 block text-xs text-base-muted">Área</span>
+            <span className="mb-1 block text-xs text-base-muted">{text.tuEspacio.areaLabel}</span>
             <select
               value={areaId}
               onChange={(e) => setAreaId(e.target.value)}
@@ -591,16 +588,16 @@ function ProjectsSection({
             </select>
           </label>
           <button type="submit" className="rounded-full bg-accent px-4 py-2 text-sm font-medium text-white">
-            Añadir proyecto
+            {text.tuEspacio.addProjectButton}
           </button>
         </form>
       )}
 
       <div className="flex flex-wrap items-center gap-3 rounded-card border border-base-border bg-base-surface p-3 text-sm">
         <label className="flex items-center gap-1.5">
-          <span className="text-xs text-base-muted">Área</span>
+          <span className="text-xs text-base-muted">{text.tuEspacio.areaLabel}</span>
           <select value={filterArea} onChange={(e) => setFilterArea(e.target.value)} className="rounded-lg border border-base-border bg-base-bg px-2 py-1 text-xs">
-            <option value="">Todas</option>
+            <option value="">{text.tuEspacio.filterAll}</option>
             {areas.map((a) => (
               <option key={a.id} value={a.id}>
                 {a.name}
@@ -609,24 +606,24 @@ function ProjectsSection({
           </select>
         </label>
         <label className="flex items-center gap-1.5">
-          <span className="text-xs text-base-muted">Estado</span>
+          <span className="text-xs text-base-muted">{text.tuEspacio.statusLabel}</span>
           <select
             value={filterStatus}
             onChange={(e) => setFilterStatus(e.target.value as typeof filterStatus)}
             className="rounded-lg border border-base-border bg-base-bg px-2 py-1 text-xs"
           >
-            <option value="">Todos</option>
-            <option value="ACTIVE">Activos</option>
-            <option value="COMPLETED">Completados</option>
-            <option value="ARCHIVED">Archivados</option>
+            <option value="">{text.tuEspacio.filterAllMasc}</option>
+            <option value="ACTIVE">{text.tuEspacio.filterActive}</option>
+            <option value="COMPLETED">{text.tuEspacio.filterCompleted}</option>
+            <option value="ARCHIVED">{text.tuEspacio.filterArchived}</option>
           </select>
         </label>
         <label className="flex items-center gap-1.5">
-          <span className="text-xs text-base-muted">Ordenar</span>
+          <span className="text-xs text-base-muted">{text.tuEspacio.sortLabel}</span>
           <select value={sort} onChange={(e) => setSort(e.target.value as typeof sort)} className="rounded-lg border border-base-border bg-base-bg px-2 py-1 text-xs">
-            <option value="createdAt_desc">Más recientes primero</option>
-            <option value="createdAt_asc">Más antiguos primero</option>
-            <option value="dueDate_asc">Vencimiento más próximo</option>
+            <option value="createdAt_desc">{text.tuEspacio.sortNewestFirst}</option>
+            <option value="createdAt_asc">{text.tuEspacio.sortOldestFirst}</option>
+            <option value="dueDate_asc">{text.tuEspacio.sortDueDateAsc}</option>
           </select>
         </label>
       </div>
@@ -635,7 +632,7 @@ function ProjectsSection({
         {visible.map((p) => (
           <ProjectCard key={p.id} project={p} areas={areas} onRefresh={onRefresh} />
         ))}
-        {visible.length === 0 ? <p className="text-sm text-base-muted">No hay proyectos con esos filtros.</p> : null}
+        {visible.length === 0 ? <p className="text-sm text-base-muted">{text.tuEspacio.noProjectsForFilters}</p> : null}
       </div>
     </div>
   );
@@ -662,8 +659,8 @@ export function TuEspacioClient({
   return (
     <div className="space-y-8">
       <div>
-        <h1 className="text-2xl font-semibold">Tu espacio</h1>
-        <p className="text-sm text-base-muted">Tus áreas y proyectos, todo en un sitio.</p>
+        <h1 className="text-2xl font-semibold">{text.tuEspacio.title}</h1>
+        <p className="text-sm text-base-muted">{text.tuEspacio.subtitle}</p>
       </div>
       <AreasSection areas={areas} onRefresh={refreshAreas} />
       <ProjectsSection projects={projects} areas={areas} onRefresh={refreshProjects} />

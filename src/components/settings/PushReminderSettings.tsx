@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { api } from '@/lib/api-client';
 import { useToast } from '@/components/Toast';
 import { DAY_NAMES } from '@/lib/week';
+import { text } from '@/i18n/es';
 
 function urlBase64ToUint8Array(base64String: string) {
   const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
@@ -39,7 +40,7 @@ export function PushReminderSettings({
     try {
       const permission = await Notification.requestPermission();
       if (permission !== 'granted') {
-        showToast('Necesitamos tu permiso de notificaciones para avisarte', 'error');
+        showToast(text.pushReminder.permissionError, 'error');
         return;
       }
       const reg = await navigator.serviceWorker.register('/sw.js');
@@ -51,9 +52,9 @@ export function PushReminderSettings({
       const json = sub.toJSON();
       await api.post('/api/push/subscribe', { endpoint: json.endpoint, keys: json.keys });
       setSubscribed(true);
-      showToast('Notificaciones activadas');
+      showToast(text.pushReminder.activateSuccess);
     } catch {
-      showToast('No se pudo activar las notificaciones', 'error');
+      showToast(text.pushReminder.activateError, 'error');
     }
   }
 
@@ -63,23 +64,20 @@ export function PushReminderSettings({
     try {
       await api.patch('/api/settings/reminder', { weeklyReminderDayOfWeek: nextDay, weeklyReminderTime: nextSlot });
     } catch {
-      showToast('No se pudo guardar el recordatorio', 'error');
+      showToast(text.pushReminder.scheduleError, 'error');
     }
   }
 
   return (
     <div className="rounded-card border border-base-border bg-base-surface p-4">
-      <h3 className="mb-3 text-sm font-semibold">Recordatorio semanal</h3>
-      <p className="mb-3 text-xs text-base-muted">
-        Un aviso tipo notificación para que prepares la semana siguiente. Por limitaciones del plan gratuito de
-        alojamiento, la hora es aproximada (mañana ≈ 9:00, tarde ≈ 19:00), no al minuto exacto.
-      </p>
+      <h3 className="mb-3 text-sm font-semibold">{text.pushReminder.title}</h3>
+      <p className="mb-3 text-xs text-base-muted">{text.pushReminder.description}</p>
 
       {!supported ? (
-        <p className="text-sm text-base-muted">Tu navegador no soporta notificaciones push.</p>
+        <p className="text-sm text-base-muted">{text.pushReminder.unsupported}</p>
       ) : !subscribed ? (
         <button onClick={subscribe} className="rounded-full bg-accent px-4 py-2 text-sm font-medium text-white">
-          Activar notificaciones
+          {text.pushReminder.activateButton}
         </button>
       ) : (
         <div className="flex flex-wrap items-center gap-2">
@@ -99,10 +97,10 @@ export function PushReminderSettings({
             onChange={(e) => saveSchedule(dayOfWeek, e.target.value)}
             className="rounded-lg border border-base-border bg-base-bg px-2 py-1.5 text-sm"
           >
-            <option value="MORNING">Por la mañana (~9:00)</option>
-            <option value="EVENING">Por la tarde (~19:00)</option>
+            <option value="MORNING">{text.pushReminder.morningOption}</option>
+            <option value="EVENING">{text.pushReminder.eveningOption}</option>
           </select>
-          <span className="text-xs text-accent">✓ Activado</span>
+          <span className="text-xs text-accent">{text.pushReminder.activated}</span>
         </div>
       )}
     </div>

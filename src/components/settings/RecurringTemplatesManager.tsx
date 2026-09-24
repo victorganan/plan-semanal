@@ -7,6 +7,8 @@ import { PRIORITY_LABELS } from '@/types';
 import { describeRecurrence, presetValue } from '@/lib/rrule-helpers';
 import type { RecurrenceValue } from '@/lib/rrule-helpers';
 import type { Area } from '@/types';
+// Alias: el estado local de este componente ya usa el nombre `text` para el texto de la plantilla.
+import { text as t } from '@/i18n/es';
 
 interface Template {
   id: string;
@@ -54,37 +56,35 @@ export function RecurringTemplatesManager({ initialTemplates, areas }: { initial
 
   return (
     <div className="rounded-card border border-base-border bg-base-surface p-4">
-      <h3 className="mb-3 text-sm font-semibold">Tareas recurrentes</h3>
-      <p className="mb-3 text-xs text-base-muted">
-        Se generan automáticamente en cada semana que corresponda, sin duplicarse, desde la semana actual en adelante.
-      </p>
+      <h3 className="mb-3 text-sm font-semibold">{t.recurringTemplates.title}</h3>
+      <p className="mb-3 text-xs text-base-muted">{t.recurringTemplates.description}</p>
       {areas.length === 0 ? (
-        <p className="mb-3 text-xs text-priority-high">Crea al menos un área en Tu espacio antes de añadir plantillas.</p>
+        <p className="mb-3 text-xs text-priority-high">{t.recurringTemplates.needsArea}</p>
       ) : null}
       <ul className="space-y-2">
-        {templates.map((t) => (
-          <li key={t.id} className="flex items-center justify-between gap-3 rounded-lg border border-base-border px-3 py-2 text-sm">
+        {templates.map((tpl) => (
+          <li key={tpl.id} className="flex items-center justify-between gap-3 rounded-lg border border-base-border px-3 py-2 text-sm">
             <span>
-              {t.area.name} · {t.text} ·{' '}
+              {tpl.area.name} · {tpl.text} ·{' '}
               {describeRecurrence(
                 {
-                  freq: t.freq,
-                  interval: t.interval,
-                  byWeekdays: t.byWeekdays,
-                  monthlyByNthWeekday: t.monthlyByNthWeekday,
-                  endMode: t.endMode,
-                  endDate: t.endDate ? new Date(t.endDate).toISOString().slice(0, 10) : null,
-                  endCount: t.endCount,
+                  freq: tpl.freq,
+                  interval: tpl.interval,
+                  byWeekdays: tpl.byWeekdays,
+                  monthlyByNthWeekday: tpl.monthlyByNthWeekday,
+                  endMode: tpl.endMode,
+                  endDate: tpl.endDate ? new Date(tpl.endDate).toISOString().slice(0, 10) : null,
+                  endCount: tpl.endCount,
                 },
-                new Date(t.dtstart)
+                new Date(tpl.dtstart)
               )}
             </span>
-            <button onClick={() => remove(t.id)} className="shrink-0 text-xs text-priority-high hover:underline">
-              Eliminar
+            <button onClick={() => remove(tpl.id)} className="shrink-0 text-xs text-priority-high hover:underline">
+              {t.recurringTemplates.deleteButton}
             </button>
           </li>
         ))}
-        {templates.length === 0 ? <p className="text-sm text-base-muted">Sin plantillas todavía.</p> : null}
+        {templates.length === 0 ? <p className="text-sm text-base-muted">{t.recurringTemplates.empty}</p> : null}
       </ul>
 
       <form onSubmit={add} className="mt-4 space-y-2">
@@ -115,11 +115,11 @@ export function RecurringTemplatesManager({ initialTemplates, areas }: { initial
         <input
           value={text}
           onChange={(e) => setText(e.target.value)}
-          placeholder="Texto de la tarea"
+          placeholder={t.recurringTemplates.textPlaceholder}
           className="w-full rounded-lg border border-base-border bg-base-bg px-2 py-1.5 text-sm"
         />
         <label className="block">
-          <span className="mb-1 block text-xs text-base-muted">Primera fecha</span>
+          <span className="mb-1 block text-xs text-base-muted">{t.recurringTemplates.firstDateLabel}</span>
           <input
             type="date"
             value={dtstart}
@@ -136,7 +136,7 @@ export function RecurringTemplatesManager({ initialTemplates, areas }: { initial
           disabled={areas.length === 0 || !recurrence}
           className="rounded-full bg-accent px-3 py-1.5 text-sm font-medium text-white disabled:opacity-40"
         >
-          Añadir plantilla
+          {t.recurringTemplates.addButton}
         </button>
       </form>
     </div>

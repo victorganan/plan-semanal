@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { addWeeks, currentIsoWeek, todayDayOfWeek, dateForDayOfWeek } from '@/lib/week';
+import { text } from '@/i18n/es';
 
 function step(isoWeek: string, dayOfWeek: number, delta: number) {
   let dow = dayOfWeek + delta;
@@ -29,21 +30,21 @@ export function DayNav({ isoWeek, dayOfWeek }: { isoWeek: string; dayOfWeek: num
         href={`/dia/${prev.iso}/${prev.dow}`}
         className="rounded-full border border-base-border px-3 py-1.5 text-sm hover:bg-base-border/40"
       >
-        ← Anterior
+        {text.dayNav.prev}
       </Link>
       <span className="text-sm font-semibold">{dateLabel}</span>
       <Link
         href={`/dia/${next.iso}/${next.dow}`}
         className="rounded-full border border-base-border px-3 py-1.5 text-sm hover:bg-base-border/40"
       >
-        Siguiente →
+        {text.dayNav.next}
       </Link>
       {!isCurrentToday ? (
         <Link
           href={`/dia/${currentIsoWeek()}/${todayDayOfWeek()}`}
           className="rounded-full bg-accent px-3 py-1.5 text-sm font-medium text-white"
         >
-          Hoy
+          {text.dayNav.today}
         </Link>
       ) : null}
     </div>

@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import type { Area, TaskWithProject } from '@/types';
 import { DAY_NAMES } from '@/lib/week';
+import { text } from '@/i18n/es';
 
 interface Props {
   items: TaskWithProject[];
@@ -29,9 +30,9 @@ function TwoMinuteTimer({ onDone }: { onDone: () => void }) {
       <p className="text-3xl font-semibold tabular-nums">
         {mm}:{ss}
       </p>
-      <p className="text-sm text-base-muted">Hazla ahora mismo. Cuando termines, márcala como hecha.</p>
+      <p className="text-sm text-base-muted">{text.inboxTriage.doItNowBody}</p>
       <button onClick={onDone} className="rounded-full bg-accent px-5 py-2 text-sm font-semibold text-white">
-        Ya está hecha ✓
+        {text.inboxTriage.doneButton}
       </button>
     </div>
   );
@@ -81,10 +82,10 @@ export function InboxTriageWizard({ items, areas, currentIsoWeek, onUpdate, onDe
     return (
       <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/40 p-4">
         <div className="w-full max-w-sm rounded-card bg-base-surface p-6 text-center shadow-xl">
-          <p className="mb-4 text-lg font-semibold">Bandeja vacía 🎉</p>
-          <p className="mb-4 text-sm text-base-muted">Has procesado todo lo pendiente.</p>
+          <p className="mb-4 text-lg font-semibold">{text.inboxTriage.emptyTitle}</p>
+          <p className="mb-4 text-sm text-base-muted">{text.inboxTriage.emptyBody}</p>
           <button onClick={onClose} className="rounded-full bg-accent px-5 py-2 text-sm font-semibold text-white">
-            Cerrar
+            {text.inboxTriage.close}
           </button>
         </div>
       </div>
@@ -96,9 +97,9 @@ export function InboxTriageWizard({ items, areas, currentIsoWeek, onUpdate, onDe
       <div className="w-full max-w-md rounded-t-2xl bg-base-surface p-6 shadow-xl sm:rounded-card">
         <div className="mb-4 flex items-center justify-between">
           <span className="text-xs font-medium uppercase tracking-wide text-base-muted">
-            {index + 1} de {queue.length}
+            {text.inboxTriage.progress(index + 1, queue.length)}
           </span>
-          <button onClick={onClose} aria-label="Cerrar" className="rounded-full p-1.5 text-base-muted hover:bg-base-border/40">
+          <button onClick={onClose} aria-label={text.inboxTriage.closeAriaLabel} className="rounded-full p-1.5 text-base-muted hover:bg-base-border/40">
             ✕
           </button>
         </div>
@@ -107,42 +108,42 @@ export function InboxTriageWizard({ items, areas, currentIsoWeek, onUpdate, onDe
 
         {step === 'actionable' ? (
           <div className="space-y-2">
-            <p className="mb-2 text-center text-sm text-base-muted">¿Es accionable?</p>
+            <p className="mb-2 text-center text-sm text-base-muted">{text.inboxTriage.actionableQuestion}</p>
             <div className="flex gap-2">
               <button
                 onClick={() => setStep('twoMinutes')}
                 className="flex-1 rounded-full bg-accent px-4 py-2 text-sm font-semibold text-white"
               >
-                Sí
+                {text.inboxTriage.yes}
               </button>
               <button
                 onClick={() => setStep('notActionable')}
                 className="flex-1 rounded-full border border-base-border px-4 py-2 text-sm font-medium hover:bg-base-border/40"
               >
-                No
+                {text.inboxTriage.no}
               </button>
             </div>
             <button onClick={advance} className="mt-2 w-full text-center text-xs text-base-muted hover:underline">
-              Saltar por ahora
+              {text.inboxTriage.skip}
             </button>
           </div>
         ) : null}
 
         {step === 'notActionable' ? (
           <div className="space-y-2">
-            <p className="mb-2 text-center text-sm text-base-muted">Vale, ¿qué hacemos con ella?</p>
+            <p className="mb-2 text-center text-sm text-base-muted">{text.inboxTriage.notActionableQuestion}</p>
             <div className="flex gap-2">
               <button
                 onClick={someday}
                 className="flex-1 rounded-full border border-base-border px-4 py-2 text-sm font-medium hover:bg-base-border/40"
               >
-                Algún día
+                {text.inboxTriage.someday}
               </button>
               <button
                 onClick={discard}
                 className="flex-1 rounded-full px-4 py-2 text-sm font-medium text-priority-high hover:bg-priority-high/10"
               >
-                Descartar
+                {text.inboxTriage.discard}
               </button>
             </div>
           </div>
@@ -150,19 +151,19 @@ export function InboxTriageWizard({ items, areas, currentIsoWeek, onUpdate, onDe
 
         {step === 'twoMinutes' && !timerActive ? (
           <div className="space-y-2">
-            <p className="mb-2 text-center text-sm text-base-muted">¿Menos de 2 minutos?</p>
+            <p className="mb-2 text-center text-sm text-base-muted">{text.inboxTriage.twoMinutesQuestion}</p>
             <div className="flex gap-2">
               <button
                 onClick={() => setTimerActive(true)}
                 className="flex-1 rounded-full bg-accent px-4 py-2 text-sm font-semibold text-white"
               >
-                Sí, hazla ya
+                {text.inboxTriage.doItNow}
               </button>
               <button
                 onClick={() => setStep('schedule')}
                 className="flex-1 rounded-full border border-base-border px-4 py-2 text-sm font-medium hover:bg-base-border/40"
               >
-                No, resérvale tiempo
+                {text.inboxTriage.reserveTime}
               </button>
             </div>
           </div>
@@ -172,7 +173,7 @@ export function InboxTriageWizard({ items, areas, currentIsoWeek, onUpdate, onDe
 
         {step === 'schedule' ? (
           <div className="space-y-3">
-            <p className="text-center text-sm text-base-muted">¿Cuándo y dónde?</p>
+            <p className="text-center text-sm text-base-muted">{text.inboxTriage.whenWhereQuestion}</p>
             <div className="flex gap-1.5">
               <select
                 value={day}
@@ -202,7 +203,7 @@ export function InboxTriageWizard({ items, areas, currentIsoWeek, onUpdate, onDe
               disabled={!areaId}
               className="w-full rounded-full bg-accent px-4 py-2 text-sm font-semibold text-white disabled:opacity-40"
             >
-              Planificar →
+              {text.inboxTriage.scheduleButton}
             </button>
           </div>
         ) : null}

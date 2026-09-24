@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { addWeeks, currentIsoWeek, formatWeekRange } from '@/lib/week';
+import { text } from '@/i18n/es';
 
 export function WeekNav({ isoWeek }: { isoWeek: string }) {
   const prev = addWeeks(isoWeek, -1);
@@ -14,7 +15,7 @@ export function WeekNav({ isoWeek }: { isoWeek: string }) {
         href={`/semana/${prev}`}
         className="rounded-full border border-base-border px-3 py-1.5 text-sm hover:bg-base-border/40"
       >
-        ← Anterior
+        {text.weekNav.prev}
       </Link>
       <div className="text-center">
         <div className="text-sm font-semibold">{isoWeek}</div>
@@ -24,14 +25,14 @@ export function WeekNav({ isoWeek }: { isoWeek: string }) {
         href={`/semana/${next}`}
         className="rounded-full border border-base-border px-3 py-1.5 text-sm hover:bg-base-border/40"
       >
-        Siguiente →
+        {text.weekNav.next}
       </Link>
       {!isCurrent ? (
         <Link
           href={`/semana/${currentIsoWeek()}`}
           className="rounded-full bg-accent px-3 py-1.5 text-sm font-medium text-white"
         >
-          Hoy
+          {text.weekNav.today}
         </Link>
       ) : null}
     </div>

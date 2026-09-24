@@ -5,23 +5,24 @@ import { useEffect, useRef, useState } from 'react';
 import clsx from 'clsx';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import { LogoutButton } from '@/components/LogoutButton';
+import { text } from '@/i18n/es';
 
 const LINKS_BEFORE = [
-  { href: '/hoy', label: 'Hoy' },
-  { href: '/semana', label: 'Semana' },
-  { href: '/tu-espacio', label: 'Tu espacio' },
+  { href: '/hoy', label: text.nav.hoy },
+  { href: '/semana', label: text.nav.semana },
+  { href: '/tu-espacio', label: text.nav.tuEspacio },
 ];
 
 const LINKS_AFTER = [
-  { href: '/dashboard', label: 'Dashboard' },
-  { href: '/ajustes', label: 'Ajustes' },
+  { href: '/dashboard', label: text.nav.dashboard },
+  { href: '/ajustes', label: text.nav.ajustes },
 ];
 
 const HERRAMIENTAS_ITEMS = [
-  { href: '/herramientas', label: 'Ver todas' },
-  { href: '/herramientas/matriz', label: '🎯 Matriz de Eisenhower' },
-  { href: '/herramientas/pomodoro', label: '🍅 Pomodoro' },
-  { href: '/herramientas/tiempo', label: '⏱️ Real vs. Estimado' },
+  { href: '/herramientas', label: text.nav.herramientasViewAll },
+  { href: '/herramientas/matriz', label: text.nav.herramientasMatriz },
+  { href: '/herramientas/pomodoro', label: text.nav.herramientasPomodoro },
+  { href: '/herramientas/tiempo', label: text.nav.herramientasTiempo },
 ];
 
 function HerramientasMenu() {
@@ -43,7 +44,7 @@ function HerramientasMenu() {
         onClick={() => setOpen((v) => !v)}
         className="flex items-center gap-1 rounded-full px-3 py-1.5 text-sm font-medium text-base-muted transition hover:bg-base-border/40 hover:text-base-text"
       >
-        Herramientas
+        {text.nav.herramientas}
         <span className={clsx('text-[9px] transition-transform', open && 'rotate-180')}>▼</span>
       </button>
       {open ? (

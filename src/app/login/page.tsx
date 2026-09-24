@@ -1,5 +1,6 @@
 import { redirect } from 'next/navigation';
 import { auth, signIn } from '@/auth';
+import { text } from '@/i18n/es';
 
 export default async function LoginPage() {
   const session = await auth();
@@ -8,10 +9,8 @@ export default async function LoginPage() {
   return (
     <div className="flex min-h-[80vh] items-center justify-center px-4">
       <div className="w-full max-w-sm rounded-card border border-base-border bg-base-surface p-8 text-center shadow-sm">
-        <h1 className="text-2xl font-semibold">Nortvira</h1>
-        <p className="mt-2 text-sm text-base-muted">
-          Tu asistente de productividad semanal: hoy, la semana, proyectos y hábitos en un solo sitio.
-        </p>
+        <h1 className="text-2xl font-semibold">{text.login.title}</h1>
+        <p className="mt-2 text-sm text-base-muted">{text.login.subtitle}</p>
         <form
           className="mt-8"
           action={async () => {
@@ -24,7 +23,7 @@ export default async function LoginPage() {
             className="flex w-full items-center justify-center gap-2 rounded-full border border-base-border bg-base-bg px-4 py-2.5 text-sm font-medium transition hover:bg-base-border/40"
           >
             <GoogleIcon />
-            Entrar con Google
+            {text.login.googleButton}
           </button>
         </form>
       </div>

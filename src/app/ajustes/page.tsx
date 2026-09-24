@@ -8,6 +8,7 @@ import { RecurringTemplatesManager } from '@/components/settings/RecurringTempla
 import { ActivityLogPanel } from '@/components/settings/ActivityLogPanel';
 import { PushReminderSettings } from '@/components/settings/PushReminderSettings';
 import { CapacitySettings } from '@/components/settings/CapacitySettings';
+import { text } from '@/i18n/es';
 
 export default async function AjustesPage({ searchParams }: { searchParams: Promise<{ todoist?: string }> }) {
   const session = await auth();
@@ -30,17 +31,17 @@ export default async function AjustesPage({ searchParams }: { searchParams: Prom
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-semibold">Ajustes</h1>
-        <p className="text-sm text-base-muted">Integraciones, hábitos, tareas recurrentes y actividad.</p>
+        <h1 className="text-2xl font-semibold">{text.ajustes.title}</h1>
+        <p className="text-sm text-base-muted">{text.ajustes.subtitle}</p>
       </div>
 
       {todoist === 'error' ? (
         <p className="rounded-card border border-priority-high/40 bg-priority-high/10 px-4 py-2 text-sm text-priority-high">
-          No se pudo conectar con Todoist. Inténtalo de nuevo.
+          {text.ajustes.todoistError}
         </p>
       ) : null}
       {todoist === 'connected' ? (
-        <p className="rounded-card border border-accent/40 bg-accent/10 px-4 py-2 text-sm text-accent">Todoist conectado correctamente.</p>
+        <p className="rounded-card border border-accent/40 bg-accent/10 px-4 py-2 text-sm text-accent">{text.ajustes.todoistConnected}</p>
       ) : null}
 
       <IntegrationsPanel initialTodoistConnected={!!todoistToken} initialCalendarConnected={calendarConnected} />

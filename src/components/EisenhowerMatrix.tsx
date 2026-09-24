@@ -6,6 +6,7 @@ import { TimeSelect, nextQuarterHourFromNow } from '@/components/TimeSelect';
 import { EISENHOWER_QUADRANTS, EISENHOWER_LABELS, EISENHOWER_HINTS } from '@/types';
 import type { EisenhowerQuadrantValue } from '@/types';
 import type { ProjectWithAreaAndCollaborators, TaskWithProject } from '@/types';
+import { text } from '@/i18n/es';
 
 interface Props {
   tasks: TaskWithProject[];
@@ -128,7 +129,7 @@ export function EisenhowerMatrix({ tasks, projects, calendarConnected, onUpdate,
           {quadrant ? (
             <button
               onClick={() => unclassify(task)}
-              aria-label="Quitar de la matriz"
+              aria-label={text.eisenhowerMatrix.unclassifyAriaLabel}
               className="shrink-0 text-base-muted hover:text-priority-high"
             >
               ✕
@@ -166,7 +167,7 @@ export function EisenhowerMatrix({ tasks, projects, calendarConnected, onUpdate,
               disabled={!decideDate || !decideTime}
               className="w-full rounded-full bg-accent px-2 py-1 text-[11px] font-medium text-white disabled:opacity-40"
             >
-              Guardar fecha
+              {text.eisenhowerMatrix.saveDate}
             </button>
           </div>
         ) : null}
@@ -176,7 +177,7 @@ export function EisenhowerMatrix({ tasks, projects, calendarConnected, onUpdate,
             <input
               value={delegateTo}
               onChange={(e) => setDelegateTo(e.target.value)}
-              placeholder="Nombre de la persona"
+              placeholder={text.eisenhowerMatrix.personNamePlaceholder}
               list={listId}
               className="w-full rounded border border-base-border bg-base-bg px-1.5 py-1 text-[11px]"
             />
@@ -192,7 +193,7 @@ export function EisenhowerMatrix({ tasks, projects, calendarConnected, onUpdate,
               disabled={!delegateTo.trim()}
               className="w-full rounded-full bg-accent px-2 py-1 text-[11px] font-medium text-white disabled:opacity-40"
             >
-              Asignar
+              {text.eisenhowerMatrix.assign}
             </button>
           </div>
         ) : null}
@@ -203,13 +204,13 @@ export function EisenhowerMatrix({ tasks, projects, calendarConnected, onUpdate,
               onClick={() => postpone(task)}
               className="flex-1 rounded-full border border-base-border px-2 py-1 text-[11px] hover:bg-base-border/40"
             >
-              Aplazar
+              {text.eisenhowerMatrix.postpone}
             </button>
             <button
               onClick={() => discard(task)}
               className="flex-1 rounded-full px-2 py-1 text-[11px] text-priority-high hover:bg-priority-high/10"
             >
-              Descartar
+              {text.eisenhowerMatrix.discard}
             </button>
           </div>
         ) : null}
@@ -222,7 +223,7 @@ export function EisenhowerMatrix({ tasks, projects, calendarConnected, onUpdate,
   return (
     <div className="rounded-card border border-base-border bg-base-surface p-4">
       <button onClick={() => setOpen((v) => !v)} className="flex w-full items-center justify-between text-sm font-semibold">
-        Matriz de Eisenhower
+        {text.eisenhowerMatrix.title}
         <span className="text-base-muted">{open ? '▲' : '▼'}</span>
       </button>
       {open ? (
@@ -262,22 +263,18 @@ export function EisenhowerMatrix({ tasks, projects, calendarConnected, onUpdate,
           </div>
 
           <div>
-            <p className="mb-1.5 text-xs font-semibold text-base-muted">Sin clasificar</p>
+            <p className="mb-1.5 text-xs font-semibold text-base-muted">{text.eisenhowerMatrix.unclassified}</p>
             <div className="space-y-1.5">
               {unclassified.map((t) => (
                 <TaskChip key={t.id} task={t} />
               ))}
               {unclassified.length === 0 ? (
-                <p className="text-xs text-base-muted">Todo clasificado. Bien hecho.</p>
+                <p className="text-xs text-base-muted">{text.eisenhowerMatrix.allClassified}</p>
               ) : null}
             </div>
           </div>
 
-          <p className="text-xs text-base-muted">
-            Arrastra una tarea a un cuadrante o usa sus botones. <strong>Hacer</strong> la agenda para hoy,{' '}
-            <strong>Decidir</strong> pide fecha y hora, <strong>Delegar</strong> pide a quién asignarla, y{' '}
-            <strong>Algún día</strong> deja aplazarla o descartarla.
-          </p>
+          <p className="text-xs text-base-muted">{text.eisenhowerMatrix.helpText}</p>
         </div>
       ) : null}
     </div>

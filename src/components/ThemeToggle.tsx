@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { text } from '@/i18n/es';
 
 export function ThemeToggle() {
   const [isDark, setIsDark] = useState<boolean | null>(null);
@@ -21,7 +22,7 @@ export function ThemeToggle() {
   return (
     <button
       onClick={toggle}
-      aria-label="Cambiar tema"
+      aria-label={text.themeToggle.ariaLabel}
       className="flex h-9 w-9 items-center justify-center rounded-full border border-base-border text-base-muted transition hover:text-base-text hover:bg-base-border/40"
     >
       {isDark ? '☀️' : '🌙'}

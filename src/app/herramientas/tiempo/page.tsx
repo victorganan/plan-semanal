@@ -1,6 +1,7 @@
 import { auth } from '@/auth';
 import { getTimeReport } from '@/lib/time-report';
 import { TimeReportClient } from '@/components/TimeReportClient';
+import { text } from '@/i18n/es';
 
 export default async function HerramientasTiempoPage() {
   const session = await auth();
@@ -9,10 +10,8 @@ export default async function HerramientasTiempoPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-semibold">Real vs. Estimado</h1>
-        <p className="text-sm text-base-muted">
-          Compara el tiempo estimado de tus tareas con el tiempo que realmente les has dedicado.
-        </p>
+        <h1 className="text-2xl font-semibold">{text.herramientas.timeReportPageTitle}</h1>
+        <p className="text-sm text-base-muted">{text.herramientas.timeReportPageSubtitle}</p>
       </div>
 
       <TimeReportClient week={report.week} all={report.all} />
