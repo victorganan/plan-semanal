@@ -23,3 +23,21 @@ export function countPendingProcess(tasks: TaskWithProject[]): number {
   const today = new Date();
   return tasks.filter((t) => isPendingProcess(t, today)).length;
 }
+
+export interface TriageSessionSummary {
+  allProcessed: boolean;
+  processedCount: number;
+  remainingCount: number;
+}
+
+// Resumen al terminar una pasada del asistente de Bandeja. "Saltar por
+// ahora" no procesa la tarea (sigue con processedAt = null): si se saltó
+// alguna, la cola local del asistente llega a su fin sin que la Bandeja
+// esté realmente vacía, así que el mensaje final no puede ser fijo.
+export function summarizeTriageSession(totalInQueue: number, skippedCount: number): TriageSessionSummary {
+  return {
+    allProcessed: skippedCount === 0,
+    processedCount: totalInQueue - skippedCount,
+    remainingCount: skippedCount,
+  };
+}

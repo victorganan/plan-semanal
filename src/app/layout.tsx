@@ -6,6 +6,7 @@ import { ThemeScript } from '@/components/ThemeScript';
 import { ToastProvider } from '@/components/Toast';
 import { RegisterServiceWorker } from '@/components/RegisterServiceWorker';
 import { QuickCapture } from '@/components/QuickCapture';
+import { InboxCaptureProvider } from '@/components/InboxCaptureContext';
 import { getInboxPendingCount } from '@/lib/page-data';
 import './globals.css';
 
@@ -38,12 +39,14 @@ export default async function RootLayout({ children }: { children: React.ReactNo
       <body className="flex min-h-screen flex-col font-sans antialiased">
         <RegisterServiceWorker />
         <ToastProvider>
-          {session?.user ? (
-            <NavBar userName={session.user.name} userImage={session.user.image} pendingBandeja={pendingBandeja} />
-          ) : null}
-          <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-6 sm:px-6 sm:py-8">{children}</main>
-          {session?.user ? <Footer /> : null}
-          {session?.user ? <QuickCapture /> : null}
+          <InboxCaptureProvider>
+            {session?.user ? (
+              <NavBar userName={session.user.name} userImage={session.user.image} pendingBandeja={pendingBandeja} />
+            ) : null}
+            <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-6 sm:px-6 sm:py-8">{children}</main>
+            {session?.user ? <Footer /> : null}
+            {session?.user ? <QuickCapture /> : null}
+          </InboxCaptureProvider>
         </ToastProvider>
       </body>
     </html>

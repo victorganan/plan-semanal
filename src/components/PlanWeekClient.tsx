@@ -1,10 +1,11 @@
 'use client';
 
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { api, ApiError } from '@/lib/api-client';
 import { currentIsoWeek } from '@/lib/week';
 import { useToast } from '@/components/Toast';
+import { useInboxCapture } from '@/components/InboxCaptureContext';
 import type { WeekFull, Habit, ProjectWithAreaAndCollaborators, Area, Tag, TaskWithProject } from '@/types';
 import { DayCard } from '@/components/DayCard';
 import { HabitGrid } from '@/components/HabitGrid';
@@ -63,8 +64,14 @@ export function PlanWeekClient({
   const [wizardOpen, setWizardOpen] = useState(false);
   const [closeRitualOpen, setCloseRitualOpen] = useState(false);
   const { showToast } = useToast();
+  const { subscribe } = useInboxCapture();
   const router = useRouter();
   const weekIsoOfToday = currentIsoWeek();
+
+  // La captura rápida (botón flotante / atajo N) vive en el layout, fuera de
+  // esta pantalla: publica la tarea creada por aquí para que aparezca en la
+  // Bandeja al instante, sin esperar a un recargado.
+  useEffect(() => subscribe((task) => setInbox((prev) => [...prev, task])), [subscribe]);
 
   const hardRefresh = useCallback(async () => {
     const fresh = await api.get(`/api/weeks/${isoWeek}`);

@@ -71,6 +71,7 @@ function SetReminderControl({ onSet }: { onSet: (isoDate: string) => Promise<voi
 
 export function InboxList({ tasks, projects, areas, tags, currentIsoWeek, onAdd, onUpdate, onDelete, onCreateCalendarEvent }: Props) {
   const [triageOpen, setTriageOpen] = useState(false);
+  const [wizardKey, setWizardKey] = useState(0);
   const [tab, setTab] = useState<Tab>('bandeja');
   const { showToast } = useToast();
   const router = useRouter();
@@ -167,12 +168,14 @@ export function InboxList({ tasks, projects, areas, tags, currentIsoWeek, onAdd,
           ) : null}
           {triageOpen ? (
             <InboxTriageWizard
+              key={wizardKey}
               items={queueTasks}
               areas={areas}
               onUpdate={wizardUpdate}
               onDelete={wizardDelete}
               onCreateCalendarEvent={onCreateCalendarEvent}
               onClose={() => setTriageOpen(false)}
+              onRestart={() => setWizardKey((k) => k + 1)}
             />
           ) : null}
           <div className="space-y-2">

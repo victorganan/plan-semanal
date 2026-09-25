@@ -1,9 +1,10 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { api, ApiError } from '@/lib/api-client';
 import { currentIsoWeek } from '@/lib/week';
 import { useToast } from '@/components/Toast';
+import { useInboxCapture } from '@/components/InboxCaptureContext';
 import { InboxList } from '@/components/InboxList';
 import type { Area, ProjectWithAreaAndCollaborators, Tag, TaskWithProject } from '@/types';
 import { text as t } from '@/i18n/es';
@@ -28,7 +29,10 @@ function tempId() {
 export function BandejaClient({ initialInbox, projects, areas, tags, calendarConnected }: Props) {
   const [inbox, setInbox] = useState(initialInbox);
   const { showToast } = useToast();
+  const { subscribe } = useInboxCapture();
   const isoWeek = currentIsoWeek();
+
+  useEffect(() => subscribe((task) => setInbox((prev) => [...prev, task])), [subscribe]);
 
   async function addBacklog(text: string) {
     const optimistic: TaskWithProject = {

@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { api } from '@/lib/api-client';
 import type { Area, TaskWithProject } from '@/types';
 import { isoWeekAndDowFor, todayLocalString } from '@/lib/week';
+import { summarizeTriageSession } from '@/lib/inbox';
 import { TimeSelect } from '@/components/TimeSelect';
 import { QuickDateChips } from '@/components/QuickDateChips';
 import { text } from '@/i18n/es';
@@ -15,6 +16,9 @@ interface Props {
   onDelete: (id: string) => Promise<void>;
   onCreateCalendarEvent?: (id: string) => Promise<void>;
   onClose: () => void;
+  // Reabre el asistente con una cola nueva (lo que quede pendiente de
+  // procesar tras cerrar esta sesión), para "Procesar las que quedan".
+  onRestart: () => void;
 }
 
 // Árbol de decisión de A.6.1. La cola se captura una sola vez al abrir:
@@ -57,10 +61,11 @@ function TwoMinuteTimer({ onDone }: { onDone: () => void }) {
   );
 }
 
-export function InboxTriageWizard({ items, areas, onUpdate, onDelete, onCreateCalendarEvent, onClose }: Props) {
+export function InboxTriageWizard({ items, areas, onUpdate, onDelete, onCreateCalendarEvent, onClose, onRestart }: Props) {
   const [queue] = useState(items);
   const [index, setIndex] = useState(0);
   const [step, setStep] = useState<Step>('actionable');
+  const [skippedCount, setSkippedCount] = useState(0);
 
   const [date, setDate] = useState(todayLocalString());
   const [areaId, setAreaId] = useState(areas[0]?.id ?? '');
@@ -84,6 +89,11 @@ export function InboxTriageWizard({ items, areas, onUpdate, onDelete, onCreateCa
     setSomedayDate('');
     setWaitPerson('');
     setWaitFollowUp('');
+  }
+
+  function skip() {
+    setSkippedCount((c) => c + 1);
+    advance();
   }
 
   function advance() {
@@ -190,14 +200,38 @@ export function InboxTriageWizard({ items, areas, onUpdate, onDelete, onCreateCa
   }
 
   if (!current) {
+    const summary = summarizeTriageSession(queue.length, skippedCount);
     return (
       <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/40 p-4">
         <div className="w-full max-w-sm rounded-card bg-base-surface p-6 text-center shadow-xl">
-          <p className="mb-1 text-lg font-semibold">{text.inboxTriage.emptyTitle}</p>
-          <p className="mb-4 text-sm text-base-muted">{text.inboxTriage.emptyBody}</p>
-          <button onClick={onClose} className="rounded-full bg-accent px-5 py-2 text-sm font-semibold text-white">
-            {text.inboxTriage.close}
-          </button>
+          {summary.allProcessed ? (
+            <>
+              <p className="mb-1 text-lg font-semibold">{text.inboxTriage.emptyTitle}</p>
+              <p className="mb-4 text-sm text-base-muted">{text.inboxTriage.emptyBody}</p>
+            </>
+          ) : (
+            <>
+              <p className="mb-1 text-lg font-semibold">{text.inboxTriage.partialTitle(summary.processedCount)}</p>
+              <p className="mb-4 text-sm text-base-muted">{text.inboxTriage.partialBody(summary.remainingCount)}</p>
+            </>
+          )}
+          <div className="flex flex-col gap-2">
+            {!summary.allProcessed ? (
+              <button onClick={onRestart} className="rounded-full bg-accent px-5 py-2 text-sm font-semibold text-white">
+                {text.inboxTriage.continueProcessing}
+              </button>
+            ) : null}
+            <button
+              onClick={onClose}
+              className={
+                summary.allProcessed
+                  ? 'rounded-full bg-accent px-5 py-2 text-sm font-semibold text-white'
+                  : 'rounded-full border border-base-border px-5 py-2 text-sm font-medium hover:bg-base-border/40'
+              }
+            >
+              {text.inboxTriage.close}
+            </button>
+          </div>
         </div>
       </div>
     );
@@ -234,7 +268,7 @@ export function InboxTriageWizard({ items, areas, onUpdate, onDelete, onCreateCa
                 {text.inboxTriage.no}
               </button>
             </div>
-            <button onClick={advance} className="mt-2 w-full text-center text-xs text-base-muted hover:underline">
+            <button onClick={skip} className="mt-2 w-full text-center text-xs text-base-muted hover:underline">
               {text.inboxTriage.skip}
             </button>
           </div>

@@ -4,6 +4,8 @@ import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { api } from '@/lib/api-client';
 import { useToast } from '@/components/Toast';
+import { useInboxCapture } from '@/components/InboxCaptureContext';
+import type { TaskWithProject } from '@/types';
 import { text } from '@/i18n/es';
 
 function isTypingTarget(el: EventTarget | null): boolean {
@@ -13,17 +15,19 @@ function isTypingTarget(el: EventTarget | null): boolean {
 }
 
 // Atajo global de captura (M6.1): disponible en cualquier pantalla, incluida
-// la Guardia de foco. No usa el estado de ninguna pantalla en concreto: solo
-// guarda directo en la Bandeja y confirma con un toast. router.refresh() no
-// toca el estado propio de la pantalla actual (sigue siendo el mismo
-// componente, con sus datos ya cargados) pero sí actualiza el contador de
-// "Bandeja (N)" del menú, que se calcula en el servidor (layout).
+// la Guardia de foco. Vive en el layout, fuera del árbol de la pantalla que
+// esté mostrando la Bandeja (Semana, Hoy o /bandeja), así que para que la
+// tarea aparezca en esa lista al instante (no solo el contador) la publica
+// por notifyCaptured — quien esté mirando la Bandeja está suscrito y la
+// añade a su propia lista sin esperar a nada. router.refresh() se encarga
+// aparte del contador "Bandeja (N)" del menú, que se calcula en el servidor.
 export function QuickCapture() {
   const [open, setOpen] = useState(false);
   const [value, setValue] = useState('');
   const [busy, setBusy] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const { showToast } = useToast();
+  const { notifyCaptured } = useInboxCapture();
   const router = useRouter();
 
   useEffect(() => {
@@ -47,7 +51,8 @@ export function QuickCapture() {
     if (!trimmed || busy) return;
     setBusy(true);
     try {
-      await api.post('/api/tasks', { kind: 'BACKLOG', text: trimmed });
+      const created = await api.post('/api/tasks', { kind: 'BACKLOG', text: trimmed });
+      notifyCaptured({ ...created, project: null, area: null, subtasks: [], recurringTemplate: null, tags: [] } as TaskWithProject);
       showToast(text.quickCapture.captured, 'success', { label: text.quickCapture.viewInbox, href: '/bandeja' });
       setValue('');
       setOpen(false);
