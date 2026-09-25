@@ -28,6 +28,7 @@ export default async function DiaPage({ params }: { params: Promise<{ iso: strin
       todoistConnected={data.todoistConnected}
       calendarConnected={data.calendarConnected}
       dailyCapacityMinutes={data.dailyCapacityMinutes}
+      bufferPercent={data.bufferPercent}
     />
   );
 }

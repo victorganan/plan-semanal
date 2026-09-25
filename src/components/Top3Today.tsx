@@ -10,7 +10,14 @@ interface Props {
 }
 
 export function Top3Today({ tasks, title = text.top3.title, onToggleDone, onUnstar }: Props) {
-  if (tasks.length === 0) return null;
+  if (tasks.length === 0) {
+    return (
+      <div className="mb-3 rounded-lg border border-dashed border-base-border p-3 text-center">
+        <p className="text-sm font-medium">{text.top3.emptyTitle}</p>
+        <p className="mt-0.5 text-xs text-base-muted">{text.top3.emptyBody}</p>
+      </div>
+    );
+  }
 
   return (
     <div className="mb-3 rounded-lg border border-amber-400/40 bg-amber-400/5 p-3">

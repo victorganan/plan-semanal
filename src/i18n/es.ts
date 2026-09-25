@@ -88,12 +88,29 @@ export const text = {
   capacityBar: {
     plannedOf: (planned: string, capacity: string) => `${planned} planificadas de ${capacity}`,
     overloaded: 'Sobreplanificado',
+    unestimatedWarning: (n: number) => (n === 1 ? '1 tarea sin duración: estimación aproximada' : `${n} tareas sin duración: estimación aproximada`),
+    tooltipCapacity: (raw: string, bufferPercent: number) => `Capacidad: ${raw} − ${bufferPercent}% de margen`,
+    tooltipEffective: (effective: string) => `Capacidad con margen: ${effective}`,
+    tooltipPlanned: (planned: string) => `Planificado: ${planned}`,
+    tooltipFree: (free: string) => `Libre: ${free}`,
+  },
+
+  weeklyCapacity: {
+    title: 'Carga semanal (lunes a viernes)',
   },
 
   top3: {
     title: 'Las 3 del día',
     unstarAriaLabel: 'Quitar de Las 3 del día',
     toggleDoneAriaLabel: (done: boolean) => (done ? 'Marcar como pendiente' : 'Marcar como hecha'),
+    emptyTitle: '¿Qué 3 cosas harían que hoy fuera un buen día?',
+    emptyBody: 'Marca hasta 3 tareas con la estrella para destacarlas aquí.',
+  },
+
+  top3Swap: {
+    question: 'Las 3 del día son 3. ¿Cuál cambias?',
+    swapButton: 'Cambiar por esta',
+    cancel: 'Cancelar',
   },
 
   taskCard: {
@@ -514,6 +531,10 @@ export const text = {
       'Horas reales que sueles tener disponibles al día (descontando reuniones fijas, comidas, etc.). Se usa para avisarte cuando sobreplanificas un día.',
     currentLabel: (value: string) => `Ahora mismo: ${value}`,
     saveError: 'No se pudo guardar la capacidad diaria',
+    bufferTitle: 'Margen para imprevistos',
+    bufferDescription: 'Parte del día que dejas libre a propósito, sin planificar, por si surge algo.',
+    bufferCurrentLabel: (pct: number) => `${pct}%`,
+    bufferSaveError: 'No se pudo guardar el margen para imprevistos',
   },
 
   habitsManager: {

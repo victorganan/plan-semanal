@@ -8,6 +8,7 @@ import { useToast } from '@/components/Toast';
 import { useInboxCapture } from '@/components/InboxCaptureContext';
 import type { WeekFull, Habit, ProjectWithAreaAndCollaborators, Area, Tag, TaskWithProject } from '@/types';
 import { DayCard } from '@/components/DayCard';
+import { CapacityBar } from '@/components/CapacityBar';
 import { HabitGrid } from '@/components/HabitGrid';
 import { MoodSliders } from '@/components/MoodSliders';
 import { ObjectivesForm, EvaluationForm } from '@/components/WeekMetaForm';
@@ -21,6 +22,7 @@ import { DayNav } from '@/components/DayNav';
 import { ViewSwitcher } from '@/components/ViewSwitcher';
 import { DAY_NAMES, dateForDayOfWeek, addWeeks } from '@/lib/week';
 import { countPendingProcess } from '@/lib/inbox';
+import { summarizeLoad } from '@/lib/capacity';
 // Alias: muchos callbacks locales de este componente usan `text` como nombre de parámetro.
 import { text as t } from '@/i18n/es';
 
@@ -38,6 +40,7 @@ interface Props {
   todoistConnected: boolean;
   calendarConnected: boolean;
   dailyCapacityMinutes: number;
+  bufferPercent: number;
 }
 
 function tempId() {
@@ -58,6 +61,7 @@ export function PlanWeekClient({
   todoistConnected,
   calendarConnected,
   dailyCapacityMinutes,
+  bufferPercent,
 }: Props) {
   const [week, setWeek] = useState(initialWeek);
   const [inbox, setInbox] = useState(initialInbox);
@@ -575,6 +579,7 @@ export function PlanWeekClient({
           tags={tags}
           isToday={isViewingToday}
           capacityMinutes={dailyCapacityMinutes}
+          bufferPercent={bufferPercent}
           onAddTask={(areaId, text) => addTask('DAY_AREA', text, { dayOfWeek: viewDow, areaId })}
           onUpdateTask={updateTask}
           onDeleteTask={deleteTask}
@@ -622,6 +627,13 @@ export function PlanWeekClient({
     );
   }
 
+  // Carga semanal = suma de días laborables (L-V, ya decidido en la Fase 0
+  // como horario común); sábado y domingo no cuentan ni en lo planificado
+  // ni en la capacidad.
+  const weekdayIds = new Set(week.days.filter((d) => d.dayOfWeek <= 4).map((d) => d.id));
+  const weekdayTasks = week.tasks.filter((t) => t.kind === 'DAY_AREA' && t.dayId && weekdayIds.has(t.dayId));
+  const weekLoad = summarizeLoad(weekdayTasks);
+
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-4">
@@ -637,6 +649,18 @@ export function PlanWeekClient({
           <WeekNav isoWeek={isoWeek} />
         </div>
       </div>
+
+      {weekLoad.plannedMinutes > 0 ? (
+        <div className="flex items-center justify-between gap-3 rounded-card border border-base-border bg-base-surface px-4 py-3">
+          <span className="text-sm font-medium">{t.weeklyCapacity.title}</span>
+          <CapacityBar
+            plannedMinutes={weekLoad.plannedMinutes}
+            capacityMinutes={dailyCapacityMinutes * 5}
+            bufferPercent={bufferPercent}
+            unestimatedCount={weekLoad.unestimatedCount}
+          />
+        </div>
+      ) : null}
 
       {wizardOpen ? (
         <PlanningWizard
@@ -675,6 +699,7 @@ export function PlanWeekClient({
               tags={tags}
               isToday={isoWeek === weekIsoOfToday && day.dayOfWeek === todayDow}
               capacityMinutes={dailyCapacityMinutes}
+              bufferPercent={bufferPercent}
               onAddTask={(areaId, text) => addTask('DAY_AREA', text, { dayOfWeek: day.dayOfWeek, areaId })}
               onUpdateTask={updateTask}
               onDeleteTask={deleteTask}

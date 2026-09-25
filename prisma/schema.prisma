@@ -35,6 +35,7 @@ model User {
   weeklyReminderTime      String? // "HH:MM"
 
   dailyCapacityMinutes Int @default(300) // horas reales disponibles al día (por defecto 5h)
+  bufferPercent        Int @default(20) // margen para imprevistos, 0-40%; Capacidad = dailyCapacityMinutes × (1 − margen)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

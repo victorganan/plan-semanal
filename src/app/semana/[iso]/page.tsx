@@ -26,6 +26,7 @@ export default async function SemanaPage({ params }: { params: Promise<{ iso: st
       todoistConnected={data.todoistConnected}
       calendarConnected={data.calendarConnected}
       dailyCapacityMinutes={data.dailyCapacityMinutes}
+      bufferPercent={data.bufferPercent}
     />
   );
 }

@@ -4,7 +4,8 @@ import { prisma } from '@/lib/prisma';
 import { requireUserId, isResponse } from '@/lib/api-auth';
 
 const schema = z.object({
-  dailyCapacityMinutes: z.number().int().min(15).max(1440),
+  dailyCapacityMinutes: z.number().int().min(15).max(1440).optional(),
+  bufferPercent: z.number().int().min(0).max(40).optional(),
 });
 
 export async function PATCH(req: NextRequest) {

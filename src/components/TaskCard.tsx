@@ -32,6 +32,10 @@ interface Props {
   // Permite arrastrar tarjetas que no son DAY_AREA (p.ej. tareas ya
   // organizadas en la Bandeja, sin día todavía) a una columna de día+área.
   dragEnabled?: boolean;
+  // Marcar/desmarcar Las 3 del día: por defecto usa onUpdate directo, pero
+  // DayCard lo sustituye para poder ofrecer el selector de sustitución
+  // cuando ya hay 3 marcadas ese día.
+  onToggleTop3?: (id: string, next: boolean) => void;
 }
 
 function templateToValue(t: RecurringTaskTemplate): RecurrenceValue {
@@ -69,6 +73,7 @@ export function TaskCard({
   showRecurrence,
   currentIsoWeek,
   dragEnabled,
+  onToggleTop3,
 }: Props) {
   const [open, setOpen] = useState(false);
   const [text, setText] = useState(task.text);
@@ -349,7 +354,9 @@ export function TaskCard({
 
         {task.kind === 'DAY_AREA' ? (
           <button
-            onClick={() => onUpdate(task.id, { isTop3: !task.isTop3 })}
+            onClick={() =>
+              onToggleTop3 ? onToggleTop3(task.id, !task.isTop3) : onUpdate(task.id, { isTop3: !task.isTop3 })
+            }
             aria-label={t.taskCard.top3AriaLabel(task.isTop3)}
             title={t.taskCard.top3AriaLabel(task.isTop3)}
             className={clsx(

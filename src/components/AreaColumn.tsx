@@ -22,6 +22,7 @@ interface Props {
   onReorder: (orderedIds: string[]) => Promise<void>;
   onExportTodoist?: (id: string) => Promise<void>;
   onCreateCalendarEvent?: (id: string) => Promise<void>;
+  onToggleTop3?: (id: string, next: boolean) => void;
 }
 
 export function AreaColumn({
@@ -37,6 +38,7 @@ export function AreaColumn({
   onReorder,
   onExportTodoist,
   onCreateCalendarEvent,
+  onToggleTop3,
 }: Props) {
   const [dragOver, setDragOver] = useState(false);
   const [dropTarget, setDropTarget] = useState<{ id: string; position: 'before' | 'after' } | null>(null);
@@ -126,6 +128,7 @@ export function AreaColumn({
               onDelete={onDelete}
               onExportTodoist={onExportTodoist}
               onCreateCalendarEvent={onCreateCalendarEvent}
+              onToggleTop3={onToggleTop3}
               showRecurrence
               currentIsoWeek={isoWeek}
             />

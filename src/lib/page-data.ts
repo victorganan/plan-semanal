@@ -87,7 +87,7 @@ export async function getWeekPageData(userId: string, isoWeek: string) {
         tags: true,
       },
     }) as Promise<TaskWithProject[]>,
-    prisma.user.findUnique({ where: { id: userId }, select: { dailyCapacityMinutes: true } }),
+    prisma.user.findUnique({ where: { id: userId }, select: { dailyCapacityMinutes: true, bufferPercent: true } }),
   ]);
 
   return {
@@ -100,6 +100,7 @@ export async function getWeekPageData(userId: string, isoWeek: string) {
     calendarConnected,
     inbox,
     dailyCapacityMinutes: user?.dailyCapacityMinutes ?? 300,
+    bufferPercent: user?.bufferPercent ?? 20,
   };
 }
 

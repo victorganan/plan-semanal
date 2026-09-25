@@ -24,7 +24,7 @@ export default async function AjustesPage({ searchParams }: { searchParams: Prom
     prisma.activityLog.findMany({ where: { userId }, orderBy: { createdAt: 'desc' }, take: 50 }),
     prisma.user.findUnique({
       where: { id: userId },
-      select: { weeklyReminderDayOfWeek: true, weeklyReminderTime: true, dailyCapacityMinutes: true },
+      select: { weeklyReminderDayOfWeek: true, weeklyReminderTime: true, dailyCapacityMinutes: true, bufferPercent: true },
     }),
   ]);
 
@@ -45,7 +45,7 @@ export default async function AjustesPage({ searchParams }: { searchParams: Prom
       ) : null}
 
       <IntegrationsPanel initialTodoistConnected={!!todoistToken} initialCalendarConnected={calendarConnected} />
-      <CapacitySettings initialMinutes={user?.dailyCapacityMinutes ?? 300} />
+      <CapacitySettings initialMinutes={user?.dailyCapacityMinutes ?? 300} initialBufferPercent={user?.bufferPercent ?? 20} />
       <PushReminderSettings
         initialDayOfWeek={user?.weeklyReminderDayOfWeek ?? null}
         initialSlot={user?.weeklyReminderTime ?? null}
