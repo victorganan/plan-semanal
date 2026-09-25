@@ -9,7 +9,14 @@ export function hasReappeared(t: TaskWithProject, today: Date = new Date()): boo
 }
 
 export function isPendingProcess(t: TaskWithProject, today: Date = new Date()): boolean {
-  return !t.done && t.gtdStatus === 'ACTIVA' && (t.processedAt === null || hasReappeared(t, today));
+  if (t.done) return false;
+  // "gtdStatus === 'ACTIVA' && hasReappeared(...)" nunca puede darse a la
+  // vez (hasReappeared exige ALGUN_DIA): son dos casos alternativos, no uno
+  // combinado. Antes iban unidos con un único && y la reaparición nunca
+  // contaba: una tarea con recordatorio de hoy quedaba invisible en
+  // cualquier pestaña (ni Algún día, que ya la excluye, ni Bandeja).
+  if (t.gtdStatus === 'ACTIVA') return t.processedAt === null;
+  return hasReappeared(t, today);
 }
 
 export function countPendingProcess(tasks: TaskWithProject[]): number {

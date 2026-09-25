@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { AddTaskInline } from '@/components/AddTaskInline';
 import { TaskCard } from '@/components/TaskCard';
 import { InboxTriageWizard } from '@/components/InboxTriageWizard';
@@ -72,6 +73,27 @@ export function InboxList({ tasks, projects, areas, tags, currentIsoWeek, onAdd,
   const [triageOpen, setTriageOpen] = useState(false);
   const [tab, setTab] = useState<Tab>('bandeja');
   const { showToast } = useToast();
+  const router = useRouter();
+
+  // El contador de "Bandeja (N)" del menú se calcula en el layout (servidor)
+  // y no se entera solo de los cambios optimistas del cliente: lo refrescamos
+  // justo en los tres momentos que pueden variarlo — procesar (asistente) y
+  // traer de vuelta desde Algún día. La captura rápida se refresca por su
+  // cuenta, desde su propio componente.
+  async function wizardUpdate(id: string, patch: Record<string, unknown>) {
+    await onUpdate(id, patch);
+    router.refresh();
+  }
+
+  async function wizardDelete(id: string) {
+    await onDelete(id);
+    router.refresh();
+  }
+
+  async function bringBackToInbox(id: string) {
+    await onUpdate(id, { gtdStatus: 'ACTIVA' });
+    router.refresh();
+  }
 
   const today = new Date();
   const pending = tasks.filter((t) => !t.done);
@@ -147,8 +169,8 @@ export function InboxList({ tasks, projects, areas, tags, currentIsoWeek, onAdd,
             <InboxTriageWizard
               items={queueTasks}
               areas={areas}
-              onUpdate={onUpdate}
-              onDelete={onDelete}
+              onUpdate={wizardUpdate}
+              onDelete={wizardDelete}
               onCreateCalendarEvent={onCreateCalendarEvent}
               onClose={() => setTriageOpen(false)}
             />
@@ -257,12 +279,14 @@ export function InboxList({ tasks, projects, areas, tags, currentIsoWeek, onAdd,
                   </p>
                   {isIdea ? <p className="mt-1 text-xs text-base-muted italic">{text.algunDiaView.ideaTag}</p> : null}
                   <button
-                    onClick={() => onUpdate(t.id, { gtdStatus: 'ACTIVA' })}
+                    onClick={() => bringBackToInbox(t.id)}
                     className="mt-2 text-xs font-medium text-accent hover:underline"
                   >
                     {text.algunDiaView.bringBackButton}
                   </button>
-                  {!t.snoozeUntil ? <SetReminderControl onSet={(isoDate) => onUpdate(t.id, { snoozeUntil: isoDate })} /> : null}
+                  {!t.snoozeUntil ? (
+                    <SetReminderControl onSet={async (isoDate) => { await onUpdate(t.id, { snoozeUntil: isoDate }); router.refresh(); }} />
+                  ) : null}
                 </div>
               );
             })

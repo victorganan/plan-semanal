@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { api } from '@/lib/api-client';
 import { useToast } from '@/components/Toast';
 import { text } from '@/i18n/es';
@@ -12,14 +13,18 @@ function isTypingTarget(el: EventTarget | null): boolean {
 }
 
 // Atajo global de captura (M6.1): disponible en cualquier pantalla, incluida
-// la Guardia de foco. No usa el estado de ninguna pantalla en concreto — solo
-// guarda directo en la Bandeja y confirma con un toast, sin refrescar nada.
+// la Guardia de foco. No usa el estado de ninguna pantalla en concreto: solo
+// guarda directo en la Bandeja y confirma con un toast. router.refresh() no
+// toca el estado propio de la pantalla actual (sigue siendo el mismo
+// componente, con sus datos ya cargados) pero sí actualiza el contador de
+// "Bandeja (N)" del menú, que se calcula en el servidor (layout).
 export function QuickCapture() {
   const [open, setOpen] = useState(false);
   const [value, setValue] = useState('');
   const [busy, setBusy] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const { showToast } = useToast();
+  const router = useRouter();
 
   useEffect(() => {
     function onKeyDown(e: KeyboardEvent) {
@@ -46,6 +51,7 @@ export function QuickCapture() {
       showToast(text.quickCapture.captured, 'success', { label: text.quickCapture.viewInbox, href: '/bandeja' });
       setValue('');
       setOpen(false);
+      router.refresh();
     } catch {
       showToast(text.quickCapture.error, 'error');
     } finally {
