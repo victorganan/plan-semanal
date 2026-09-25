@@ -1,20 +1,20 @@
 'use client';
 
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import clsx from 'clsx';
 import type { TaskWithProject } from '@/types';
 import { text } from '@/i18n/es';
 import { useTop3Toggle } from '@/components/useTop3Toggle';
 import { Top3SwapModal } from '@/components/Top3SwapModal';
-import { CLOSE_CHECK_IDS, closeChecksFromAnswers, offersPrepTask, type CloseCheckId, type CloseCheckAnswer } from '@/lib/day-close';
+import { CLOSE_CHECK_IDS, PREP_OFFER_CHECK_IDS, type CloseCheckId } from '@/lib/day-close';
 
 export type PendingTaskDecision = 'MANANA' | 'OTRA_FECHA' | 'ALGUN_DIA' | 'HECHA' | 'ELIMINAR';
 
 interface Props {
   dayLabel: string;
   tasks: TaskWithProject[]; // tareas DAY_AREA de hoy
-  tomorrowLabel: string;
-  tomorrowTasks: TaskWithProject[] | null; // null si mañana cae en otra semana (no cargada)
+  tomorrowLabel: string; // día concreto, p.ej. "Lunes 28"
+  tomorrowTasks: TaskWithProject[] | null; // null mientras se cargan (puede ser de otra semana)
   tomorrowFirstTaskId: string | null;
   initialJournalNote: string;
   onSaveJournal: (note: string) => Promise<void>;
@@ -53,10 +53,11 @@ export function DayCloseRitual({
   const [otherDateOpenId, setOtherDateOpenId] = useState<string | null>(null);
   const [otherDateValue, setOtherDateValue] = useState('');
   const [decidingId, setDecidingId] = useState<string | null>(null);
-  const [checkAnswers, setCheckAnswers] = useState<Partial<Record<CloseCheckId, CloseCheckAnswer>>>({});
+  const [checkedIds, setCheckedIds] = useState<Set<CloseCheckId>>(new Set());
   const [prepTaskCreated, setPrepTaskCreated] = useState<Partial<Record<CloseCheckId, boolean>>>({});
   const [closing, setClosing] = useState(false);
   const [closed, setClosed] = useState(false);
+  const pendingSectionRef = useRef<HTMLDivElement>(null);
 
   const {
     top3Tasks: tomorrowTop3,
@@ -83,15 +84,28 @@ export function DayCloseRitual({
     }
   }
 
+  function toggleCheck(id: CloseCheckId) {
+    setCheckedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
   async function createPrepTask(id: CloseCheckId, taskText: string) {
     await onCreatePrepTask(taskText);
     setPrepTaskCreated((prev) => ({ ...prev, [id]: true }));
   }
 
   async function handleFinishClose() {
+    if (pending.length > 0) {
+      pendingSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      return;
+    }
     setClosing(true);
     try {
-      await onFinishClose(closeChecksFromAnswers(checkAnswers));
+      await onFinishClose(Array.from(checkedIds));
       setClosed(true);
     } finally {
       setClosing(false);
@@ -141,7 +155,7 @@ export function DayCloseRitual({
           </section>
 
           {pending.length > 0 ? (
-            <section>
+            <section ref={pendingSectionRef}>
               <h3 className="mb-1 text-xs font-semibold uppercase tracking-wide text-base-muted">
                 {text.dayCloseRitual.pendingSection(pending.length)}
               </h3>
@@ -156,7 +170,7 @@ export function DayCloseRitual({
                         disabled={decidingId === task.id}
                         className="rounded-full border border-base-border px-2.5 py-1 text-xs hover:bg-base-border/40 disabled:opacity-40"
                       >
-                        {text.dayCloseRitual.decisionTomorrow}
+                        {tomorrowLabel}
                       </button>
                       <button
                         onClick={() => setOtherDateOpenId(otherDateOpenId === task.id ? null : task.id)}
@@ -215,7 +229,7 @@ export function DayCloseRitual({
               {text.dayCloseRitual.firstTaskSection(tomorrowLabel)}
             </h3>
             {tomorrowTasks === null ? (
-              <p className="text-base-muted">{text.dayCloseRitual.tomorrowIsNewWeek}</p>
+              <p className="text-base-muted">{text.dayCloseRitual.tomorrowLoading}</p>
             ) : tomorrowTasks.length === 0 ? (
               <p className="text-base-muted">{text.dayCloseRitual.firstTaskEmpty(tomorrowLabel)}</p>
             ) : (
@@ -239,7 +253,7 @@ export function DayCloseRitual({
               {text.dayCloseRitual.tomorrowTop3Section(tomorrowLabel)}
             </h3>
             {tomorrowTasks === null ? (
-              <p className="text-base-muted">{text.dayCloseRitual.tomorrowIsNewWeek}</p>
+              <p className="text-base-muted">{text.dayCloseRitual.tomorrowLoading}</p>
             ) : tomorrowTasks.length === 0 ? (
               <p className="text-base-muted">{text.dayCloseRitual.tomorrowEmpty(tomorrowLabel)}</p>
             ) : (
@@ -266,32 +280,18 @@ export function DayCloseRitual({
             <div className="space-y-2">
               {CLOSE_CHECK_IDS.map((id) => (
                 <div key={id}>
-                  <div className="flex items-center justify-between gap-2">
+                  <label className="flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      checked={checkedIds.has(id)}
+                      onChange={() => toggleCheck(id)}
+                      className="h-4 w-4 rounded border-base-border"
+                    />
                     <span>{CHECK_LABELS[id]}</span>
-                    <div className="flex shrink-0 gap-1">
-                      <button
-                        onClick={() => setCheckAnswers((prev) => ({ ...prev, [id]: 'yes' }))}
-                        className={clsx(
-                          'rounded-full border px-2.5 py-1 text-xs',
-                          checkAnswers[id] === 'yes' ? 'border-accent bg-accent text-white' : 'border-base-border hover:bg-base-border/40'
-                        )}
-                      >
-                        {text.dayCloseRitual.checksYes}
-                      </button>
-                      <button
-                        onClick={() => setCheckAnswers((prev) => ({ ...prev, [id]: 'no' }))}
-                        className={clsx(
-                          'rounded-full border px-2.5 py-1 text-xs',
-                          checkAnswers[id] === 'no' ? 'border-priority-high bg-priority-high text-white' : 'border-base-border hover:bg-base-border/40'
-                        )}
-                      >
-                        {text.dayCloseRitual.checksNo}
-                      </button>
-                    </div>
-                  </div>
-                  {offersPrepTask(id, checkAnswers[id]) && tomorrowTasks !== null ? (
+                  </label>
+                  {PREP_OFFER_CHECK_IDS.includes(id) && tomorrowTasks !== null ? (
                     prepTaskCreated[id] ? (
-                      <p className="mt-1 text-xs text-accent">{text.dayCloseRitual.prepTaskCreated}</p>
+                      <p className="ml-6 mt-0.5 text-xs text-accent">{text.dayCloseRitual.prepTaskCreated}</p>
                     ) : (
                       <button
                         onClick={() =>
@@ -302,13 +302,9 @@ export function DayCloseRitual({
                               : text.dayCloseRitual.prepTaskMeetings
                           )
                         }
-                        className="mt-1 rounded-full border border-accent px-2.5 py-1 text-xs font-medium text-accent hover:bg-accent/10"
+                        className="ml-6 mt-0.5 text-xs font-medium text-accent hover:underline"
                       >
-                        {text.dayCloseRitual.createPrepTask(
-                          id === 'firstTaskSupplies'
-                            ? `${text.dayCloseRitual.prepTaskPrefix} ${firstTaskText ?? text.dayCloseRitual.prepTaskFirstTaskFallback}`
-                            : text.dayCloseRitual.prepTaskMeetings
-                        )}
+                        {text.dayCloseRitual.createPrepTaskLink}
                       </button>
                     )
                   ) : null}
@@ -332,14 +328,13 @@ export function DayCloseRitual({
           </section>
         </div>
 
-        <div className="mt-6 flex flex-col items-end gap-1.5 border-t border-base-border pt-4">
-          {pending.length > 0 ? <p className="text-xs text-base-muted">{text.dayCloseRitual.pendingGateHint(pending.length)}</p> : null}
+        <div className="mt-6 flex justify-end border-t border-base-border pt-4">
           <button
             onClick={handleFinishClose}
-            disabled={pending.length > 0 || closing}
+            disabled={closing}
             className="rounded-full bg-accent px-5 py-2 text-sm font-semibold text-white disabled:opacity-40"
           >
-            {text.dayCloseRitual.finishButton}
+            {pending.length > 0 ? text.dayCloseRitual.pendingGateButton(pending.length) : text.dayCloseRitual.finishButton}
           </button>
         </div>
       </div>

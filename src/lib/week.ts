@@ -47,6 +47,22 @@ export function addWeeks(isoWeek: string, delta: number): string {
   return isoWeekOf(monday);
 }
 
+// Siguiente/anterior día LABORABLE (lunes a viernes), saltando fin de
+// semana y cruzando de semana ISO cuando toca (viernes/sábado/domingo →
+// el lunes siguiente, en la semana que viene si hace falta; lunes → el
+// viernes de la semana anterior). Usado por el Cierre del día: "mañana"
+// significa siempre el próximo día laborable, no el día natural siguiente.
+export function nextBusinessDay(isoWeek: string, dayOfWeek: number): { isoWeek: string; dayOfWeek: number } {
+  if (dayOfWeek <= 3) return { isoWeek, dayOfWeek: dayOfWeek + 1 };
+  return { isoWeek: addWeeks(isoWeek, 1), dayOfWeek: 0 };
+}
+
+export function previousBusinessDay(isoWeek: string, dayOfWeek: number): { isoWeek: string; dayOfWeek: number } {
+  if (dayOfWeek === 0) return { isoWeek: addWeeks(isoWeek, -1), dayOfWeek: 4 };
+  if (dayOfWeek >= 5) return { isoWeek, dayOfWeek: 4 };
+  return { isoWeek, dayOfWeek: dayOfWeek - 1 };
+}
+
 export function mondayBasedDayOfWeek(date: Date): number {
   const jsDay = date.getDay(); // 0=domingo..6=sábado
   return jsDay === 0 ? 6 : jsDay - 1; // 0=lunes..6=domingo

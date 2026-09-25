@@ -23,7 +23,7 @@ import { PinnedFirstTask } from '@/components/PinnedFirstTask';
 import { WeekNav } from '@/components/WeekNav';
 import { DayNav } from '@/components/DayNav';
 import { ViewSwitcher } from '@/components/ViewSwitcher';
-import { DAY_NAMES, dateForDayOfWeek, addWeeks, todayLocalString, isoWeekAndDowFor } from '@/lib/week';
+import { DAY_NAMES, dateForDayOfWeek, nextBusinessDay, previousBusinessDay, todayLocalString, isoWeekAndDowFor } from '@/lib/week';
 import { countPendingProcess } from '@/lib/inbox';
 import { summarizeLoad } from '@/lib/capacity';
 // Alias: muchos callbacks locales de este componente usan `text` como nombre de parámetro.
@@ -73,17 +73,23 @@ export function PlanWeekClient({
   const [wizardOpen, setWizardOpen] = useState(false);
   const [closeRitualOpen, setCloseRitualOpen] = useState(false);
   const [startCardOpen, setStartCardOpen] = useState(false);
+  // Datos de la semana de "mañana" cuando cae fuera de la semana cargada
+  // (p.ej. al cerrar un viernes): se cargan solo cuando hacen falta, desde
+  // el Cierre del día.
+  const [tomorrowWeekData, setTomorrowWeekData] = useState<WeekFull | null>(null);
   const { showToast } = useToast();
   const { subscribe } = useInboxCapture();
   const router = useRouter();
   const weekIsoOfToday = currentIsoWeek();
 
   const isViewingToday = isoWeek === weekIsoOfToday && viewDow === todayDow;
-  const tomorrowDow = (viewDow + 1) % 7;
-  const tomorrowCrossesWeek = viewDow === 6;
-  const tomorrowIsoWeek = tomorrowCrossesWeek ? addWeeks(isoWeek, 1) : isoWeek;
-  const yesterdayDow = (viewDow + 6) % 7;
-  const yesterdayCrossesWeek = viewDow === 0;
+  // "Mañana" en el Cierre es siempre el próximo día LABORABLE (nunca sábado
+  // ni domingo), aunque eso cruce a la semana ISO siguiente.
+  const { isoWeek: tomorrowIsoWeek, dayOfWeek: tomorrowDow } = nextBusinessDay(isoWeek, viewDow);
+  const tomorrowCrossesWeek = tomorrowIsoWeek !== isoWeek;
+  const tomorrowLabel = `${DAY_NAMES[tomorrowDow]} ${dateForDayOfWeek(tomorrowIsoWeek, tomorrowDow).getUTCDate()}`;
+  const { isoWeek: yesterdayIsoWeek, dayOfWeek: yesterdayDow } = previousBusinessDay(isoWeek, viewDow);
+  const yesterdayCrossesWeek = yesterdayIsoWeek !== isoWeek;
 
   // La captura rápida (botón flotante / atajo N) vive en el layout, fuera de
   // esta pantalla: publica la tarea creada por aquí para que aparezca en la
@@ -124,6 +130,50 @@ export function PlanWeekClient({
     el.scrollIntoView({ behavior: 'smooth', block: 'center' });
     el.classList.add('ring-2', 'ring-accent');
     setTimeout(() => el.classList.remove('ring-2', 'ring-accent'), 2000);
+  }
+
+  // "Mañana" del Cierre puede caer en una semana que no está cargada (p.ej.
+  // al cerrar un viernes, mañana es el lunes de la semana siguiente): se
+  // carga sola (y se crea si hace falta, vía getOrCreateWeek en el propio
+  // GET) al abrir el Cierre.
+  useEffect(() => {
+    if (!closeRitualOpen || !tomorrowCrossesWeek) {
+      setTomorrowWeekData(null);
+      return;
+    }
+    let cancelled = false;
+    api.get(`/api/weeks/${tomorrowIsoWeek}`).then((data) => {
+      if (!cancelled) setTomorrowWeekData(data);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [closeRitualOpen, tomorrowCrossesWeek, tomorrowIsoWeek]);
+
+  async function refreshTomorrowWeekData() {
+    setTomorrowWeekData(await api.get(`/api/weeks/${tomorrowIsoWeek}`));
+  }
+
+  // Actualizar una tarea de "mañana" (Las 3 de mañana) cuando mañana cae en
+  // una semana distinta de la cargada: no puede pasar por el updateTask
+  // optimista normal (que solo conoce `week`), así que aplica el PATCH
+  // directo y refresca la copia de la semana de mañana.
+  async function updateTomorrowTask(id: string, patch: Record<string, unknown>) {
+    if (!tomorrowCrossesWeek) {
+      await updateTask(id, patch);
+      return;
+    }
+    await api.patch(`/api/tasks/${id}`, patch);
+    await refreshTomorrowWeekData();
+  }
+
+  async function setTomorrowFirstTask(taskId: string | null) {
+    if (!tomorrowCrossesWeek) {
+      await saveDayFields(tomorrowDow, { firstTaskId: taskId });
+      return;
+    }
+    await api.patch(`/api/weeks/${tomorrowIsoWeek}`, { days: [{ dayOfWeek: tomorrowDow, firstTaskId: taskId }] });
+    await refreshTomorrowWeekData();
   }
 
   const hardRefresh = useCallback(async () => {
@@ -488,8 +538,15 @@ export function PlanWeekClient({
   }
 
   async function createPrepTask(taskText: string) {
-    if (tomorrowCrossesWeek) return;
-    await addTask('DAY_AREA', taskText, { dayOfWeek: tomorrowDow, areaId: areas[0]?.id });
+    const areaId = areas[0]?.id;
+    if (!areaId) return;
+    if (tomorrowCrossesWeek) {
+      // No pertenece a la semana cargada: se crea directo, sin estado optimista local.
+      await api.post('/api/tasks', { isoWeek: tomorrowIsoWeek, kind: 'DAY_AREA', text: taskText, dayOfWeek: tomorrowDow, areaId });
+      await refreshTomorrowWeekData();
+    } else {
+      await addTask('DAY_AREA', taskText, { dayOfWeek: tomorrowDow, areaId });
+    }
   }
 
   async function finishClose(closeChecks: string[]) {
@@ -587,9 +644,13 @@ export function PlanWeekClient({
     const day = week.days.find((d) => d.dayOfWeek === viewDow);
     const dayTasks = week.tasks.filter((t) => t.kind === 'DAY_AREA' && t.dayId === day?.id);
     const viewDate = dateForDayOfWeek(isoWeek, viewDow);
-    const tomorrowDay = tomorrowCrossesWeek ? undefined : week.days.find((d) => d.dayOfWeek === tomorrowDow);
+    const tomorrowDay = tomorrowCrossesWeek
+      ? tomorrowWeekData?.days.find((d) => d.dayOfWeek === tomorrowDow)
+      : week.days.find((d) => d.dayOfWeek === tomorrowDow);
     const tomorrowTasks = tomorrowCrossesWeek
-      ? null
+      ? tomorrowWeekData
+        ? tomorrowWeekData.tasks.filter((t) => t.kind === 'DAY_AREA' && t.dayId === tomorrowDay?.id)
+        : null
       : week.tasks.filter((t) => t.kind === 'DAY_AREA' && t.dayId === tomorrowDay?.id);
     const yesterdayDay = yesterdayCrossesWeek ? undefined : week.days.find((d) => d.dayOfWeek === yesterdayDow);
     const showChooseTop3Prompt = isViewingToday && !yesterdayCrossesWeek && !!yesterdayDay && !yesterdayDay.closedAt;
@@ -680,14 +741,14 @@ export function PlanWeekClient({
           <DayCloseRitual
             dayLabel={isViewingToday ? t.planWeekClient.dayLabelToday : t.planWeekClient.dayLabelOther(DAY_NAMES[viewDow])}
             tasks={dayTasks}
-            tomorrowLabel={DAY_NAMES[tomorrowDow]}
+            tomorrowLabel={tomorrowLabel}
             tomorrowTasks={tomorrowTasks}
             tomorrowFirstTaskId={tomorrowDay?.firstTaskId ?? null}
             initialJournalNote={day?.journalNote ?? ''}
             onSaveJournal={(note) => saveJournal(viewDow, note)}
             onDecidePendingTask={decidePendingTask}
-            onUpdateTask={updateTask}
-            onSetTomorrowFirstTask={(taskId) => saveDayFields(tomorrowDow, { firstTaskId: taskId })}
+            onUpdateTask={updateTomorrowTask}
+            onSetTomorrowFirstTask={setTomorrowFirstTask}
             onCreatePrepTask={createPrepTask}
             onFinishClose={finishClose}
             onClose={() => setCloseRitualOpen(false)}
