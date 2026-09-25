@@ -36,6 +36,9 @@ interface Props {
   // DayCard lo sustituye para poder ofrecer el selector de sustitución
   // cuando ya hay 3 marcadas ese día.
   onToggleTop3?: (id: string, next: boolean) => void;
+  // true mientras hay un PATCH de isTop3 en curso para esta tarea: desactiva
+  // el botón para que un doble clic no dispare un segundo toggle.
+  isTop3Pending?: boolean;
 }
 
 function templateToValue(t: RecurringTaskTemplate): RecurrenceValue {
@@ -74,6 +77,7 @@ export function TaskCard({
   currentIsoWeek,
   dragEnabled,
   onToggleTop3,
+  isTop3Pending,
 }: Props) {
   const [open, setOpen] = useState(false);
   const [text, setText] = useState(task.text);
@@ -252,6 +256,17 @@ export function TaskCard({
     <div
       draggable={task.kind === 'DAY_AREA' || dragEnabled}
       onDragStart={(e) => {
+        // Si el gesto empieza sobre un control interactivo (botón, input...),
+        // no es una intención de arrastrar la tarjeta: cancelamos el drag
+        // nativo para que el clic llegue normalmente al control. Sin esto,
+        // el navegador puede interpretar un ligero movimiento entre
+        // mousedown/mouseup sobre la estrella (u otro botón) como el inicio
+        // de un arrastre y "tragarse" el clic.
+        const target = e.target as HTMLElement;
+        if (target.closest('button, input, select, textarea, a, label')) {
+          e.preventDefault();
+          return;
+        }
         e.dataTransfer.setData('text/plain', task.id);
         e.dataTransfer.effectAllowed = 'move';
       }}
@@ -357,10 +372,11 @@ export function TaskCard({
             onClick={() =>
               onToggleTop3 ? onToggleTop3(task.id, !task.isTop3) : onUpdate(task.id, { isTop3: !task.isTop3 })
             }
+            disabled={isTop3Pending}
             aria-label={t.taskCard.top3AriaLabel(task.isTop3)}
             title={t.taskCard.top3AriaLabel(task.isTop3)}
             className={clsx(
-              'shrink-0 rounded-full p-1.5 transition hover:bg-base-border/40',
+              'shrink-0 rounded-full p-1.5 transition hover:bg-base-border/40 disabled:opacity-50',
               task.isTop3 ? 'text-amber-500' : 'text-base-muted/50 hover:text-base-muted'
             )}
           >

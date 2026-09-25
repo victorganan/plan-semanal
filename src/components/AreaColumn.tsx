@@ -23,6 +23,7 @@ interface Props {
   onExportTodoist?: (id: string) => Promise<void>;
   onCreateCalendarEvent?: (id: string) => Promise<void>;
   onToggleTop3?: (id: string, next: boolean) => void;
+  pendingTop3Ids?: Set<string>;
 }
 
 export function AreaColumn({
@@ -39,6 +40,7 @@ export function AreaColumn({
   onExportTodoist,
   onCreateCalendarEvent,
   onToggleTop3,
+  pendingTop3Ids,
 }: Props) {
   const [dragOver, setDragOver] = useState(false);
   const [dropTarget, setDropTarget] = useState<{ id: string; position: 'before' | 'after' } | null>(null);
@@ -129,6 +131,7 @@ export function AreaColumn({
               onExportTodoist={onExportTodoist}
               onCreateCalendarEvent={onCreateCalendarEvent}
               onToggleTop3={onToggleTop3}
+              isTop3Pending={pendingTop3Ids?.has(t.id)}
               showRecurrence
               currentIsoWeek={isoWeek}
             />

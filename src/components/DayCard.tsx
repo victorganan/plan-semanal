@@ -53,23 +53,37 @@ export function DayCard({
 }: Props) {
   const [pendingSwap, setPendingSwap] = useState<{ id: string; text: string } | null>(null);
   const [swapBusy, setSwapBusy] = useState(false);
+  // Evita que un doble clic (o un clic sintético duplicado) sobre la misma
+  // estrella dispare dos PATCH consecutivos: el segundo leería isTop3 ya
+  // actualizado por el primero y lo revertiría al instante.
+  const [pendingTop3, setPendingTop3] = useState<Set<string>>(new Set());
 
   const date = dateForDayOfWeek(isoWeek, dayOfWeek);
   const dateLabel = date.toLocaleDateString('es-ES', { day: 'numeric', month: 'short', timeZone: 'UTC' });
   const { plannedMinutes, unestimatedCount } = summarizeLoad(tasks);
   const top3Tasks = tasks.filter((t) => t.isTop3);
 
-  function handleToggleTop3(id: string, next: boolean) {
-    if (!next) {
-      onUpdateTask(id, { isTop3: false });
-      return;
+  async function handleToggleTop3(id: string, next: boolean) {
+    if (pendingTop3.has(id)) return;
+    setPendingTop3((prev) => new Set(prev).add(id));
+    try {
+      if (!next) {
+        await onUpdateTask(id, { isTop3: false });
+        return;
+      }
+      if (top3Tasks.length >= 3) {
+        const task = tasks.find((t) => t.id === id);
+        if (task) setPendingSwap({ id, text: task.text });
+        return;
+      }
+      await onUpdateTask(id, { isTop3: true });
+    } finally {
+      setPendingTop3((prev) => {
+        const nextSet = new Set(prev);
+        nextSet.delete(id);
+        return nextSet;
+      });
     }
-    if (top3Tasks.length >= 3) {
-      const task = tasks.find((t) => t.id === id);
-      if (task) setPendingSwap({ id, text: task.text });
-      return;
-    }
-    onUpdateTask(id, { isTop3: true });
   }
 
   async function confirmSwap(outgoingId: string) {
@@ -113,7 +127,7 @@ export function DayCard({
       <Top3Today
         tasks={top3Tasks}
         onToggleDone={(id, done) => onUpdateTask(id, { done })}
-        onUnstar={(id) => onUpdateTask(id, { isTop3: false })}
+        onUnstar={(id) => handleToggleTop3(id, false)}
       />
       {areas.length === 0 ? (
         <p className="text-sm text-base-muted">{text.dayCard.noAreas}</p>
@@ -135,6 +149,7 @@ export function DayCard({
               onExportTodoist={onExportTodoist}
               onCreateCalendarEvent={onCreateCalendarEvent}
               onToggleTop3={handleToggleTop3}
+              pendingTop3Ids={pendingTop3}
             />
           ))}
         </div>
