@@ -1,5 +1,7 @@
+import { useRef } from 'react';
 import type { TaskWithProject } from '@/types';
 import { text } from '@/i18n/es';
+import { shouldIgnoreBackdropClick } from '@/lib/top3-swap-modal';
 
 interface Props {
   currentTop3: TaskWithProject[];
@@ -12,8 +14,18 @@ interface Props {
 // "Al intentar marcar una cuarta: «Las 3 del día son 3. ¿Cuál cambias?» con
 // las tres actuales para sustituir" (M4.1).
 export function Top3SwapModal({ currentTop3, incomingTaskText, busy, onSwap, onCancel }: Props) {
+  const openedAtRef = useRef(Date.now());
   return (
-    <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/40 p-4" onClick={onCancel}>
+    <div
+      className="fixed inset-0 z-40 flex items-center justify-center bg-black/40 p-4"
+      onClick={() => {
+        // Un doble clic sobre la estrella (o un evento duplicado) puede caer,
+        // en su segundo golpe, sobre este mismo fondo justo al abrirse: lo
+        // ignoramos durante un breve margen para que no se cierre solo.
+        if (shouldIgnoreBackdropClick(openedAtRef.current, Date.now())) return;
+        onCancel();
+      }}
+    >
       <div className="w-full max-w-sm rounded-card bg-base-surface p-5 shadow-xl" onClick={(e) => e.stopPropagation()}>
         <p className="mb-1 text-center text-base font-medium">{text.top3Swap.question}</p>
         <p className="mb-4 text-center text-xs text-base-muted">{incomingTaskText}</p>
