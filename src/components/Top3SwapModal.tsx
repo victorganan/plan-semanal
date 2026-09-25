@@ -17,7 +17,7 @@ export function Top3SwapModal({ currentTop3, incomingTaskText, busy, onSwap, onC
   const openedAtRef = useRef(Date.now());
   return (
     <div
-      className="fixed inset-0 z-40 flex items-center justify-center bg-black/40 p-4"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
       onClick={() => {
         // Un doble clic sobre la estrella (o un evento duplicado) puede caer,
         // en su segundo golpe, sobre este mismo fondo justo al abrirse: lo

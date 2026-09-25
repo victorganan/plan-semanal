@@ -17,10 +17,13 @@ import { ProjectFocusPicker } from '@/components/ProjectFocusPicker';
 import { BandejaSummaryLink } from '@/components/BandejaSummaryLink';
 import { PlanningWizard } from '@/components/PlanningWizard';
 import { DayCloseRitual } from '@/components/DayCloseRitual';
+import type { PendingTaskDecision } from '@/components/DayCloseRitual';
+import { DayStartCard } from '@/components/DayStartCard';
+import { PinnedFirstTask } from '@/components/PinnedFirstTask';
 import { WeekNav } from '@/components/WeekNav';
 import { DayNav } from '@/components/DayNav';
 import { ViewSwitcher } from '@/components/ViewSwitcher';
-import { DAY_NAMES, dateForDayOfWeek, addWeeks } from '@/lib/week';
+import { DAY_NAMES, dateForDayOfWeek, addWeeks, todayLocalString, isoWeekAndDowFor } from '@/lib/week';
 import { countPendingProcess } from '@/lib/inbox';
 import { summarizeLoad } from '@/lib/capacity';
 // Alias: muchos callbacks locales de este componente usan `text` como nombre de parámetro.
@@ -41,6 +44,7 @@ interface Props {
   calendarConnected: boolean;
   dailyCapacityMinutes: number;
   bufferPercent: number;
+  arranqueVisibility: 'LABORABLES' | 'SIEMPRE' | 'NUNCA';
 }
 
 function tempId() {
@@ -62,20 +66,65 @@ export function PlanWeekClient({
   calendarConnected,
   dailyCapacityMinutes,
   bufferPercent,
+  arranqueVisibility,
 }: Props) {
   const [week, setWeek] = useState(initialWeek);
   const [inbox, setInbox] = useState(initialInbox);
   const [wizardOpen, setWizardOpen] = useState(false);
   const [closeRitualOpen, setCloseRitualOpen] = useState(false);
+  const [startCardOpen, setStartCardOpen] = useState(false);
   const { showToast } = useToast();
   const { subscribe } = useInboxCapture();
   const router = useRouter();
   const weekIsoOfToday = currentIsoWeek();
 
+  const isViewingToday = isoWeek === weekIsoOfToday && viewDow === todayDow;
+  const tomorrowDow = (viewDow + 1) % 7;
+  const tomorrowCrossesWeek = viewDow === 6;
+  const tomorrowIsoWeek = tomorrowCrossesWeek ? addWeeks(isoWeek, 1) : isoWeek;
+  const yesterdayDow = (viewDow + 6) % 7;
+  const yesterdayCrossesWeek = viewDow === 0;
+
   // La captura rápida (botón flotante / atajo N) vive en el layout, fuera de
   // esta pantalla: publica la tarea creada por aquí para que aparezca en la
   // Bandeja al instante, sin esperar a un recargado.
   useEffect(() => subscribe((task) => setInbox((prev) => [...prev, task])), [subscribe]);
+
+  // Tarjeta de Arranque del día: se muestra sola la primera vez que se entra
+  // en Hoy cada día (según el ajuste de visibilidad), y se recuerda cerrada
+  // por navegador hasta el día siguiente. El botón manual "Arrancar el día"
+  // la reabre siempre, sea cual sea este cálculo.
+  useEffect(() => {
+    if (!isViewingToday) return;
+    if (arranqueVisibility === 'NUNCA') return;
+    const isWeekday = viewDow <= 4; // 0=lunes..4=viernes
+    if (arranqueVisibility === 'LABORABLES' && !isWeekday) return;
+    try {
+      const key = `nortvira:arranque-dismissed:${todayLocalString()}`;
+      if (localStorage.getItem(key)) return;
+    } catch {
+      // almacenamiento no disponible (privado/bloqueado): se muestra igualmente
+    }
+    setStartCardOpen(true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  function dismissStartCard() {
+    setStartCardOpen(false);
+    try {
+      localStorage.setItem(`nortvira:arranque-dismissed:${todayLocalString()}`, '1');
+    } catch {
+      // sin almacenamiento disponible: la tarjeta podrá reaparecer, sin más consecuencia
+    }
+  }
+
+  function startFirstTask(taskId: string) {
+    const el = document.getElementById(`task-${taskId}`);
+    if (!el) return;
+    el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    el.classList.add('ring-2', 'ring-accent');
+    setTimeout(() => el.classList.remove('ring-2', 'ring-accent'), 2000);
+  }
 
   const hardRefresh = useCallback(async () => {
     const fresh = await api.get(`/api/weeks/${isoWeek}`);
@@ -394,10 +443,57 @@ export function PlanWeekClient({
     }
   }
 
-  async function replanPendingToTomorrow(pendingIds: string[], tomorrowIsoWeek: string, tomorrowDow: number) {
-    await Promise.all(pendingIds.map((id) => updateTask(id, { isoWeek: tomorrowIsoWeek, dayOfWeek: tomorrowDow })));
-    // El dayId real se resuelve en el servidor; refrescamos para que la vista de hoy deje de listarlas.
-    await hardRefresh();
+  // Campos nuevos de Day (Arranque/Cierre): misma mecánica optimista que
+  // saveStar/saveJournal, pero genérica para poder reutilizarla con
+  // cualquier combinación de energy/dayGoal/firstTaskId/closeChecks/closedAt,
+  // y para poder escribir en el Day de MAÑANA (no solo en el que se ve).
+  async function saveDayFields(dayOfWeek: number, fields: Record<string, unknown>) {
+    setWeek((w) => ({
+      ...w,
+      days: w.days.map((d) => (d.dayOfWeek === dayOfWeek ? { ...d, ...fields } : d)),
+    }));
+    try {
+      await api.patch(`/api/weeks/${isoWeek}`, { days: [{ dayOfWeek, ...fields }] });
+    } catch {
+      showToast(t.planWeekClient.saveGenericError, 'error');
+      await hardRefresh();
+    }
+  }
+
+  // Decisión en un toque para una tarea pendiente al cerrar el día: todas
+  // reutilizan updateTask/deleteTask ya existentes, así que una tarea
+  // decidida desaparece sola de "pendientes" (cambia de día, de kind, se
+  // marca hecha o se elimina) sin necesidad de llevar un estado aparte.
+  async function decidePendingTask(taskId: string, decision: PendingTaskDecision, dateStr?: string) {
+    switch (decision) {
+      case 'MANANA':
+        await updateTask(taskId, { isoWeek: tomorrowIsoWeek, dayOfWeek: tomorrowDow });
+        break;
+      case 'OTRA_FECHA': {
+        if (!dateStr) return;
+        const { isoWeek: iw, dayOfWeek: dow } = isoWeekAndDowFor(dateStr);
+        await updateTask(taskId, { isoWeek: iw, dayOfWeek: dow });
+        break;
+      }
+      case 'ALGUN_DIA':
+        await updateTask(taskId, { kind: 'BACKLOG', gtdStatus: 'ALGUN_DIA' });
+        break;
+      case 'HECHA':
+        await updateTask(taskId, { done: true });
+        break;
+      case 'ELIMINAR':
+        await deleteTask(taskId);
+        break;
+    }
+  }
+
+  async function createPrepTask(taskText: string) {
+    if (tomorrowCrossesWeek) return;
+    await addTask('DAY_AREA', taskText, { dayOfWeek: tomorrowDow, areaId: areas[0]?.id });
+  }
+
+  async function finishClose(closeChecks: string[]) {
+    await saveDayFields(viewDow, { closeChecks, closedAt: new Date().toISOString() });
   }
 
   async function addAndTag(text: string, field: 'evalPostponedTaskIds' | 'evalDelegateTaskIds') {
@@ -490,15 +586,14 @@ export function PlanWeekClient({
   if (mode === 'day') {
     const day = week.days.find((d) => d.dayOfWeek === viewDow);
     const dayTasks = week.tasks.filter((t) => t.kind === 'DAY_AREA' && t.dayId === day?.id);
-    const isViewingToday = isoWeek === weekIsoOfToday && viewDow === todayDow;
     const viewDate = dateForDayOfWeek(isoWeek, viewDow);
-    const tomorrowDow = (viewDow + 1) % 7;
-    const tomorrowCrossesWeek = viewDow === 6;
-    const tomorrowIsoWeek = tomorrowCrossesWeek ? addWeeks(isoWeek, 1) : isoWeek;
     const tomorrowDay = tomorrowCrossesWeek ? undefined : week.days.find((d) => d.dayOfWeek === tomorrowDow);
     const tomorrowTasks = tomorrowCrossesWeek
       ? null
       : week.tasks.filter((t) => t.kind === 'DAY_AREA' && t.dayId === tomorrowDay?.id);
+    const yesterdayDay = yesterdayCrossesWeek ? undefined : week.days.find((d) => d.dayOfWeek === yesterdayDow);
+    const showChooseTop3Prompt = isViewingToday && !yesterdayCrossesWeek && !!yesterdayDay && !yesterdayDay.closedAt;
+    const firstTask = isViewingToday && day?.firstTaskId ? dayTasks.find((task) => task.id === day.firstTaskId) ?? null : null;
 
     return (
       <div className="space-y-6">
@@ -516,6 +611,14 @@ export function PlanWeekClient({
             >
               {t.planWeekClient.openReflectionMoment}
             </button>
+            {isViewingToday ? (
+              <button
+                onClick={() => setStartCardOpen(true)}
+                className="rounded-full border border-base-border px-3 py-1.5 text-sm font-medium hover:bg-base-border/40"
+              >
+                {t.planWeekClient.startDayButton}
+              </button>
+            ) : null}
             <button
               onClick={() => setCloseRitualOpen(true)}
               className="rounded-full border border-base-border px-3 py-1.5 text-sm font-medium hover:bg-base-border/40"
@@ -526,6 +629,30 @@ export function PlanWeekClient({
             <DayNav isoWeek={isoWeek} dayOfWeek={viewDow} />
           </div>
         </div>
+
+        {isViewingToday && firstTask ? (
+          <PinnedFirstTask
+            task={firstTask}
+            candidateTasks={dayTasks}
+            onToggleDone={(done) => updateTask(firstTask.id, { done })}
+            onChange={(taskId) => saveDayFields(viewDow, { firstTaskId: taskId })}
+            onStart={() => startFirstTask(firstTask.id)}
+          />
+        ) : null}
+
+        {isViewingToday && startCardOpen && day ? (
+          <DayStartCard
+            day={day}
+            tasks={dayTasks}
+            showChooseTop3Prompt={showChooseTop3Prompt}
+            onSaveEnergy={(value) => saveDayFields(viewDow, { energy: value })}
+            onSaveGoal={(value) => saveDayFields(viewDow, { dayGoal: value.trim() || null })}
+            onSetFirstTask={(taskId) => saveDayFields(viewDow, { firstTaskId: taskId })}
+            onUpdateTask={updateTask}
+            onStartFirstTask={startFirstTask}
+            onDismiss={dismissStartCard}
+          />
+        ) : null}
 
         {wizardOpen ? (
           <PlanningWizard
@@ -555,16 +682,14 @@ export function PlanWeekClient({
             tasks={dayTasks}
             tomorrowLabel={DAY_NAMES[tomorrowDow]}
             tomorrowTasks={tomorrowTasks}
+            tomorrowFirstTaskId={tomorrowDay?.firstTaskId ?? null}
             initialJournalNote={day?.journalNote ?? ''}
             onSaveJournal={(note) => saveJournal(viewDow, note)}
-            onReplanPending={() =>
-              replanPendingToTomorrow(
-                dayTasks.filter((t) => !t.done).map((t) => t.id),
-                tomorrowIsoWeek,
-                tomorrowDow
-              )
-            }
-            onToggleTomorrowTop3={(id, next) => updateTask(id, { isTop3: next })}
+            onDecidePendingTask={decidePendingTask}
+            onUpdateTask={updateTask}
+            onSetTomorrowFirstTask={(taskId) => saveDayFields(tomorrowDow, { firstTaskId: taskId })}
+            onCreatePrepTask={createPrepTask}
+            onFinishClose={finishClose}
             onClose={() => setCloseRitualOpen(false)}
           />
         ) : null}

@@ -37,6 +37,8 @@ model User {
   dailyCapacityMinutes Int @default(300) // horas reales disponibles al día (por defecto 5h)
   bufferPercent        Int @default(20) // margen para imprevistos, 0-40%; Capacidad = dailyCapacityMinutes × (1 − margen)
 
+  arranqueVisibility ArranqueVisibility @default(LABORABLES) // cuándo se muestra sola la tarjeta de Arranque del día en Hoy
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
@@ -143,6 +145,12 @@ enum IntegrationProvider {
   TODOIST
 }
 
+enum ArranqueVisibility {
+  LABORABLES
+  SIEMPRE
+  NUNCA
+}
+
 model Tag {
   id         String @id @default(cuid())
   userId     String
@@ -236,8 +244,16 @@ model Day {
   starRating  Int? // 0-5
   journalNote String? @db.Text // una línea de diario del ritual de cierre del día
 
-  week  Week   @relation(fields: [weekId], references: [id], onDelete: Cascade)
-  tasks Task[]
+  energy      Int? // 1-5, del ritual de Arranque de este mismo día
+  dayGoal     String? @db.Text // objetivo del día, del ritual de Arranque ("Hoy daré el día por bueno si…")
+  firstTaskId String? // primera tarea de este día: se elige en el Cierre del día anterior (o se cambia desde el Arranque/Hoy)
+  closeChecks String[] @default([]) // ids de las comprobaciones del Cierre respondidas "Sí" (Apéndice A.2.1)
+  overloadAccepted Boolean @default(false) // reservado para la Balanza (Fase 2): sin interfaz todavía
+  closedAt    DateTime? // cuándo se completó el ritual de Cierre de este día
+
+  week      Week   @relation(fields: [weekId], references: [id], onDelete: Cascade)
+  tasks     Task[]
+  firstTask Task?  @relation("DayFirstTask", fields: [firstTaskId], references: [id], onDelete: SetNull)
 
   @@unique([weekId, dayOfWeek])
 }
@@ -294,6 +310,7 @@ model Task {
   subtasks   Task[] @relation("TaskSubtasks")
   tags       Tag[]
   focusSessions FocusSession[]
+  firstTaskOfDays Day[] @relation("DayFirstTask")
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

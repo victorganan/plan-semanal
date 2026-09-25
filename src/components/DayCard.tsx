@@ -1,11 +1,11 @@
 'use client';
 
-import { useState } from 'react';
 import { AreaColumn } from '@/components/AreaColumn';
 import { StarRating } from '@/components/StarRating';
 import { CapacityBar } from '@/components/CapacityBar';
 import { Top3Today } from '@/components/Top3Today';
 import { Top3SwapModal } from '@/components/Top3SwapModal';
+import { useTop3Toggle } from '@/components/useTop3Toggle';
 import { DAY_NAMES, dateForDayOfWeek } from '@/lib/week';
 import { summarizeLoad } from '@/lib/capacity';
 import type { Area, Day, ProjectWithAreaAndCollaborators, Tag, TaskWithProject } from '@/types';
@@ -51,52 +51,14 @@ export function DayCard({
   onExportTodoist,
   onCreateCalendarEvent,
 }: Props) {
-  const [pendingSwap, setPendingSwap] = useState<{ id: string; text: string } | null>(null);
-  const [swapBusy, setSwapBusy] = useState(false);
-  // Evita que un doble clic (o un clic sintético duplicado) sobre la misma
-  // estrella dispare dos PATCH consecutivos: el segundo leería isTop3 ya
-  // actualizado por el primero y lo revertiría al instante.
-  const [pendingTop3, setPendingTop3] = useState<Set<string>>(new Set());
+  const { top3Tasks, pendingTop3, handleToggleTop3, pendingSwap, swapBusy, confirmSwap, cancelSwap } = useTop3Toggle(
+    tasks,
+    onUpdateTask
+  );
 
   const date = dateForDayOfWeek(isoWeek, dayOfWeek);
   const dateLabel = date.toLocaleDateString('es-ES', { day: 'numeric', month: 'short', timeZone: 'UTC' });
   const { plannedMinutes, unestimatedCount } = summarizeLoad(tasks);
-  const top3Tasks = tasks.filter((t) => t.isTop3);
-
-  async function handleToggleTop3(id: string, next: boolean) {
-    if (pendingTop3.has(id)) return;
-    setPendingTop3((prev) => new Set(prev).add(id));
-    try {
-      if (!next) {
-        await onUpdateTask(id, { isTop3: false });
-        return;
-      }
-      if (top3Tasks.length >= 3) {
-        const task = tasks.find((t) => t.id === id);
-        if (task) setPendingSwap({ id, text: task.text });
-        return;
-      }
-      await onUpdateTask(id, { isTop3: true });
-    } finally {
-      setPendingTop3((prev) => {
-        const nextSet = new Set(prev);
-        nextSet.delete(id);
-        return nextSet;
-      });
-    }
-  }
-
-  async function confirmSwap(outgoingId: string) {
-    if (!pendingSwap) return;
-    setSwapBusy(true);
-    try {
-      await onUpdateTask(outgoingId, { isTop3: false });
-      await onUpdateTask(pendingSwap.id, { isTop3: true });
-      setPendingSwap(null);
-    } finally {
-      setSwapBusy(false);
-    }
-  }
 
   return (
     <section className={clsx('rounded-card border p-4', isToday ? 'border-accent bg-accent/5' : 'border-base-border bg-base-surface')}>
@@ -106,7 +68,7 @@ export function DayCard({
           incomingTaskText={pendingSwap.text}
           busy={swapBusy}
           onSwap={confirmSwap}
-          onCancel={() => setPendingSwap(null)}
+          onCancel={cancelSwap}
         />
       ) : null}
       <div className="mb-3 flex flex-wrap items-center justify-between gap-2">

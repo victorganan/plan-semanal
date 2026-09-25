@@ -54,6 +54,11 @@ const patchSchema = z.object({
         dayOfWeek: z.number().int().min(0).max(6),
         starRating: z.number().int().min(0).max(5).nullable().optional(),
         journalNote: z.string().max(2000).nullable().optional(),
+        energy: z.number().int().min(1).max(5).nullable().optional(),
+        dayGoal: z.string().max(500).nullable().optional(),
+        firstTaskId: z.string().nullable().optional(),
+        closeChecks: z.array(z.string()).optional(),
+        closedAt: z.string().datetime().nullable().optional(),
       })
     )
     .optional(),
@@ -72,11 +77,18 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ is
   await prisma.week.update({ where: { id: week.id }, data: weekFields });
 
   if (days) {
-    for (const { dayOfWeek, ...fields } of days) {
-      if (Object.keys(fields).length === 0) continue;
+    for (const { dayOfWeek, closedAt, firstTaskId, ...fields } of days) {
+      const data: Record<string, unknown> = { ...fields };
+      if (closedAt !== undefined) data.closedAt = closedAt ? new Date(closedAt) : null;
+      if (firstTaskId !== undefined) {
+        // Solo tareas propias del usuario: evita fijar como "primera tarea" un id ajeno adivinado.
+        const owned = firstTaskId ? await prisma.task.findFirst({ where: { id: firstTaskId, userId }, select: { id: true } }) : null;
+        data.firstTaskId = owned ? owned.id : null;
+      }
+      if (Object.keys(data).length === 0) continue;
       await prisma.day.updateMany({
         where: { weekId: week.id, dayOfWeek },
-        data: fields,
+        data,
       });
     }
   }

@@ -254,6 +254,7 @@ export function TaskCard({
 
   return (
     <div
+      id={`task-${task.id}`}
       draggable={task.kind === 'DAY_AREA' || dragEnabled}
       onDragStart={(e) => {
         // Si el gesto empieza sobre un control interactivo (botón, input...),

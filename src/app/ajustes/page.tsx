@@ -8,6 +8,7 @@ import { RecurringTemplatesManager } from '@/components/settings/RecurringTempla
 import { ActivityLogPanel } from '@/components/settings/ActivityLogPanel';
 import { PushReminderSettings } from '@/components/settings/PushReminderSettings';
 import { CapacitySettings } from '@/components/settings/CapacitySettings';
+import { ArranqueSettings } from '@/components/settings/ArranqueSettings';
 import { text } from '@/i18n/es';
 
 export default async function AjustesPage({ searchParams }: { searchParams: Promise<{ todoist?: string }> }) {
@@ -24,7 +25,13 @@ export default async function AjustesPage({ searchParams }: { searchParams: Prom
     prisma.activityLog.findMany({ where: { userId }, orderBy: { createdAt: 'desc' }, take: 50 }),
     prisma.user.findUnique({
       where: { id: userId },
-      select: { weeklyReminderDayOfWeek: true, weeklyReminderTime: true, dailyCapacityMinutes: true, bufferPercent: true },
+      select: {
+        weeklyReminderDayOfWeek: true,
+        weeklyReminderTime: true,
+        dailyCapacityMinutes: true,
+        bufferPercent: true,
+        arranqueVisibility: true,
+      },
     }),
   ]);
 
@@ -46,6 +53,7 @@ export default async function AjustesPage({ searchParams }: { searchParams: Prom
 
       <IntegrationsPanel initialTodoistConnected={!!todoistToken} initialCalendarConnected={calendarConnected} />
       <CapacitySettings initialMinutes={user?.dailyCapacityMinutes ?? 300} initialBufferPercent={user?.bufferPercent ?? 20} />
+      <ArranqueSettings initialVisibility={user?.arranqueVisibility ?? 'LABORABLES'} />
       <PushReminderSettings
         initialDayOfWeek={user?.weeklyReminderDayOfWeek ?? null}
         initialSlot={user?.weeklyReminderTime ?? null}
