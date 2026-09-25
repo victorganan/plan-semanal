@@ -43,7 +43,7 @@ export function QuickCapture() {
     setBusy(true);
     try {
       await api.post('/api/tasks', { kind: 'BACKLOG', text: trimmed });
-      showToast(text.quickCapture.captured);
+      showToast(text.quickCapture.captured, 'success', { label: text.quickCapture.viewInbox, href: '/bandeja' });
       setValue('');
       setOpen(false);
     } catch {

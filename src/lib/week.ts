@@ -62,6 +62,36 @@ export function weeksBetween(fromIsoWeek: string, toIsoWeek: string): number {
   return Math.round((to - from) / (7 * 86400000));
 }
 
+// Fechas reales (no ligadas a "la semana que se está viendo"), en hora local
+// del navegador — es quien decide qué es "hoy" para el usuario.
+export function localDateString(d: Date): string {
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+}
+
+export function todayLocalString(): string {
+  return localDateString(new Date());
+}
+
+export function tomorrowLocalString(): string {
+  return localDateString(new Date(Date.now() + 86400000));
+}
+
+// Siempre en el futuro, aunque hoy sea lunes.
+export function nextMondayLocalString(): string {
+  const now = new Date();
+  const daysUntilMonday = ((8 - now.getDay()) % 7) || 7;
+  return localDateString(new Date(now.getFullYear(), now.getMonth(), now.getDate() + daysUntilMonday));
+}
+
+// A partir de una fecha "YYYY-MM-DD" (input type=date), resuelve la semana
+// ISO y el día de semana (0=lunes) para guardar la tarea. Se interpreta en
+// hora local, igual que el resto de combinaciones fecha+hora de la app.
+export function isoWeekAndDowFor(dateStr: string): { isoWeek: string; dayOfWeek: number } {
+  const d = new Date(`${dateStr}T00:00`);
+  return { isoWeek: isoWeekOf(d), dayOfWeek: mondayBasedDayOfWeek(d) };
+}
+
 export function formatWeekRange(isoWeek: string): string {
   const monday = isoWeekToMonday(isoWeek);
   const sunday = new Date(monday);

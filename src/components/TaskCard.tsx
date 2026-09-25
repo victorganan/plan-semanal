@@ -11,7 +11,8 @@ import { api } from '@/lib/api-client';
 import { PRIORITY_LABELS, RECURRENCE_LABELS, formatDurationMinutes, areaBgClass } from '@/types';
 import { describeRecurrence } from '@/lib/rrule-helpers';
 import type { RecurrenceValue } from '@/lib/rrule-helpers';
-import { DAY_NAMES, isoWeekOf, mondayBasedDayOfWeek } from '@/lib/week';
+import { isoWeekOf, mondayBasedDayOfWeek, isoWeekAndDowFor, todayLocalString } from '@/lib/week';
+import { QuickDateChips } from '@/components/QuickDateChips';
 import type { Area, ProjectWithAreaAndCollaborators, Task, TaskWithProject, RecurringTaskTemplate, Tag } from '@/types';
 // Alias: el estado local de este componente ya usa el nombre `text` para el título de la tarea.
 import { text as t } from '@/i18n/es';
@@ -78,8 +79,11 @@ export function TaskCard({
   const initialSplit = splitScheduled(task.scheduledAt);
   const [date, setDate] = useState(initialSplit.date);
   const [time, setTime] = useState(initialSplit.time);
-  const [moveDay, setMoveDay] = useState(0);
-  const [moveArea, setMoveArea] = useState(areas[0]?.id ?? '');
+  const [assignOpen, setAssignOpen] = useState(false);
+  const [assignDate, setAssignDate] = useState(todayLocalString());
+  const [assignTime, setAssignTime] = useState('');
+  const [assignAreaId, setAssignAreaId] = useState(areas[0]?.id ?? '');
+  const [assignBusy, setAssignBusy] = useState(false);
   const [subtasks, setSubtasks] = useState<Task[]>(task.subtasks);
   const [recurrenceOpen, setRecurrenceOpen] = useState(false);
   const [recurrenceBusy, setRecurrenceBusy] = useState(false);
@@ -215,6 +219,20 @@ export function TaskCard({
     }
   }
 
+  async function submitAssignDate() {
+    if (!assignDate || !assignAreaId) return;
+    setAssignBusy(true);
+    try {
+      const { isoWeek, dayOfWeek } = isoWeekAndDowFor(assignDate);
+      const patch: Record<string, unknown> = { kind: 'DAY_AREA', isoWeek, dayOfWeek, areaId: assignAreaId };
+      if (assignTime) patch.scheduledAt = new Date(`${assignDate}T${assignTime}`).toISOString();
+      await onUpdate(task.id, patch);
+      setAssignOpen(false);
+    } finally {
+      setAssignBusy(false);
+    }
+  }
+
   const scheduledLabel = task.scheduledAt
     ? new Date(task.scheduledAt).toLocaleString('es-ES', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })
     : null;
@@ -287,39 +305,44 @@ export function TaskCard({
             ) : null}
           </div>
 
-          {task.kind === 'BACKLOG' && currentIsoWeek ? (
-            <div className="mt-2 flex flex-wrap items-center gap-1.5">
-              <select
-                value={moveDay}
-                onChange={(e) => setMoveDay(Number(e.target.value))}
-                className="rounded-lg border border-base-border bg-base-bg px-2 py-1 text-xs"
-              >
-                {DAY_NAMES.map((d, i) => (
-                  <option key={d} value={i}>
-                    {d}
-                  </option>
-                ))}
-              </select>
-              <select
-                value={moveArea}
-                onChange={(e) => setMoveArea(e.target.value)}
-                className="rounded-lg border border-base-border bg-base-bg px-2 py-1 text-xs"
-              >
-                {areas.map((a) => (
-                  <option key={a.id} value={a.id}>
-                    {a.name}
-                  </option>
-                ))}
-              </select>
-              <button
-                onClick={() =>
-                  onUpdate(task.id, { kind: 'DAY_AREA', isoWeek: currentIsoWeek, dayOfWeek: moveDay, areaId: moveArea })
-                }
-                disabled={!moveArea}
-                className="rounded-full bg-accent px-3 py-1 text-xs font-medium text-white disabled:opacity-40"
-              >
-                {t.taskCard.moveToWeek}
-              </button>
+          {task.kind === 'BACKLOG' ? (
+            <div className="mt-2">
+              {!assignOpen ? (
+                <button onClick={() => setAssignOpen(true)} className="text-xs font-medium text-accent hover:underline">
+                  {t.taskCard.assignDateButton}
+                </button>
+              ) : (
+                <div className="space-y-1.5 rounded-lg border border-base-border p-2">
+                  <QuickDateChips onPick={setAssignDate} />
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    <input
+                      type="date"
+                      value={assignDate}
+                      onChange={(e) => setAssignDate(e.target.value)}
+                      className="rounded-lg border border-base-border bg-base-bg px-2 py-1 text-xs"
+                    />
+                    <select
+                      value={assignAreaId}
+                      onChange={(e) => setAssignAreaId(e.target.value)}
+                      className="rounded-lg border border-base-border bg-base-bg px-2 py-1 text-xs"
+                    >
+                      {areas.map((a) => (
+                        <option key={a.id} value={a.id}>
+                          {a.name}
+                        </option>
+                      ))}
+                    </select>
+                    <TimeSelect value={assignTime} onChange={setAssignTime} className="rounded-lg border border-base-border bg-base-bg px-2 py-1 text-xs" />
+                    <button
+                      onClick={submitAssignDate}
+                      disabled={!assignDate || !assignAreaId || assignBusy}
+                      className="rounded-full bg-accent px-3 py-1 text-xs font-medium text-white disabled:opacity-40"
+                    >
+                      {t.taskCard.assignDateSubmit}
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
           ) : null}
         </div>

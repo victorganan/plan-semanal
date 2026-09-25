@@ -19,6 +19,7 @@ export const text = {
   nav: {
     hoy: 'Hoy',
     semana: 'Semana',
+    bandeja: 'Bandeja',
     tuEspacio: 'Tu espacio',
     herramientas: 'Herramientas',
     dashboard: 'Dashboard',
@@ -99,7 +100,8 @@ export const text = {
     toggleDoneAriaLabel: (done: boolean) => (done ? 'Marcar como pendiente' : 'Marcar como hecha'),
     top3AriaLabel: (isTop3: boolean) => (isTop3 ? 'Quitar de Las 3 del día' : 'Marcar como una de Las 3 del día'),
     editAriaLabel: 'Editar tarea',
-    moveToWeek: 'Mover a esta semana →',
+    assignDateButton: 'Asignar fecha',
+    assignDateSubmit: 'Asignar fecha',
     description: 'Descripción',
     descriptionPlaceholder: 'Notas, contexto o detalles de esta tarea…',
     priority: 'Prioridad',
@@ -191,9 +193,17 @@ export const text = {
     empty: 'Vacía por ahora.',
     addPlaceholder: 'Anota algo que no quieres olvidar…',
     organizedSectionTitle: 'Organizadas, sin fecha',
-    organizedSectionHint: 'Ya están claras. Arrástralas a un día o asígnales uno con el selector.',
-    assignDayButton: 'Asignar día',
-    assignDaySubmit: 'Guardar',
+    organizedSectionHint: 'Ya están claras. Arrástralas a un día o asígnales fecha con el botón.',
+    bandejaNavLabel: (n: number) => (n > 0 ? `Bandeja (${n})` : 'Bandeja'),
+    summaryLine: (n: number) =>
+      n === 0 ? 'Bandeja vacía.' : n === 1 ? 'Bandeja: 1 pendiente de procesar.' : `Bandeja: ${n} pendientes de procesar.`,
+    summaryLink: 'Ir a la Bandeja →',
+  },
+
+  quickDate: {
+    today: 'Hoy',
+    tomorrow: 'Mañana',
+    nextMonday: 'Lunes que viene',
   },
 
   esperandoView: {
@@ -211,6 +221,8 @@ export const text = {
     withoutDate: 'Sin fecha de recordatorio',
     ideaTag: 'Con la etiqueta Idea: pasará al Cuaderno de bitácora cuando exista (módulo 1.8).',
     bringBackButton: 'Traer a la Bandeja ahora',
+    setReminderButton: 'Poner fecha de recordatorio',
+    setReminderSubmit: 'Guardar',
   },
 
   quickCapture: {
@@ -220,6 +232,7 @@ export const text = {
     submit: 'Guardar en la Bandeja',
     cancelAriaLabel: 'Cerrar captura rápida',
     captured: 'Guardado en la Bandeja',
+    viewInbox: 'Ver Bandeja',
     error: 'No se pudo guardar',
   },
 
@@ -234,6 +247,9 @@ export const text = {
     no: 'No',
     notActionableIdea: 'Guardar como idea',
     notActionableSomeday: 'Algún día',
+    somedayDateQuestion: '¿Cuándo quieres que reaparezca? (opcional)',
+    somedaySubmit: 'Guardar',
+    clearDate: 'Quitar fecha',
     notActionableDiscard: 'Eliminar',
     skip: 'Saltar por ahora',
     twoMinutesQuestion: '¿Se hace en menos de 2 minutos?',

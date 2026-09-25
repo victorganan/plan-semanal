@@ -5,6 +5,48 @@ import { hasCalendarAccess } from '@/lib/google-calendar';
 import { currentIsoWeek, todayDayOfWeek } from '@/lib/week';
 import type { WeekFull, TaskWithProject } from '@/types';
 
+const INBOX_INCLUDE = {
+  project: { include: { area: true, collaborators: true } },
+  area: true,
+  subtasks: true,
+  recurringTemplate: true,
+  tags: true,
+} as const;
+
+// Misma definición de "pendiente de procesar" que usa la pestaña Bandeja en
+// el cliente (src/components/InboxList.tsx): activa y sin procesar, o
+// Algún día cuya fecha de reaparición ya llegó.
+export async function getInboxPendingCount(userId: string): Promise<number> {
+  return prisma.task.count({
+    where: {
+      userId,
+      kind: 'BACKLOG',
+      parentTaskId: null,
+      done: false,
+      OR: [
+        { gtdStatus: 'ACTIVA', processedAt: null },
+        { gtdStatus: 'ALGUN_DIA', snoozeUntil: { lte: new Date() } },
+      ],
+    },
+  });
+}
+
+export async function getInboxPageData(userId: string) {
+  const [inbox, projects, areas, tags, calendarConnected] = await Promise.all([
+    prisma.task.findMany({
+      where: { userId, kind: 'BACKLOG', parentTaskId: null },
+      orderBy: [{ order: 'asc' }, { createdAt: 'asc' }],
+      include: INBOX_INCLUDE,
+    }) as Promise<TaskWithProject[]>,
+    prisma.project.findMany({ where: { userId }, include: { area: true, collaborators: true }, orderBy: { createdAt: 'desc' } }),
+    prisma.area.findMany({ where: { userId }, orderBy: { order: 'asc' } }),
+    prisma.tag.findMany({ where: { userId }, orderBy: { name: 'asc' } }),
+    hasCalendarAccess(userId),
+  ]);
+
+  return { inbox, projects, areas, tags, calendarConnected };
+}
+
 export async function getWeekPageData(userId: string, isoWeek: string) {
   const weekRef = await getOrCreateWeek(userId, isoWeek);
 

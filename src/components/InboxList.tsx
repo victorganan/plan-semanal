@@ -4,8 +4,9 @@ import { useState } from 'react';
 import { AddTaskInline } from '@/components/AddTaskInline';
 import { TaskCard } from '@/components/TaskCard';
 import { InboxTriageWizard } from '@/components/InboxTriageWizard';
+import { QuickDateChips } from '@/components/QuickDateChips';
 import { useToast } from '@/components/Toast';
-import { DAY_NAMES } from '@/lib/week';
+import { hasReappeared, isPendingProcess } from '@/lib/inbox';
 import type { Area, ProjectWithAreaAndCollaborators, Tag, TaskWithProject } from '@/types';
 import { text } from '@/i18n/es';
 
@@ -23,68 +24,46 @@ interface Props {
 
 type Tab = 'bandeja' | 'esperando' | 'algunDia';
 
-function hasReappeared(t: TaskWithProject, today: Date): boolean {
-  return t.gtdStatus === 'ALGUN_DIA' && !!t.snoozeUntil && new Date(t.snoozeUntil) <= today;
-}
-
 function formatDate(d: Date | string): string {
   return new Date(d).toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric' });
 }
 
-function AssignDayControl({
-  areas,
-  currentIsoWeek,
-  onAssign,
-}: {
-  areas: Area[];
-  currentIsoWeek: string;
-  onAssign: (dayOfWeek: number, areaId: string) => Promise<void>;
-}) {
+function SetReminderControl({ onSet }: { onSet: (isoDate: string) => Promise<void> }) {
   const [open, setOpen] = useState(false);
-  const [day, setDay] = useState(0);
-  const [areaId, setAreaId] = useState(areas[0]?.id ?? '');
+  const [date, setDate] = useState('');
   const [busy, setBusy] = useState(false);
 
   if (!open) {
     return (
-      <button onClick={() => setOpen(true)} className="text-xs font-medium text-accent hover:underline">
-        {text.inboxList.assignDayButton}
+      <button onClick={() => setOpen(true)} className="mt-2 text-xs font-medium text-accent hover:underline">
+        {text.algunDiaView.setReminderButton}
       </button>
     );
   }
 
   return (
-    <div className="flex flex-wrap items-center gap-1.5">
-      <select
-        value={day}
-        onChange={(e) => setDay(Number(e.target.value))}
-        className="rounded-lg border border-base-border bg-base-bg px-2 py-1 text-xs"
-      >
-        {DAY_NAMES.map((d, i) => (
-          <option key={d} value={i}>
-            {d}
-          </option>
-        ))}
-      </select>
-      <select value={areaId} onChange={(e) => setAreaId(e.target.value)} className="rounded-lg border border-base-border bg-base-bg px-2 py-1 text-xs">
-        {areas.map((a) => (
-          <option key={a.id} value={a.id}>
-            {a.name}
-          </option>
-        ))}
-      </select>
-      <button
-        disabled={!areaId || busy}
-        onClick={async () => {
-          setBusy(true);
-          await onAssign(day, areaId);
-          setBusy(false);
-          setOpen(false);
-        }}
-        className="rounded-full bg-accent px-3 py-1 text-xs font-semibold text-white disabled:opacity-40"
-      >
-        {text.inboxList.assignDaySubmit}
-      </button>
+    <div className="mt-2 space-y-1.5">
+      <QuickDateChips onPick={setDate} />
+      <div className="flex items-center gap-1.5">
+        <input
+          type="date"
+          value={date}
+          onChange={(e) => setDate(e.target.value)}
+          className="rounded-lg border border-base-border bg-base-bg px-2 py-1 text-xs"
+        />
+        <button
+          disabled={!date || busy}
+          onClick={async () => {
+            setBusy(true);
+            await onSet(new Date(`${date}T00:00`).toISOString());
+            setBusy(false);
+            setOpen(false);
+          }}
+          className="rounded-full bg-accent px-3 py-1 text-xs font-semibold text-white disabled:opacity-40"
+        >
+          {text.algunDiaView.setReminderSubmit}
+        </button>
+      </div>
     </div>
   );
 }
@@ -99,7 +78,7 @@ export function InboxList({ tasks, projects, areas, tags, currentIsoWeek, onAdd,
 
   // "Bandeja" (pestaña) = lo pendiente de procesar + lo ya organizado sin
   // fecha; el contador de la pestaña y el asistente solo cuentan lo primero.
-  const queueTasks = pending.filter((t) => t.gtdStatus === 'ACTIVA' && (t.processedAt === null || hasReappeared(t, today)));
+  const queueTasks = pending.filter((t) => isPendingProcess(t, today));
   const organizedTasks = pending.filter((t) => t.gtdStatus === 'ACTIVA' && t.processedAt !== null && !hasReappeared(t, today));
   const esperandoTasks = pending.filter((t) => t.gtdStatus === 'ESPERANDO');
   const algunDiaTasks = pending.filter((t) => t.gtdStatus === 'ALGUN_DIA' && !hasReappeared(t, today));
@@ -168,7 +147,6 @@ export function InboxList({ tasks, projects, areas, tags, currentIsoWeek, onAdd,
             <InboxTriageWizard
               items={queueTasks}
               areas={areas}
-              currentIsoWeek={currentIsoWeek}
               onUpdate={onUpdate}
               onDelete={onDelete}
               onCreateCalendarEvent={onCreateCalendarEvent}
@@ -202,23 +180,17 @@ export function InboxList({ tasks, projects, areas, tags, currentIsoWeek, onAdd,
               <p className="mb-2 text-xs text-base-muted">{text.inboxList.organizedSectionHint}</p>
               <div className="space-y-2">
                 {organizedTasks.map((t) => (
-                  <div key={t.id} className="space-y-1">
-                    <TaskCard
-                      task={t}
-                      projects={projects}
-                      areas={areas}
-                      tags={tags}
-                      onUpdate={onUpdate}
-                      onDelete={onDelete}
-                      currentIsoWeek={currentIsoWeek}
-                      dragEnabled
-                    />
-                    <AssignDayControl
-                      areas={areas}
-                      currentIsoWeek={currentIsoWeek}
-                      onAssign={(dayOfWeek, areaId) => onUpdate(t.id, { kind: 'DAY_AREA', isoWeek: currentIsoWeek, dayOfWeek, areaId })}
-                    />
-                  </div>
+                  <TaskCard
+                    key={t.id}
+                    task={t}
+                    projects={projects}
+                    areas={areas}
+                    tags={tags}
+                    onUpdate={onUpdate}
+                    onDelete={onDelete}
+                    currentIsoWeek={currentIsoWeek}
+                    dragEnabled
+                  />
                 ))}
               </div>
             </div>
@@ -290,6 +262,7 @@ export function InboxList({ tasks, projects, areas, tags, currentIsoWeek, onAdd,
                   >
                     {text.algunDiaView.bringBackButton}
                   </button>
+                  {!t.snoozeUntil ? <SetReminderControl onSet={(isoDate) => onUpdate(t.id, { snoozeUntil: isoDate })} /> : null}
                 </div>
               );
             })

@@ -12,13 +12,14 @@ import { MoodSliders } from '@/components/MoodSliders';
 import { ObjectivesForm, EvaluationForm } from '@/components/WeekMetaForm';
 import { PriorityListSection } from '@/components/PriorityListSection';
 import { ProjectFocusPicker } from '@/components/ProjectFocusPicker';
-import { InboxList } from '@/components/InboxList';
+import { BandejaSummaryLink } from '@/components/BandejaSummaryLink';
 import { PlanningWizard } from '@/components/PlanningWizard';
 import { DayCloseRitual } from '@/components/DayCloseRitual';
 import { WeekNav } from '@/components/WeekNav';
 import { DayNav } from '@/components/DayNav';
 import { ViewSwitcher } from '@/components/ViewSwitcher';
 import { DAY_NAMES, dateForDayOfWeek, addWeeks } from '@/lib/week';
+import { countPendingProcess } from '@/lib/inbox';
 // Alias: muchos callbacks locales de este componente usan `text` como nombre de parámetro.
 import { text as t } from '@/i18n/es';
 
@@ -576,6 +577,8 @@ export function PlanWeekClient({
           {...calendarProps}
         />
 
+        <BandejaSummaryLink pendingCount={countPendingProcess(inbox)} />
+
         <div className="grid gap-4 lg:grid-cols-2">
           <div>
             <h3 className="mb-2 text-sm font-semibold text-base-muted">
@@ -705,17 +708,7 @@ export function PlanWeekClient({
 
       <ObjectivesForm week={week} onSave={saveWeekMeta} />
 
-      <InboxList
-        tasks={inbox}
-        projects={projects}
-        areas={areas}
-        tags={tags}
-        currentIsoWeek={isoWeek}
-        onAdd={addBacklog}
-        onUpdate={updateTask}
-        onDelete={deleteTask}
-        {...calendarProps}
-      />
+      <BandejaSummaryLink pendingCount={countPendingProcess(inbox)} />
 
       <div>
         <h3 className="mb-2 text-sm font-semibold text-base-muted">{t.planWeekClient.weekHabits}</h3>

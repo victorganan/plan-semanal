@@ -3,14 +3,14 @@
 import { useEffect, useState } from 'react';
 import { api } from '@/lib/api-client';
 import type { Area, TaskWithProject } from '@/types';
-import { DAY_NAMES, dateForDayOfWeek } from '@/lib/week';
+import { isoWeekAndDowFor, todayLocalString } from '@/lib/week';
 import { TimeSelect } from '@/components/TimeSelect';
+import { QuickDateChips } from '@/components/QuickDateChips';
 import { text } from '@/i18n/es';
 
 interface Props {
   items: TaskWithProject[];
   areas: Area[];
-  currentIsoWeek: string;
   onUpdate: (id: string, patch: Record<string, unknown>) => Promise<void>;
   onDelete: (id: string) => Promise<void>;
   onCreateCalendarEvent?: (id: string) => Promise<void>;
@@ -24,6 +24,7 @@ interface Props {
 type Step =
   | 'actionable'
   | 'notActionable'
+  | 'somedayForm'
   | 'twoMinutes'
   | 'timer'
   | 'yourTurn'
@@ -33,12 +34,6 @@ type Step =
   | 'schedule'
   | 'calendarOffer'
   | 'project';
-
-function dateStrFromDayOfWeek(isoWeek: string, dayOfWeek: number): string {
-  const d = dateForDayOfWeek(isoWeek, dayOfWeek);
-  const pad = (n: number) => String(n).padStart(2, '0');
-  return `${d.getUTCFullYear()}-${pad(d.getUTCMonth() + 1)}-${pad(d.getUTCDate())}`;
-}
 
 function TwoMinuteTimer({ onDone }: { onDone: () => void }) {
   const [seconds, setSeconds] = useState(120);
@@ -62,16 +57,17 @@ function TwoMinuteTimer({ onDone }: { onDone: () => void }) {
   );
 }
 
-export function InboxTriageWizard({ items, areas, currentIsoWeek, onUpdate, onDelete, onCreateCalendarEvent, onClose }: Props) {
+export function InboxTriageWizard({ items, areas, onUpdate, onDelete, onCreateCalendarEvent, onClose }: Props) {
   const [queue] = useState(items);
   const [index, setIndex] = useState(0);
   const [step, setStep] = useState<Step>('actionable');
 
-  const [day, setDay] = useState(0);
+  const [date, setDate] = useState(todayLocalString());
   const [areaId, setAreaId] = useState(areas[0]?.id ?? '');
   const [time, setTime] = useState('');
   const [firstStep, setFirstStep] = useState('');
   const [projectFirstStep, setProjectFirstStep] = useState('');
+  const [somedayDate, setSomedayDate] = useState('');
   const [waitMode, setWaitMode] = useState<'wait' | 'delegate'>('wait');
   const [waitPerson, setWaitPerson] = useState('');
   const [waitFollowUp, setWaitFollowUp] = useState('');
@@ -80,11 +76,12 @@ export function InboxTriageWizard({ items, areas, currentIsoWeek, onUpdate, onDe
   const current = queue[index];
 
   function resetFormState() {
-    setDay(0);
+    setDate(todayLocalString());
     setAreaId(areas[0]?.id ?? '');
     setTime('');
     setFirstStep('');
     setProjectFirstStep('');
+    setSomedayDate('');
     setWaitPerson('');
     setWaitFollowUp('');
   }
@@ -122,8 +119,10 @@ export function InboxTriageWizard({ items, areas, currentIsoWeek, onUpdate, onDe
     });
   }
 
-  async function saveSomeday() {
-    await run(() => onUpdate(current.id, { gtdStatus: 'ALGUN_DIA' }));
+  async function submitSomeday() {
+    const patch: Record<string, unknown> = { gtdStatus: 'ALGUN_DIA' };
+    if (somedayDate) patch.snoozeUntil = new Date(`${somedayDate}T00:00`).toISOString();
+    await run(() => onUpdate(current.id, patch));
   }
 
   async function submitWaitForm() {
@@ -139,10 +138,10 @@ export function InboxTriageWizard({ items, areas, currentIsoWeek, onUpdate, onDe
   }
 
   async function submitSchedule() {
-    // "Sin fecha todavía" (day === -1): la tarea se queda en Bandeja, solo
+    // "Sin fecha todavía" (date vacío): la tarea se queda en Bandeja, solo
     // organizada. No se le puede fijar área sin día (el modelo la limpia en
     // cualquier tarea que no sea DAY_AREA), así que en ese caso no se pide.
-    if (day === -1) {
+    if (!date) {
       const patch: Record<string, unknown> = { markProcessed: true, processedAt: new Date() };
       if (firstStep.trim()) patch.firstStep = firstStep.trim();
       await run(() => onUpdate(current.id, patch));
@@ -150,14 +149,15 @@ export function InboxTriageWizard({ items, areas, currentIsoWeek, onUpdate, onDe
     }
 
     if (!areaId) return;
+    const { isoWeek, dayOfWeek } = isoWeekAndDowFor(date);
     const patch: Record<string, unknown> = {
       kind: 'DAY_AREA',
-      isoWeek: currentIsoWeek,
-      dayOfWeek: day,
+      isoWeek,
+      dayOfWeek,
       areaId,
     };
     if (firstStep.trim()) patch.firstStep = firstStep.trim();
-    if (time) patch.scheduledAt = new Date(`${dateStrFromDayOfWeek(currentIsoWeek, day)}T${time}`).toISOString();
+    if (time) patch.scheduledAt = new Date(`${date}T${time}`).toISOString();
     setBusy(true);
     try {
       await onUpdate(current.id, patch);
@@ -251,7 +251,7 @@ export function InboxTriageWizard({ items, areas, currentIsoWeek, onUpdate, onDe
             </button>
             <button
               disabled={busy}
-              onClick={saveSomeday}
+              onClick={() => setStep('somedayForm')}
               className="rounded-full border border-base-border px-4 py-2 text-sm font-medium hover:bg-base-border/40 disabled:opacity-40"
             >
               {text.inboxTriage.notActionableSomeday}
@@ -262,6 +262,31 @@ export function InboxTriageWizard({ items, areas, currentIsoWeek, onUpdate, onDe
               className="rounded-full px-4 py-2 text-sm font-medium text-priority-high hover:bg-priority-high/10 disabled:opacity-40"
             >
               {text.inboxTriage.notActionableDiscard}
+            </button>
+          </div>
+        ) : null}
+
+        {step === 'somedayForm' ? (
+          <div className="space-y-3">
+            <p className="text-center text-sm text-base-muted">{text.inboxTriage.somedayDateQuestion}</p>
+            <QuickDateChips onPick={setSomedayDate} />
+            <input
+              type="date"
+              value={somedayDate}
+              onChange={(e) => setSomedayDate(e.target.value)}
+              className="w-full rounded-lg border border-base-border bg-base-bg px-3 py-2 text-sm"
+            />
+            {somedayDate ? (
+              <button onClick={() => setSomedayDate('')} className="text-xs text-base-muted hover:underline">
+                {text.inboxTriage.clearDate}
+              </button>
+            ) : null}
+            <button
+              onClick={submitSomeday}
+              disabled={busy}
+              className="w-full rounded-full bg-accent px-4 py-2 text-sm font-semibold text-white disabled:opacity-40"
+            >
+              {text.inboxTriage.somedaySubmit}
             </button>
           </div>
         ) : null}
@@ -384,34 +409,40 @@ export function InboxTriageWizard({ items, areas, currentIsoWeek, onUpdate, onDe
         {step === 'schedule' ? (
           <div className="space-y-3">
             <p className="text-center text-sm text-base-muted">{text.inboxTriage.whenWhereQuestion}</p>
-            <div className="flex gap-1.5">
+            <div className="flex flex-wrap gap-1.5">
+              <button
+                type="button"
+                onClick={() => setDate('')}
+                className={
+                  date === ''
+                    ? 'rounded-full border border-accent px-2.5 py-1 text-xs font-medium text-accent'
+                    : 'rounded-full border border-base-border px-2.5 py-1 text-xs hover:bg-base-border/40'
+                }
+              >
+                {text.inboxTriage.noDateYet}
+              </button>
+              <QuickDateChips onPick={setDate} />
+            </div>
+            <input
+              type="date"
+              value={date}
+              onChange={(e) => setDate(e.target.value)}
+              className="w-full rounded-lg border border-base-border bg-base-bg px-3 py-2 text-sm"
+            />
+            {date ? (
               <select
-                value={day}
-                onChange={(e) => setDay(Number(e.target.value))}
+                value={areaId}
+                onChange={(e) => setAreaId(e.target.value)}
                 className="w-full rounded-lg border border-base-border bg-base-bg px-2 py-1.5 text-sm"
               >
-                <option value={-1}>{text.inboxTriage.noDateYet}</option>
-                {DAY_NAMES.map((d, i) => (
-                  <option key={d} value={i}>
-                    {d}
+                {areas.map((a) => (
+                  <option key={a.id} value={a.id}>
+                    {a.name}
                   </option>
                 ))}
               </select>
-              {day !== -1 ? (
-                <select
-                  value={areaId}
-                  onChange={(e) => setAreaId(e.target.value)}
-                  className="w-full rounded-lg border border-base-border bg-base-bg px-2 py-1.5 text-sm"
-                >
-                  {areas.map((a) => (
-                    <option key={a.id} value={a.id}>
-                      {a.name}
-                    </option>
-                  ))}
-                </select>
-              ) : null}
-            </div>
-            {day !== -1 ? (
+            ) : null}
+            {date ? (
               <label className="block text-xs text-base-muted">
                 {text.inboxTriage.optionalTimeLabel}
                 <TimeSelect value={time} onChange={setTime} className="mt-1 w-full rounded-lg border border-base-border bg-base-bg px-2 py-1.5 text-sm" />
@@ -429,7 +460,7 @@ export function InboxTriageWizard({ items, areas, currentIsoWeek, onUpdate, onDe
             </label>
             <button
               onClick={submitSchedule}
-              disabled={(day !== -1 && !areaId) || busy}
+              disabled={(!!date && !areaId) || busy}
               className="w-full rounded-full bg-accent px-4 py-2 text-sm font-semibold text-white disabled:opacity-40"
             >
               {text.inboxTriage.scheduleButton}
