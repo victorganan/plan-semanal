@@ -49,6 +49,7 @@ export function BandejaClient({ initialInbox, projects, areas, tags, calendarCon
       done: false,
       priority: 'MEDIUM',
       durationMinutes: null,
+      calendarEventId: null,
       quadrant: null,
       assignedTo: null,
       isTop3: false,

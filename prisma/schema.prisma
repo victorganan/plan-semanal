@@ -280,6 +280,7 @@ model Task {
   done        Boolean  @default(false)
   priority Priority @default(MEDIUM)
   durationMinutes Int? // duración estimada en minutos (pasos de 15')
+  calendarEventId String? // id del evento de Google Calendar reservado para esta tarea (si lo tiene): permite actualizarlo en vez de duplicarlo
 
   quadrant   EisenhowerQuadrant? // clasificación en la matriz de Eisenhower (urgente/importante)
   assignedTo String?             // nombre de la persona asignada; vacío = tú mismo

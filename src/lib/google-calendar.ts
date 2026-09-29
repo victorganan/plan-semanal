@@ -74,3 +74,33 @@ export async function createCalendarEvent(
   return res.json();
 }
 
+// Actualiza un evento ya reservado (Reservar tiempo cuando la tarea ya tiene
+// calendarEventId) en vez de crear uno duplicado.
+export async function updateCalendarEvent(
+  accessToken: string,
+  eventId: string,
+  params: { summary: string; description?: string; startISO: string; durationMinutes: number }
+) {
+  const start = new Date(params.startISO);
+  const end = new Date(start.getTime() + params.durationMinutes * 60_000);
+
+  const res = await fetch(`${CALENDAR_API_BASE}/calendars/primary/events/${eventId}`, {
+    method: 'PATCH',
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      summary: params.summary,
+      description: params.description,
+      start: { dateTime: start.toISOString() },
+      end: { dateTime: end.toISOString() },
+    }),
+  });
+  // 404/410: el evento se borró en Calendar por fuera de Nortvira. El
+  // llamador debe crear uno nuevo en vez de fallar.
+  if (res.status === 404 || res.status === 410) return null;
+  if (!res.ok) throw new Error(`Error actualizando evento en Google Calendar: ${res.status}`);
+  return res.json();
+}
+

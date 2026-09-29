@@ -103,6 +103,7 @@ export function TaskCard({
   // Cronómetro manual de tiempo ejecutado, desde la propia ficha de la tarea.
   const [stopwatchRunning, setStopwatchRunning] = useState(false);
   const [stopwatchAccumulatedSec, setStopwatchAccumulatedSec] = useState(0);
+  const [stopwatchDoneConfirm, setStopwatchDoneConfirm] = useState(false);
   const [, forceTick] = useState(0);
   const stopwatchStartRef = useRef<number | null>(null);
 
@@ -142,7 +143,13 @@ export function TaskCard({
     setStopwatchRunning(false);
     setStopwatchAccumulatedSec(0);
     const minutes = Math.round(totalSec / 60);
-    await onUpdate(task.id, minutes > 0 ? { executedMinutes: task.executedMinutes + minutes, done: true } : { done: true });
+    if (minutes > 0) await onUpdate(task.id, { executedMinutes: task.executedMinutes + minutes });
+    setStopwatchDoneConfirm(true);
+  }
+
+  async function confirmStopwatchDone(done: boolean) {
+    setStopwatchDoneConfirm(false);
+    if (done) await onUpdate(task.id, { done: true });
   }
 
   async function saveRecurrence(v: RecurrenceValue | null) {
@@ -368,6 +375,18 @@ export function TaskCard({
           ) : null}
         </div>
 
+        <button
+          onClick={() => onUpdate(task.id, { isPriority: !task.isPriority })}
+          aria-label={t.taskCard.priorityAriaLabel(task.isPriority)}
+          title={t.taskCard.priorityAriaLabel(task.isPriority)}
+          className={clsx(
+            'shrink-0 rounded-full p-1.5 transition hover:bg-base-border/40',
+            task.isPriority ? 'text-fuchsia-600' : 'text-base-muted/50 hover:text-base-muted'
+          )}
+        >
+          🚩
+        </button>
+
         {task.kind === 'DAY_AREA' ? (
           <button
             onClick={() =>
@@ -525,6 +544,25 @@ export function TaskCard({
                 </button>
               </div>
             </div>
+            {stopwatchDoneConfirm ? (
+              <div className="flex flex-wrap items-center gap-2 rounded-card border border-accent/40 bg-accent/5 p-2 text-xs">
+                <span>{t.taskCard.taskDoneQuestion}</span>
+                <button
+                  type="button"
+                  onClick={() => confirmStopwatchDone(true)}
+                  className="rounded-full bg-accent px-2.5 py-1 font-semibold text-white"
+                >
+                  {t.taskCard.taskDoneYes}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => confirmStopwatchDone(false)}
+                  className="rounded-full border border-base-border px-2.5 py-1 font-medium hover:bg-base-border/40"
+                >
+                  {t.taskCard.taskDoneNo}
+                </button>
+              </div>
+            ) : null}
           </div>
 
           <div className="space-y-2 border-t border-base-border pt-3">

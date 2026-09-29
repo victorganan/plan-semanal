@@ -22,6 +22,7 @@ const createSchema = z.object({
   parentTaskId: z.string().optional(),
   quadrant: z.enum(['HACER', 'DECIDIR', 'DELEGAR', 'ALGUN_DIA']).nullable().optional(),
   assignedTo: z.string().max(100).nullable().optional(),
+  isPriority: z.boolean().optional(),
 });
 
 export async function POST(req: NextRequest) {
@@ -89,6 +90,10 @@ export async function POST(req: NextRequest) {
       parentTaskId: body.parentTaskId,
       quadrant: body.quadrant ?? undefined,
       assignedTo: body.assignedTo ?? undefined,
+      // "Acción prioritaria" ya no es un kind aparte (ver PlanWeekClient/PlanningWizard):
+      // el botón que la crea sigue usando kind=PRIORITY_ACTION por compatibilidad con el
+      // resto del modelo (semana sin día), pero lo que la hace "prioritaria" es este campo.
+      isPriority: body.isPriority ?? body.kind === 'PRIORITY_ACTION',
       // Ya nace "procesada" si no entra en la Bandeja (no es BACKLOG suelta) o es una subtarea.
       processedAt: body.kind !== 'BACKLOG' || body.parentTaskId ? new Date() : undefined,
     },

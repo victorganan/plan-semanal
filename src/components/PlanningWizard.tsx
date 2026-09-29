@@ -46,7 +46,7 @@ export function PlanningWizard({
 }: Props) {
   const [step, setStep] = useState(0);
   const focusIds = week.projectFocus.map((f) => f.projectId);
-  const priorityTasks = week.tasks.filter((t) => t.kind === 'PRIORITY_ACTION');
+  const priorityTasks = week.tasks.filter((t) => t.isPriority);
   const callTasks = week.tasks.filter((t) => t.kind === 'CALL');
 
   const isLast = step === STEPS.length - 1;

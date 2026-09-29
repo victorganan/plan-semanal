@@ -236,11 +236,12 @@ export function PlanWeekClient({
       done: false,
       priority: 'MEDIUM',
       durationMinutes: null,
+      calendarEventId: null,
       quadrant: null,
       assignedTo: null,
       isTop3: false,
       executedMinutes: 0,
-      isPriority: false,
+      isPriority: kind === 'PRIORITY_ACTION',
       firstStep: null,
       context: null,
       gtdStatus: 'ACTIVA',
@@ -292,6 +293,7 @@ export function PlanWeekClient({
       done: false,
       priority: 'MEDIUM',
       durationMinutes: null,
+      calendarEventId: null,
       quadrant: null,
       assignedTo: null,
       isTop3: false,
@@ -453,6 +455,9 @@ export function PlanWeekClient({
   async function createCalendarEvent(id: string) {
     try {
       await api.post('/api/integrations/calendar/create-event', { taskId: id });
+      // El evento también mueve la tarea a ese día/hora en Nortvira: se
+      // recarga la semana para que se vea en su día correcto sin F5.
+      await hardRefresh();
       showToast(t.planWeekClient.calendarEventCreated);
     } catch {
       showToast(t.planWeekClient.calendarEventError, 'error');
@@ -611,6 +616,7 @@ export function PlanWeekClient({
       done: false,
       priority: 'MEDIUM',
       durationMinutes: null,
+      calendarEventId: null,
       quadrant: null,
       assignedTo: null,
       isTop3: false,
@@ -675,7 +681,10 @@ export function PlanWeekClient({
     }
   }
 
-  const priorityTasks = week.tasks.filter((t) => t.kind === 'PRIORITY_ACTION');
+  // "Acciones prioritarias" ya no es un kind aparte: cualquier tarea de la
+  // semana (con día o sin él) marcada isPriority aparece aquí, además de en
+  // su propio sitio (día/área), igual que ya hace Las 3 del día.
+  const priorityTasks = week.tasks.filter((t) => t.isPriority);
   const callTasks = week.tasks.filter((t) => t.kind === 'CALL');
   const focusIds = week.projectFocus.map((f) => f.projectId);
 

@@ -116,6 +116,7 @@ export const text = {
   taskCard: {
     toggleDoneAriaLabel: (done: boolean) => (done ? 'Marcar como pendiente' : 'Marcar como hecha'),
     top3AriaLabel: (isTop3: boolean) => (isTop3 ? 'Quitar de Las 3 del día' : 'Marcar como una de Las 3 del día'),
+    priorityAriaLabel: (isPriority: boolean) => (isPriority ? 'Quitar de Acciones prioritarias' : 'Marcar como acción prioritaria'),
     editAriaLabel: 'Editar tarea',
     assignDateButton: 'Asignar fecha',
     assignDateSubmit: 'Asignar fecha',
@@ -147,7 +148,10 @@ export const text = {
     saveClose: 'Guardar',
     recordButton: '● Grabar',
     pauseButton: '❚❚ Pausar',
-    stopButton: '■ Parar (completada)',
+    stopButton: '■ Parar',
+    taskDoneQuestion: '¿Has terminado la tarea?',
+    taskDoneYes: 'Sí, completada',
+    taskDoneNo: 'No, sigue abierta',
   },
 
   eisenhowerMatrix: {
@@ -302,6 +306,7 @@ export const text = {
     calendarEventCreated: 'Evento creado en Calendar',
     calendarEventError: 'No se pudo crear el evento',
     continueButton: 'Continuar',
+    areaLabel: 'Área',
   },
 
   projectFocusPicker: {
