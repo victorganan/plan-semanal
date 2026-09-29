@@ -1,7 +1,7 @@
 import { notFound } from 'next/navigation';
 import { auth } from '@/auth';
 import { todayDayOfWeek } from '@/lib/week';
-import { getWeekPageData } from '@/lib/page-data';
+import { getWeekPageData, getAvoidTodaySuggestions } from '@/lib/page-data';
 import { PlanWeekClient } from '@/components/PlanWeekClient';
 
 export default async function DiaPage({ params }: { params: Promise<{ iso: string; dow: string }> }) {
@@ -11,7 +11,8 @@ export default async function DiaPage({ params }: { params: Promise<{ iso: strin
   if (!Number.isInteger(dayOfWeek) || dayOfWeek < 0 || dayOfWeek > 6) notFound();
 
   const session = await auth();
-  const data = await getWeekPageData(session!.user.id, iso);
+  const userId = session!.user.id;
+  const [data, avoidTodaySuggestions] = await Promise.all([getWeekPageData(userId, iso), getAvoidTodaySuggestions(userId)]);
 
   return (
     <PlanWeekClient
@@ -30,6 +31,8 @@ export default async function DiaPage({ params }: { params: Promise<{ iso: strin
       dailyCapacityMinutes={data.dailyCapacityMinutes}
       bufferPercent={data.bufferPercent}
       arranqueVisibility={data.arranqueVisibility}
+      extendedFocusEnabled={data.extendedFocusEnabled}
+      avoidTodaySuggestions={avoidTodaySuggestions}
     />
   );
 }

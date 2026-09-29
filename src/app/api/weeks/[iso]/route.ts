@@ -59,6 +59,12 @@ const patchSchema = z.object({
         firstTaskId: z.string().nullable().optional(),
         closeChecks: z.array(z.string()).optional(),
         closedAt: z.string().datetime().nullable().optional(),
+        inspiration: z.string().max(2000).nullable().optional(),
+        desiredFeeling: z.string().max(100).nullable().optional(),
+        yesterdayReview: z.string().max(2000).nullable().optional(),
+        avoidToday: z.string().max(2000).nullable().optional(),
+        gratitude: z.string().max(2000).nullable().optional(),
+        learning: z.string().max(2000).nullable().optional(),
       })
     )
     .optional(),

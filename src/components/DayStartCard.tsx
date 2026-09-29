@@ -1,10 +1,11 @@
 'use client';
 
-import type { Day, TaskWithProject } from '@/types';
+import type { Day, Habit, HabitCompletion, TaskWithProject } from '@/types';
 import { text } from '@/i18n/es';
 import { Top3Today } from '@/components/Top3Today';
 import { useTop3Toggle } from '@/components/useTop3Toggle';
 import { pickDailyTip } from '@/lib/daily-tip';
+import { DayStartExtendedSection } from '@/components/DayStartExtendedSection';
 
 const ENERGY_VALUES = [1, 2, 3, 4, 5] as const;
 
@@ -18,6 +19,22 @@ interface Props {
   onUpdateTask: (id: string, patch: Record<string, unknown>) => Promise<void>;
   onStartFirstTask: (taskId: string) => void;
   onDismiss: () => void;
+  extendedFocusEnabled: boolean;
+  dayOfWeek: number;
+  inbox: TaskWithProject[];
+  habits: Habit[];
+  habitCompletions: HabitCompletion[];
+  yesterdayTasks: TaskWithProject[] | null;
+  yesterdayLearning: string | null;
+  avoidTodaySuggestions: string[];
+  onSaveInspiration: (value: string) => Promise<void>;
+  onSendInspirationAsIdea: (ideaText: string) => Promise<void>;
+  onSaveDesiredFeeling: (value: string) => Promise<void>;
+  onSaveYesterdayReview: (value: string) => Promise<void>;
+  onSaveAvoidToday: (value: string) => Promise<void>;
+  onAddBandejaTaskToToday: (taskId: string) => Promise<void>;
+  onCreateKeyTask: (taskText: string) => Promise<void>;
+  onToggleHabit: (habitId: string, done: boolean) => Promise<void>;
 }
 
 export function DayStartCard({
@@ -30,6 +47,22 @@ export function DayStartCard({
   onUpdateTask,
   onStartFirstTask,
   onDismiss,
+  extendedFocusEnabled,
+  dayOfWeek,
+  inbox,
+  habits,
+  habitCompletions,
+  yesterdayTasks,
+  yesterdayLearning,
+  avoidTodaySuggestions,
+  onSaveInspiration,
+  onSendInspirationAsIdea,
+  onSaveDesiredFeeling,
+  onSaveYesterdayReview,
+  onSaveAvoidToday,
+  onAddBandejaTaskToToday,
+  onCreateKeyTask,
+  onToggleHabit,
 }: Props) {
   const { top3Tasks, handleToggleTop3 } = useTop3Toggle(tasks, onUpdateTask);
   const firstTask = day.firstTaskId ? tasks.find((t) => t.id === day.firstTaskId) ?? null : null;
@@ -131,6 +164,27 @@ export function DayStartCard({
             className="w-full rounded-lg border border-base-border bg-base-bg px-3 py-2 text-sm"
           />
         </div>
+
+        {extendedFocusEnabled ? (
+          <DayStartExtendedSection
+            day={day}
+            dayOfWeek={dayOfWeek}
+            inbox={inbox}
+            habits={habits}
+            habitCompletions={habitCompletions}
+            yesterdayTasks={yesterdayTasks}
+            yesterdayLearning={yesterdayLearning}
+            avoidTodaySuggestions={avoidTodaySuggestions}
+            onSaveInspiration={onSaveInspiration}
+            onSendInspirationAsIdea={onSendInspirationAsIdea}
+            onSaveDesiredFeeling={onSaveDesiredFeeling}
+            onSaveYesterdayReview={onSaveYesterdayReview}
+            onSaveAvoidToday={onSaveAvoidToday}
+            onAddBandejaTaskToToday={onAddBandejaTaskToToday}
+            onCreateKeyTask={onCreateKeyTask}
+            onToggleHabit={onToggleHabit}
+          />
+        ) : null}
       </div>
     </section>
   );

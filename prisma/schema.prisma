@@ -38,6 +38,7 @@ model User {
   bufferPercent        Int @default(20) // margen para imprevistos, 0-40%; Capacidad = dailyCapacityMinutes × (1 − margen)
 
   arranqueVisibility ArranqueVisibility @default(LABORABLES) // cuándo se muestra sola la tarjeta de Arranque del día en Hoy
+  extendedFocusEnabled Boolean @default(false) // activa la sección plegable "Enfoque diario" en Arranque/Cierre
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -250,6 +251,14 @@ model Day {
   closeChecks String[] @default([]) // ids de las comprobaciones del Cierre respondidas "Sí" (Apéndice A.2.1)
   overloadAccepted Boolean @default(false) // reservado para la Balanza (Fase 2): sin interfaz todavía
   closedAt    DateTime? // cuándo se completó el ritual de Cierre de este día
+
+  // Enfoque diario ampliado (opcional, sin interfaz si User.extendedFocusEnabled = false).
+  inspiration     String? @db.Text // ideas clave / inspiración, del Arranque
+  desiredFeeling  String? // cómo quiero sentirme hoy, del Arranque
+  yesterdayReview String? @db.Text // línea propia al revisar el día anterior, del Arranque
+  avoidToday      String? @db.Text // pérdidas de tiempo a evitar hoy, del Arranque
+  gratitude       String? @db.Text // reflexión / gratitud, del Cierre
+  learning        String? @db.Text // aprendizaje de hoy, del Cierre (alimentará el Cuaderno de bitácora en el 1.8)
 
   week      Week   @relation(fields: [weekId], references: [id], onDelete: Cascade)
   tasks     Task[]

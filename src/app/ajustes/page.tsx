@@ -31,6 +31,7 @@ export default async function AjustesPage({ searchParams }: { searchParams: Prom
         dailyCapacityMinutes: true,
         bufferPercent: true,
         arranqueVisibility: true,
+        extendedFocusEnabled: true,
       },
     }),
   ]);
@@ -53,7 +54,10 @@ export default async function AjustesPage({ searchParams }: { searchParams: Prom
 
       <IntegrationsPanel initialTodoistConnected={!!todoistToken} initialCalendarConnected={calendarConnected} />
       <CapacitySettings initialMinutes={user?.dailyCapacityMinutes ?? 300} initialBufferPercent={user?.bufferPercent ?? 20} />
-      <ArranqueSettings initialVisibility={user?.arranqueVisibility ?? 'LABORABLES'} />
+      <ArranqueSettings
+        initialVisibility={user?.arranqueVisibility ?? 'LABORABLES'}
+        initialExtendedFocusEnabled={user?.extendedFocusEnabled ?? false}
+      />
       <PushReminderSettings
         initialDayOfWeek={user?.weeklyReminderDayOfWeek ?? null}
         initialSlot={user?.weeklyReminderTime ?? null}

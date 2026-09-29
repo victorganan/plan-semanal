@@ -28,6 +28,8 @@ export default async function SemanaPage({ params }: { params: Promise<{ iso: st
       dailyCapacityMinutes={data.dailyCapacityMinutes}
       bufferPercent={data.bufferPercent}
       arranqueVisibility={data.arranqueVisibility}
+      extendedFocusEnabled={data.extendedFocusEnabled}
+      avoidTodaySuggestions={[]}
     />
   );
 }

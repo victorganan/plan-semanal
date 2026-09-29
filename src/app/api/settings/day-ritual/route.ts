@@ -4,7 +4,8 @@ import { prisma } from '@/lib/prisma';
 import { requireUserId, isResponse } from '@/lib/api-auth';
 
 const schema = z.object({
-  arranqueVisibility: z.enum(['LABORABLES', 'SIEMPRE', 'NUNCA']),
+  arranqueVisibility: z.enum(['LABORABLES', 'SIEMPRE', 'NUNCA']).optional(),
+  extendedFocusEnabled: z.boolean().optional(),
 });
 
 export async function PATCH(req: NextRequest) {

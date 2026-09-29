@@ -18,6 +18,11 @@ interface Props {
   tomorrowFirstTaskId: string | null;
   initialJournalNote: string;
   onSaveJournal: (note: string) => Promise<void>;
+  extendedFocusEnabled: boolean;
+  initialGratitude: string;
+  initialLearning: string;
+  onSaveGratitude: (value: string) => Promise<void>;
+  onSaveLearning: (value: string) => Promise<void>;
   onDecidePendingTask: (taskId: string, decision: PendingTaskDecision, dateStr?: string) => Promise<void>;
   onUpdateTask: (id: string, patch: Record<string, unknown>) => Promise<void>;
   onSetTomorrowFirstTask: (taskId: string | null) => Promise<void>;
@@ -42,6 +47,11 @@ export function DayCloseRitual({
   tomorrowFirstTaskId,
   initialJournalNote,
   onSaveJournal,
+  extendedFocusEnabled,
+  initialGratitude,
+  initialLearning,
+  onSaveGratitude,
+  onSaveLearning,
   onDecidePendingTask,
   onUpdateTask,
   onSetTomorrowFirstTask,
@@ -50,6 +60,9 @@ export function DayCloseRitual({
   onClose,
 }: Props) {
   const [journal, setJournal] = useState(initialJournalNote);
+  const [gratitude, setGratitude] = useState(initialGratitude);
+  const [learning, setLearning] = useState(initialLearning);
+  const [extendedOpen, setExtendedOpen] = useState(false);
   const [otherDateOpenId, setOtherDateOpenId] = useState<string | null>(null);
   const [otherDateValue, setOtherDateValue] = useState('');
   const [decidingId, setDecidingId] = useState<string | null>(null);
@@ -354,6 +367,48 @@ export function DayCloseRitual({
               className="w-full rounded-lg border border-base-border bg-base-bg px-3 py-2 text-sm"
             />
           </section>
+
+          {extendedFocusEnabled ? (
+            <section className="border-t border-base-border pt-3">
+              <button
+                onClick={() => setExtendedOpen((v) => !v)}
+                className="mb-3 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-accent"
+              >
+                {text.dayCloseRitual.extendedSectionTitle}{' '}
+                {extendedOpen ? `(${text.dayCloseRitual.extendedSectionHide})` : `(${text.dayCloseRitual.extendedSectionShow})`}
+              </button>
+              {extendedOpen ? (
+                <div className="space-y-4">
+                  <div>
+                    <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-base-muted">
+                      {text.dayCloseRitual.gratitudeLabel}
+                    </label>
+                    <textarea
+                      value={gratitude}
+                      onChange={(e) => setGratitude(e.target.value)}
+                      onBlur={() => onSaveGratitude(gratitude)}
+                      rows={2}
+                      placeholder={text.dayCloseRitual.gratitudePlaceholder}
+                      className="w-full rounded-lg border border-base-border bg-base-bg px-3 py-2 text-sm"
+                    />
+                  </div>
+                  <div>
+                    <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-base-muted">
+                      {text.dayCloseRitual.learningLabel}
+                    </label>
+                    <textarea
+                      value={learning}
+                      onChange={(e) => setLearning(e.target.value)}
+                      onBlur={() => onSaveLearning(learning)}
+                      rows={2}
+                      placeholder={text.dayCloseRitual.learningPlaceholder}
+                      className="w-full rounded-lg border border-base-border bg-base-bg px-3 py-2 text-sm"
+                    />
+                  </div>
+                </div>
+              ) : null}
+            </section>
+          ) : null}
         </div>
 
         <div className="mt-6 flex justify-end border-t border-base-border pt-4">

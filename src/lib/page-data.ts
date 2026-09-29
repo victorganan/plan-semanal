@@ -2,7 +2,7 @@ import { prisma } from '@/lib/prisma';
 import { getOrCreateWeek } from '@/lib/recurring';
 import { getTodoistToken } from '@/lib/todoist';
 import { hasCalendarAccess } from '@/lib/google-calendar';
-import { currentIsoWeek, todayDayOfWeek } from '@/lib/week';
+import { currentIsoWeek, todayDayOfWeek, dateForDayOfWeek } from '@/lib/week';
 import type { WeekFull, TaskWithProject } from '@/types';
 
 const INBOX_INCLUDE = {
@@ -89,7 +89,7 @@ export async function getWeekPageData(userId: string, isoWeek: string) {
     }) as Promise<TaskWithProject[]>,
     prisma.user.findUnique({
       where: { id: userId },
-      select: { dailyCapacityMinutes: true, bufferPercent: true, arranqueVisibility: true },
+      select: { dailyCapacityMinutes: true, bufferPercent: true, arranqueVisibility: true, extendedFocusEnabled: true },
     }),
   ]);
 
@@ -105,7 +105,34 @@ export async function getWeekPageData(userId: string, isoWeek: string) {
     dailyCapacityMinutes: user?.dailyCapacityMinutes ?? 300,
     bufferPercent: user?.bufferPercent ?? 20,
     arranqueVisibility: user?.arranqueVisibility ?? 'LABORABLES',
+    extendedFocusEnabled: user?.extendedFocusEnabled ?? false,
   };
+}
+
+// Últimos valores distintos, no vacíos, de "pérdidas de tiempo a evitar"
+// (Enfoque diario ampliado, Arranque): como Day no guarda fecha propia, se
+// resuelve la fecha real de cada uno a partir de su semana+día para poder
+// ordenarlos por recencia.
+export async function getAvoidTodaySuggestions(userId: string, limit = 10): Promise<string[]> {
+  const days = await prisma.day.findMany({
+    where: { avoidToday: { not: null }, week: { userId } },
+    select: { avoidToday: true, dayOfWeek: true, week: { select: { isoWeek: true } } },
+  });
+
+  const dated = days
+    .map((d) => ({ value: d.avoidToday!.trim(), date: dateForDayOfWeek(d.week.isoWeek, d.dayOfWeek) }))
+    .filter((d) => d.value.length > 0)
+    .sort((a, b) => b.date.getTime() - a.date.getTime());
+
+  const seen = new Set<string>();
+  const suggestions: string[] = [];
+  for (const d of dated) {
+    if (seen.has(d.value)) continue;
+    seen.add(d.value);
+    suggestions.push(d.value);
+    if (suggestions.length >= limit) break;
+  }
+  return suggestions;
 }
 
 export async function getTodayPendingTasks(userId: string): Promise<{ id: string; text: string }[]> {

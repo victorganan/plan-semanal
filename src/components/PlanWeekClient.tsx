@@ -45,6 +45,8 @@ interface Props {
   dailyCapacityMinutes: number;
   bufferPercent: number;
   arranqueVisibility: 'LABORABLES' | 'SIEMPRE' | 'NUNCA';
+  extendedFocusEnabled: boolean;
+  avoidTodaySuggestions: string[];
 }
 
 function tempId() {
@@ -67,16 +69,19 @@ export function PlanWeekClient({
   dailyCapacityMinutes,
   bufferPercent,
   arranqueVisibility,
+  extendedFocusEnabled,
+  avoidTodaySuggestions,
 }: Props) {
   const [week, setWeek] = useState(initialWeek);
   const [inbox, setInbox] = useState(initialInbox);
   const [wizardOpen, setWizardOpen] = useState(false);
   const [closeRitualOpen, setCloseRitualOpen] = useState(false);
   const [startCardOpen, setStartCardOpen] = useState(false);
-  // Datos de la semana de "mañana" cuando cae fuera de la semana cargada
-  // (p.ej. al cerrar un viernes): se cargan solo cuando hacen falta, desde
-  // el Cierre del día.
+  // Datos de la semana de "mañana"/"ayer" cuando caen fuera de la semana
+  // cargada (p.ej. al cerrar un viernes, o al arrancar un lunes): se cargan
+  // solo cuando hacen falta, desde el Cierre o el Arranque respectivamente.
   const [tomorrowWeekData, setTomorrowWeekData] = useState<WeekFull | null>(null);
+  const [yesterdayWeekData, setYesterdayWeekData] = useState<WeekFull | null>(null);
   const { showToast } = useToast();
   const { subscribe } = useInboxCapture();
   const router = useRouter();
@@ -175,6 +180,25 @@ export function PlanWeekClient({
     await api.patch(`/api/weeks/${tomorrowIsoWeek}`, { days: [{ dayOfWeek: tomorrowDow, firstTaskId: taskId }] });
     await refreshTomorrowWeekData();
   }
+
+  // "Ayer" (revisión rápida del Enfoque diario ampliado) puede caer en una
+  // semana que no está cargada (p.ej. Arranque de un lunes, ayer es el
+  // viernes de la semana anterior): solo hace falta cuando la sección
+  // ampliada está activa y el Arranque está abierto, así que se carga sola
+  // en ese momento, igual que "mañana" en el Cierre.
+  useEffect(() => {
+    if (!startCardOpen || !extendedFocusEnabled || !yesterdayCrossesWeek) {
+      setYesterdayWeekData(null);
+      return;
+    }
+    let cancelled = false;
+    api.get(`/api/weeks/${yesterdayIsoWeek}`).then((data) => {
+      if (!cancelled) setYesterdayWeekData(data);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [startCardOpen, extendedFocusEnabled, yesterdayCrossesWeek, yesterdayIsoWeek]);
 
   const hardRefresh = useCallback(async () => {
     const fresh = await api.get(`/api/weeks/${isoWeek}`);
@@ -553,6 +577,24 @@ export function PlanWeekClient({
     await saveDayFields(viewDow, { closeChecks, closedAt: new Date().toISOString() });
   }
 
+  // ---------- Enfoque diario ampliado (Arranque/Cierre, opcional) ----------
+
+  async function sendInspirationAsIdea(ideaText: string) {
+    const tag = await api.post('/api/tags', { name: 'Idea' });
+    const created = await api.post('/api/tasks', { kind: 'BACKLOG', text: ideaText });
+    await api.patch(`/api/tasks/${created.id}`, { tagIds: [tag.id] });
+    setInbox((prev) => [...prev, { ...created, project: null, area: null, subtasks: [], recurringTemplate: null, tags: [tag] }]);
+  }
+
+  async function addBandejaTaskToToday(taskId: string) {
+    await updateTask(taskId, { kind: 'DAY_AREA', isoWeek, dayOfWeek: viewDow, areaId: areas[0]?.id });
+  }
+
+  async function createKeyTaskForToday(taskText: string) {
+    if (!areas[0]?.id) return;
+    await addTask('DAY_AREA', taskText, { dayOfWeek: viewDow, areaId: areas[0].id });
+  }
+
   async function addAndTag(text: string, field: 'evalPostponedTaskIds' | 'evalDelegateTaskIds') {
     const id = tempId();
     const optimistic: TaskWithProject = {
@@ -652,9 +694,21 @@ export function PlanWeekClient({
         ? tomorrowWeekData.tasks.filter((t) => t.kind === 'DAY_AREA' && t.dayId === tomorrowDay?.id)
         : null
       : week.tasks.filter((t) => t.kind === 'DAY_AREA' && t.dayId === tomorrowDay?.id);
-    const yesterdayDay = yesterdayCrossesWeek ? undefined : week.days.find((d) => d.dayOfWeek === yesterdayDow);
+    const yesterdayDay = yesterdayCrossesWeek
+      ? yesterdayWeekData?.days.find((d) => d.dayOfWeek === yesterdayDow)
+      : week.days.find((d) => d.dayOfWeek === yesterdayDow);
     const showChooseTop3Prompt = isViewingToday && !yesterdayCrossesWeek && !!yesterdayDay && !yesterdayDay.closedAt;
     const firstTask = isViewingToday && day?.firstTaskId ? dayTasks.find((task) => task.id === day.firstTaskId) ?? null : null;
+    // Solo se resuelve de verdad cuando hace falta (Enfoque ampliado abierto):
+    // en otro caso da igual, DayStartCard no la usa si extendedFocusEnabled es false.
+    const yesterdayTasks = yesterdayCrossesWeek
+      ? yesterdayWeekData
+        ? yesterdayWeekData.tasks.filter((t) => t.kind === 'DAY_AREA' && t.dayId === yesterdayDay?.id)
+        : null
+      : yesterdayDay
+        ? week.tasks.filter((t) => t.kind === 'DAY_AREA' && t.dayId === yesterdayDay.id)
+        : null;
+    const yesterdayLearning = yesterdayDay?.learning ?? null;
 
     return (
       <div className="space-y-6">
@@ -712,6 +766,22 @@ export function PlanWeekClient({
             onUpdateTask={updateTask}
             onStartFirstTask={startFirstTask}
             onDismiss={dismissStartCard}
+            extendedFocusEnabled={extendedFocusEnabled}
+            dayOfWeek={viewDow}
+            inbox={inbox}
+            habits={habits}
+            habitCompletions={week.habitCompletions}
+            yesterdayTasks={yesterdayTasks}
+            yesterdayLearning={yesterdayLearning}
+            avoidTodaySuggestions={avoidTodaySuggestions}
+            onSaveInspiration={(value) => saveDayFields(viewDow, { inspiration: value.trim() || null })}
+            onSendInspirationAsIdea={sendInspirationAsIdea}
+            onSaveDesiredFeeling={(value) => saveDayFields(viewDow, { desiredFeeling: value.trim() || null })}
+            onSaveYesterdayReview={(value) => saveDayFields(viewDow, { yesterdayReview: value.trim() || null })}
+            onSaveAvoidToday={(value) => saveDayFields(viewDow, { avoidToday: value.trim() || null })}
+            onAddBandejaTaskToToday={addBandejaTaskToToday}
+            onCreateKeyTask={createKeyTaskForToday}
+            onToggleHabit={(habitId, done) => toggleHabit(habitId, viewDow, done)}
           />
         ) : null}
 
@@ -746,6 +816,11 @@ export function PlanWeekClient({
             tomorrowFirstTaskId={tomorrowDay?.firstTaskId ?? null}
             initialJournalNote={day?.journalNote ?? ''}
             onSaveJournal={(note) => saveJournal(viewDow, note)}
+            extendedFocusEnabled={extendedFocusEnabled}
+            initialGratitude={day?.gratitude ?? ''}
+            initialLearning={day?.learning ?? ''}
+            onSaveGratitude={(value) => saveDayFields(viewDow, { gratitude: value.trim() || null })}
+            onSaveLearning={(value) => saveDayFields(viewDow, { learning: value.trim() || null })}
             onDecidePendingTask={decidePendingTask}
             onUpdateTask={updateTomorrowTask}
             onSetTomorrowFirstTask={setTomorrowFirstTask}
