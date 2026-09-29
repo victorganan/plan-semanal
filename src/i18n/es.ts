@@ -355,7 +355,9 @@ export const text = {
     noPlannedTasks: 'No había tareas de día planificadas.',
     doneOfTotal: (done: number, total: number) => `${done} de ${total} completadas.`,
     pendingSection: (count: number) => `Pendientes (${count})`,
-    pendingHint: 'Decide qué haces con cada una antes de cerrar el día.',
+    pendingAlert: (count: number) =>
+      `⚠️ Tienes ${count} ${count === 1 ? 'tarea pendiente' : 'tareas pendientes'} sin decidir. Elige qué hacer con cada una para poder cerrar el día.`,
+    bulkTomorrowButton: (tomorrowLabel: string) => `Pasar todas a ${tomorrowLabel}`,
     decisionOtherDate: 'Otra fecha',
     decisionSomeday: 'Algún día',
     decisionDone: 'Hecha',
@@ -381,7 +383,6 @@ export const text = {
     tomorrowLoading: 'Cargando…',
     tomorrowEmpty: (tomorrowLabel: string) => `Todavía no hay tareas planificadas para ${tomorrowLabel.toLowerCase()}.`,
     toggleTop3AriaLabel: (isTop3: boolean) => (isTop3 ? 'Quitar de Las 3 del día' : 'Marcar como una de Las 3 del día'),
-    pendingGateButton: (count: number) => `Decide qué hacer con ${count} tareas pendientes`,
     finishButton: 'Cerrar día',
     closedMessage: 'Día cerrado. Mañana empiezas con ventaja.',
     closedCloseButton: 'Cerrar',

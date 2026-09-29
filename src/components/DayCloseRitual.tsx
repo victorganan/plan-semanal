@@ -53,6 +53,7 @@ export function DayCloseRitual({
   const [otherDateOpenId, setOtherDateOpenId] = useState<string | null>(null);
   const [otherDateValue, setOtherDateValue] = useState('');
   const [decidingId, setDecidingId] = useState<string | null>(null);
+  const [bulkDeciding, setBulkDeciding] = useState(false);
   const [checkedIds, setCheckedIds] = useState<Set<CloseCheckId>>(new Set());
   const [prepTaskCreated, setPrepTaskCreated] = useState<Partial<Record<CloseCheckId, boolean>>>({});
   const [closing, setClosing] = useState(false);
@@ -84,6 +85,15 @@ export function DayCloseRitual({
     }
   }
 
+  async function decideAllTomorrow() {
+    setBulkDeciding(true);
+    try {
+      await Promise.all(pending.map((task) => onDecidePendingTask(task.id, 'MANANA')));
+    } finally {
+      setBulkDeciding(false);
+    }
+  }
+
   function toggleCheck(id: CloseCheckId) {
     setCheckedIds((prev) => {
       const next = new Set(prev);
@@ -98,11 +108,19 @@ export function DayCloseRitual({
     setPrepTaskCreated((prev) => ({ ...prev, [id]: true }));
   }
 
-  async function handleFinishClose() {
+  function handleFinishClose() {
     if (pending.length > 0) {
-      pendingSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      const el = pendingSectionRef.current;
+      el?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      // Siempre da una señal visible al pulsar, aunque la sección ya estuviera a la vista.
+      el?.classList.add('ring-2', 'ring-priority-medium');
+      setTimeout(() => el?.classList.remove('ring-2', 'ring-priority-medium'), 1000);
       return;
     }
+    void finishClose();
+  }
+
+  async function finishClose() {
     setClosing(true);
     try {
       await onFinishClose(Array.from(checkedIds));
@@ -155,47 +173,57 @@ export function DayCloseRitual({
           </section>
 
           {pending.length > 0 ? (
-            <section ref={pendingSectionRef}>
+            <section
+              ref={pendingSectionRef}
+              className="rounded-lg border border-priority-medium bg-priority-medium/5 p-3 transition-shadow"
+            >
               <h3 className="mb-1 text-xs font-semibold uppercase tracking-wide text-base-muted">
                 {text.dayCloseRitual.pendingSection(pending.length)}
               </h3>
-              <p className="mb-2 text-xs text-base-muted">{text.dayCloseRitual.pendingHint}</p>
+              <p className="mb-2 text-xs font-medium text-priority-medium">{text.dayCloseRitual.pendingAlert(pending.length)}</p>
+              <button
+                onClick={decideAllTomorrow}
+                disabled={bulkDeciding || decidingId !== null}
+                className="mb-2 rounded-full border border-accent px-2.5 py-1 text-xs font-medium text-accent hover:bg-accent/10 disabled:opacity-40"
+              >
+                {text.dayCloseRitual.bulkTomorrowButton(tomorrowLabel)}
+              </button>
               <div className="space-y-2">
                 {pending.map((task) => (
-                  <div key={task.id} className="rounded-lg border border-base-border p-2">
+                  <div key={task.id} className="rounded-lg border border-base-border bg-base-surface p-2">
                     <p className="mb-1.5 truncate text-sm">{task.text}</p>
                     <div className="flex flex-wrap gap-1.5">
                       <button
                         onClick={() => decide(task.id, 'MANANA')}
-                        disabled={decidingId === task.id}
+                        disabled={decidingId === task.id || bulkDeciding}
                         className="rounded-full border border-base-border px-2.5 py-1 text-xs hover:bg-base-border/40 disabled:opacity-40"
                       >
                         {tomorrowLabel}
                       </button>
                       <button
                         onClick={() => setOtherDateOpenId(otherDateOpenId === task.id ? null : task.id)}
-                        disabled={decidingId === task.id}
+                        disabled={decidingId === task.id || bulkDeciding}
                         className="rounded-full border border-base-border px-2.5 py-1 text-xs hover:bg-base-border/40 disabled:opacity-40"
                       >
                         {text.dayCloseRitual.decisionOtherDate}
                       </button>
                       <button
                         onClick={() => decide(task.id, 'ALGUN_DIA')}
-                        disabled={decidingId === task.id}
+                        disabled={decidingId === task.id || bulkDeciding}
                         className="rounded-full border border-base-border px-2.5 py-1 text-xs hover:bg-base-border/40 disabled:opacity-40"
                       >
                         {text.dayCloseRitual.decisionSomeday}
                       </button>
                       <button
                         onClick={() => decide(task.id, 'HECHA')}
-                        disabled={decidingId === task.id}
+                        disabled={decidingId === task.id || bulkDeciding}
                         className="rounded-full border border-base-border px-2.5 py-1 text-xs hover:bg-base-border/40 disabled:opacity-40"
                       >
                         {text.dayCloseRitual.decisionDone}
                       </button>
                       <button
                         onClick={() => decide(task.id, 'ELIMINAR')}
-                        disabled={decidingId === task.id}
+                        disabled={decidingId === task.id || bulkDeciding}
                         className="rounded-full border border-base-border px-2.5 py-1 text-xs text-priority-high hover:bg-priority-high/10 disabled:opacity-40"
                       >
                         {text.dayCloseRitual.decisionDelete}
@@ -334,7 +362,7 @@ export function DayCloseRitual({
             disabled={closing}
             className="rounded-full bg-accent px-5 py-2 text-sm font-semibold text-white disabled:opacity-40"
           >
-            {pending.length > 0 ? text.dayCloseRitual.pendingGateButton(pending.length) : text.dayCloseRitual.finishButton}
+            {text.dayCloseRitual.finishButton}
           </button>
         </div>
       </div>
