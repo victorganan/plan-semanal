@@ -22,7 +22,7 @@ Inspirada en los colores reales de una carta náutica: agua profunda casi blanca
 | `--bajio` | `#DCEBF2` | Superficies secundarias, filas seleccionadas, zonas agrupadas |
 | `--tinta` | `#1D2B36` | Texto principal e iconos |
 | `--sonda` | `#5B6F7C` | Texto secundario, metadatos, bordes activos |
-| `--faro` | `#B0206E` | Acento único: Acción prioritaria, foco, estado activo del CTA principal |
+| `--faro` | `#B0206E` | Acento único: Primera tarea, foco, estado activo del CTA principal |
 | `--estribor` | `#2E7D5B` | Completado y confirmaciones |
 | `--babor` | `#C2412D` | Alertas de rumbo y errores |
 | `--linea` | `#C9D6DE` | Bordes y divisores |
@@ -42,7 +42,7 @@ Inspirada en los colores reales de una carta náutica: agua profunda casi blanca
 | Rol | Tamaño / interlineado | Peso |
 |---|---|---|
 | Norte / título de pantalla | 31 / 36 | 800 |
-| Acción prioritaria | 25 / 30 | 600 |
+| Primera tarea | 25 / 30 | 600 |
 | Título de sección | 20 / 26 | 600 |
 | Cuerpo y tareas | 16 / 24 (17 / 26 en escritorio) | 400 |
 | Metadatos | 13 / 18 | 400, color `--sonda` |
@@ -54,7 +54,9 @@ Inspirada en los colores reales de una carta náutica: agua profunda casi blanca
 
 ## 4. Layout
 
-**Idea central: la línea de rumbo.** La vista Hoy es una línea vertical fina (`--sonda`, 2 px) con las acciones del día como puntos de paso. La Acción prioritaria es el primer punto, en magenta y a mayor tamaño. Es el único elemento audaz de la app; todo lo demás es silencioso.
+> Los bocetos de esta sección son la idea original (dos columnas, línea de rumbo). La estructura de navegación concreta (destinos, barra de paneles, atajos) la define `docs/UX_AUDIT.md` §2-3 y su plan de implantación; ese documento manda mientras dure la Fase 2, y estos bocetos se actualizarán cuando se cierre.
+
+**Idea central: la línea de rumbo.** La vista Hoy es una línea vertical fina (`--sonda`, 2 px) con las acciones del día como puntos de paso. La Primera tarea es el primer punto, en magenta y a mayor tamaño. Es el único elemento audaz de la app; todo lo demás es silencioso.
 
 Móvil (vista Hoy):
 ```
@@ -62,7 +64,7 @@ Móvil (vista Hoy):
 │ Martes 29                   │
 │ Norte: cerrar propuesta X   │  ← recordatorio del Objetivo mensual, 13 px
 │                             │
-│ ●  Enviar propuesta a X     │  ← Acción prioritaria (--faro, 25 px)
+│ ●  Enviar propuesta a X     │  ← Primera tarea (--faro, 25 px)
 │ │  [Empezar]                │
 │ │                           │
 │ ○  Llamar a Laura           │
@@ -81,7 +83,7 @@ Escritorio (dos columnas, nunca tres):
 ┌──────────┬──────────────────────────────┐
 │ Hoy      │ Martes 29 · Norte            │
 │ Bandeja  │                              │
-│ Viaje    │ ● Acción prioritaria         │
+│ Viaje    │ ● Primera tarea         │
 │ Plan     │ │                            │
 │ Bitácora │ ○ ...                        │
 │          │ │                            │
@@ -98,9 +100,9 @@ Escritorio (dos columnas, nunca tres):
 
 1. **Capturar en dos toques o un atajo.** Botón [+] en toda pantalla, atajo global `N` en escritorio. Capturar nunca pide clasificar: eso es otro momento.
 2. **Procesar pregunta a pregunta.** La Bandeja se procesa en pantalla completa, un elemento cada vez: ¿requiere acción? → ¿menos de 2 minutos? → ¿un paso o varios? → ¿cuándo? Nunca un formulario largo.
-3. **Una Acción prioritaria al día.** Máximo 3 acciones en el foco del día; el resto queda plegado. La app pide elegir antes de añadir una cuarta.
+3. **Una sola Primera tarea al día.** Máximo 3 acciones en el foco del día; el resto queda plegado. La app pide elegir antes de añadir una cuarta.
 4. **Posponer mueve, nunca duplica.** Al cerrar el día, una tarea no completada se mueve a la nueva fecha conservando su historial.
-5. **Cada ritual tiene su pantalla.** Momento de reflexión (cierre del día) y Viaje semanal (revisión) son flujos guiados de pocos pasos con progreso visible, no páginas llenas de campos.
+5. **Cada ritual tiene su pantalla.** Cerrar el día (diario) y Momento de reflexión (semanal, sobre el Viaje semanal) son flujos guiados de pocos pasos con progreso visible, no páginas llenas de campos.
 6. **La app se calla.** Notificaciones solo para Alertas de rumbo y recordatorios que la persona ha pedido. En modo foco, ninguna.
 7. **Vacío = siguiente paso.** Cada estado vacío explica qué hacer y ofrece el botón para hacerlo.
 
@@ -109,13 +111,17 @@ Escritorio (dos columnas, nunca tres):
 | Término | Qué es para el usuario |
 |---|---|
 | Norte | Su propósito o meta de fondo |
-| Plan de navegación | Planificación de proyectos y objetivos |
+| Plan de navegación | Los Nortes: dirección y objetivos de fondo (Fase 2). No es la organización de áreas y proyectos: eso es **Áreas y proyectos** |
+| Áreas y proyectos | Organización de áreas y proyectos (antes "Tu espacio") |
 | Objetivo mensual | La meta del mes |
-| Viaje semanal | Revisión y plan de la semana |
-| Acción prioritaria | Lo único que, si se hace hoy, hace que el día haya merecido la pena |
+| Viaje semanal | La semana planificada (Fase 2): los días con sus tareas, no el ritual de revisarla |
+| Primera tarea | El único destacado en magenta del día: lo que, si se hace hoy, hace que el día haya merecido la pena |
+| Acciones prioritarias | Las tareas marcadas con 🚩, con o sin día. Es una lista (puede haber varias); no confundir con la Primera tarea (una sola, la del día) |
 | Alertas de rumbo | Avisos de desvío (retrasos, sobrecarga, conflictos) |
-| Momento de reflexión | Cierre del día |
-| Cuaderno de bitácora | Registro de lo hecho y aprendizajes |
+| Momento de reflexión | Ritual **semanal**: revisar y planificar el Viaje semanal |
+| Cerrar el día | Ritual **diario**: decidir qué queda pendiente, elegir la Primera tarea de mañana, una línea de diario |
+| Estadísticas | Métricas y tendencias (antes "Dashboard"; evita el anglicismo) |
+| Cuaderno de bitácora | Registro de reflexiones del Momento de reflexión y de Cerrar el día (módulo 1.8). No son las Estadísticas |
 
 - La metáfora náutica vive en los nombres de las secciones. Los botones usan verbos normales: "Capturar", "Mover a mañana", "Empezar", "Terminar". Nada de "Zarpar" o "Izar velas".
 - Un verbo, un resultado: el botón "Mover a mañana" genera el aviso "Movida a mañana".
@@ -124,7 +130,7 @@ Escritorio (dos columnas, nunca tres):
 
 ## 7. Movimiento
 
-- Un único momento orquestado: al completar la Acción prioritaria, el punto magenta se rellena y la línea de rumbo avanza hasta la siguiente acción (≤400 ms).
+- Un único momento orquestado: al completar la Primera tarea, el punto magenta se rellena y la línea de rumbo avanza hasta la siguiente acción (≤400 ms).
 - El resto del movimiento solo responde a acciones del usuario (abrir, plegar, mover) y muestra qué ha cambiado.
 - Respetar `prefers-reduced-motion`: sustituir por cambio instantáneo.
 
