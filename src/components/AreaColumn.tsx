@@ -24,6 +24,7 @@ interface Props {
   onCreateCalendarEvent?: (id: string) => Promise<void>;
   onToggleTop3?: (id: string, next: boolean) => void;
   pendingTop3Ids?: Set<string>;
+  focusMode?: boolean;
 }
 
 export function AreaColumn({
@@ -41,6 +42,7 @@ export function AreaColumn({
   onCreateCalendarEvent,
   onToggleTop3,
   pendingTop3Ids,
+  focusMode,
 }: Props) {
   const [dragOver, setDragOver] = useState(false);
   const [dropTarget, setDropTarget] = useState<{ id: string; position: 'before' | 'after' } | null>(null);
@@ -134,6 +136,7 @@ export function AreaColumn({
               isTop3Pending={pendingTop3Ids?.has(t.id)}
               showRecurrence
               currentIsoWeek={isoWeek}
+              focusMode={focusMode}
             />
           </div>
         ))}

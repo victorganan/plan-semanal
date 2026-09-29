@@ -1,7 +1,7 @@
 import { notFound } from 'next/navigation';
 import { auth } from '@/auth';
 import { todayDayOfWeek } from '@/lib/week';
-import { getWeekPageData } from '@/lib/page-data';
+import { getWeekPageData, getPriorityOverloadStats } from '@/lib/page-data';
 import { PlanWeekClient } from '@/components/PlanWeekClient';
 
 export default async function SemanaPage({ params }: { params: Promise<{ iso: string }> }) {
@@ -9,7 +9,10 @@ export default async function SemanaPage({ params }: { params: Promise<{ iso: st
   if (!/^\d{4}-W\d{2}$/.test(iso)) notFound();
 
   const session = await auth();
-  const data = await getWeekPageData(session!.user.id, iso);
+  const [data, priorityOverload] = await Promise.all([
+    getWeekPageData(session!.user.id, iso),
+    getPriorityOverloadStats(session!.user.id, iso),
+  ]);
 
   return (
     <PlanWeekClient
@@ -30,6 +33,7 @@ export default async function SemanaPage({ params }: { params: Promise<{ iso: st
       arranqueVisibility={data.arranqueVisibility}
       extendedFocusEnabled={data.extendedFocusEnabled}
       avoidTodaySuggestions={[]}
+      priorityOverload={priorityOverload}
     />
   );
 }

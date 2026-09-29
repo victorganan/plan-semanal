@@ -39,6 +39,10 @@ interface Props {
   // true mientras hay un PATCH de isTop3 en curso para esta tarea: desactiva
   // el botón para que un doble clic no dispare un segundo toggle.
   isTop3Pending?: boolean;
+  // Activa el modo "solo primer gesto" en Hoy para tareas pospuestas 2+
+  // veces con primer gesto definido. No se activa en Semana (ahí interesa
+  // ver la tarea completa para planificar, no reducirla a un paso).
+  focusMode?: boolean;
 }
 
 function templateToValue(t: RecurringTaskTemplate): RecurrenceValue {
@@ -78,6 +82,7 @@ export function TaskCard({
   dragEnabled,
   onToggleTop3,
   isTop3Pending,
+  focusMode,
 }: Props) {
   const [open, setOpen] = useState(false);
   const [text, setText] = useState(task.text);
@@ -104,6 +109,45 @@ export function TaskCard({
   const [stopwatchRunning, setStopwatchRunning] = useState(false);
   const [stopwatchAccumulatedSec, setStopwatchAccumulatedSec] = useState(0);
   const [stopwatchDoneConfirm, setStopwatchDoneConfirm] = useState(false);
+
+  // Comprobación al marcar prioritaria (A.1.4): se abre solo al activarla,
+  // nunca al desactivarla.
+  const [priorityCheckOpen, setPriorityCheckOpen] = useState(false);
+  const [priorityCheckPrereq, setPriorityCheckPrereq] = useState('');
+  const [priorityCheckBusy, setPriorityCheckBusy] = useState(false);
+  const [firstStep, setFirstStep] = useState(task.firstStep ?? '');
+
+  // Modo "solo primer gesto" (Hoy, tarea pospuesta 2+ veces con primer gesto):
+  // 'idle' = tarjeta colapsada mostrando solo el primer gesto; 'running' =
+  // cuenta atrás de 2 minutos en marcha; 'askContinue' = cuenta atrás
+  // terminada, pregunta si sigue o lo deja. `focusDismissed` saca la tarjeta
+  // de este modo de forma permanente para esta sesión (pulsó "Seguir").
+  const [focusStep, setFocusStep] = useState<'idle' | 'running' | 'askContinue'>('idle');
+  const [focusSeconds, setFocusSeconds] = useState(120);
+  const [focusDismissed, setFocusDismissed] = useState(false);
+
+  useEffect(() => {
+    if (focusStep !== 'running') return;
+    if (focusSeconds <= 0) {
+      setFocusStep('askContinue');
+      return;
+    }
+    const timer = setTimeout(() => setFocusSeconds((s) => s - 1), 1000);
+    return () => clearTimeout(timer);
+  }, [focusStep, focusSeconds]);
+
+  function startFocusTimer() {
+    setFocusSeconds(120);
+    setFocusStep('running');
+  }
+  function continueWorking() {
+    setFocusStep('idle');
+    setFocusDismissed(true);
+    setOpen(true);
+  }
+  function stopHereForNow() {
+    setFocusStep('idle');
+  }
   const [, forceTick] = useState(0);
   const stopwatchStartRef = useRef<number | null>(null);
 
@@ -213,6 +257,35 @@ export function TaskCard({
     await onUpdate(task.id, { tagIds: nextTags.map((t) => t.id), tags: nextTags });
   }
 
+  async function togglePriority() {
+    const next = !task.isPriority;
+    await onUpdate(task.id, { isPriority: next });
+    if (next) setPriorityCheckOpen(true);
+  }
+
+  async function submitPriorityCheck() {
+    setPriorityCheckBusy(true);
+    try {
+      const lines = priorityCheckPrereq
+        .split('\n')
+        .map((l) => l.trim())
+        .filter(Boolean);
+      for (const line of lines) {
+        const created = await api.post('/api/tasks', { kind: 'BACKLOG', text: line, parentTaskId: task.id });
+        setSubtasks((prev) => [...prev, created]);
+      }
+    } finally {
+      setPriorityCheckPrereq('');
+      setPriorityCheckOpen(false);
+      setPriorityCheckBusy(false);
+    }
+  }
+
+  async function saveFirstStep() {
+    const next = firstStep.trim() || null;
+    if (next !== (task.firstStep ?? null)) await onUpdate(task.id, { firstStep: next });
+  }
+
   async function toggleDone() {
     setBusy(true);
     await onUpdate(task.id, { done: !task.done });
@@ -252,6 +325,49 @@ export function TaskCard({
   const scheduledLabel = task.scheduledAt
     ? new Date(task.scheduledAt).toLocaleString('es-ES', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })
     : null;
+
+  const showFocusPrompt =
+    focusMode && !focusDismissed && task.kind === 'DAY_AREA' && !task.done && task.rescheduleCount >= 2 && !!task.firstStep;
+
+  if (showFocusPrompt) {
+    const mm = String(Math.floor(focusSeconds / 60)).padStart(2, '0');
+    const ss = String(focusSeconds % 60).padStart(2, '0');
+    return (
+      <div className="rounded-card border border-accent/40 bg-accent/5 p-3 text-center text-sm">
+        <p className="mb-1 text-xs font-medium uppercase tracking-wide text-base-muted">{t.taskCard.focusEyebrow}</p>
+        <p className="mb-2 truncate text-xs text-base-muted" title={task.text}>
+          {task.text}
+        </p>
+        <p className="mb-3 font-medium">{task.firstStep}</p>
+        {focusStep === 'idle' ? (
+          <button onClick={startFocusTimer} className="rounded-full bg-accent px-5 py-2 text-sm font-semibold text-white">
+            {t.taskCard.focusStartButton}
+          </button>
+        ) : null}
+        {focusStep === 'running' ? (
+          <p className="text-2xl font-semibold tabular-nums">
+            {mm}:{ss}
+          </p>
+        ) : null}
+        {focusStep === 'askContinue' ? (
+          <div className="space-y-2">
+            <p className="text-xs text-base-muted">{t.taskCard.focusContinueQuestion}</p>
+            <div className="flex justify-center gap-2">
+              <button onClick={continueWorking} className="rounded-full bg-accent px-4 py-1.5 text-xs font-semibold text-white">
+                {t.taskCard.focusContinueYes}
+              </button>
+              <button
+                onClick={stopHereForNow}
+                className="rounded-full border border-base-border px-4 py-1.5 text-xs font-medium hover:bg-base-border/40"
+              >
+                {t.taskCard.focusContinueNo}
+              </button>
+            </div>
+          </div>
+        ) : null}
+      </div>
+    );
+  }
 
   const currentProject = projects.find((p) => p.id === task.projectId);
   const collaboratorSuggestions = Array.from(
@@ -376,7 +492,7 @@ export function TaskCard({
         </div>
 
         <button
-          onClick={() => onUpdate(task.id, { isPriority: !task.isPriority })}
+          onClick={togglePriority}
           aria-label={t.taskCard.priorityAriaLabel(task.isPriority)}
           title={t.taskCard.priorityAriaLabel(task.isPriority)}
           className={clsx(
@@ -413,6 +529,50 @@ export function TaskCard({
         </button>
       </div>
 
+      {priorityCheckOpen ? (
+        <div className="mx-3 mb-3 space-y-2 rounded-card border border-fuchsia-500/40 bg-fuchsia-500/5 p-3 text-xs">
+          <p className="font-medium">{t.taskCard.priorityCheckTitle}</p>
+          <p>{t.taskCard.priorityCheckOutcomeQuestion}</p>
+          <div className="flex items-center justify-between gap-2">
+            <span>{t.taskCard.priorityCheckAgendaQuestion}</span>
+            {task.scheduledAt ? (
+              <span className="font-medium text-priority-low">✓ {t.taskCard.priorityCheckAgendaYes}</span>
+            ) : (
+              <button
+                type="button"
+                onClick={() => {
+                  setOpen(true);
+                  setPriorityCheckOpen(false);
+                }}
+                className="font-medium text-accent hover:underline"
+              >
+                {t.taskCard.priorityCheckAgendaCta}
+              </button>
+            )}
+          </div>
+          <label className="block space-y-1">
+            <span>{t.taskCard.priorityCheckPrereqQuestion}</span>
+            <textarea
+              value={priorityCheckPrereq}
+              onChange={(e) => setPriorityCheckPrereq(e.target.value)}
+              rows={2}
+              placeholder={t.taskCard.priorityCheckPrereqPlaceholder}
+              className="w-full rounded-lg border border-base-border bg-base-bg px-2 py-1.5 text-xs"
+            />
+          </label>
+          <div className="flex justify-end">
+            <button
+              type="button"
+              onClick={submitPriorityCheck}
+              disabled={priorityCheckBusy}
+              className="rounded-full bg-fuchsia-600 px-3 py-1 text-xs font-semibold text-white disabled:opacity-40"
+            >
+              {t.taskCard.priorityCheckDone}
+            </button>
+          </div>
+        </div>
+      ) : null}
+
       {open ? (
         <div className="space-y-3 border-t border-base-border px-3 py-3 text-sm">
           <label className="block space-y-1">
@@ -423,6 +583,18 @@ export function TaskCard({
               onBlur={saveDescription}
               rows={3}
               placeholder={t.taskCard.descriptionPlaceholder}
+              className="w-full rounded-lg border border-base-border bg-base-bg px-2 py-1.5 text-sm"
+            />
+          </label>
+
+          <label className="block space-y-1">
+            <span className="block text-xs text-base-muted">{t.taskCard.firstStepLabel}</span>
+            <input
+              value={firstStep}
+              onChange={(e) => setFirstStep(e.target.value)}
+              onBlur={saveFirstStep}
+              maxLength={120}
+              placeholder={t.taskCard.firstStepPlaceholder}
               className="w-full rounded-lg border border-base-border bg-base-bg px-2 py-1.5 text-sm"
             />
           </label>
@@ -503,6 +675,17 @@ export function TaskCard({
                   className="rounded-lg border border-base-border bg-base-bg px-2 py-1.5 text-sm"
                 />
               </div>
+              {onCreateCalendarEvent ? (
+                <button
+                  type="button"
+                  onClick={() => onCreateCalendarEvent(task.id)}
+                  disabled={!date}
+                  title={!date ? t.taskCard.reserveTimeNeedsDate : undefined}
+                  className="mt-1 rounded-full border border-base-border px-3 py-1 text-xs font-medium hover:bg-base-border/40 disabled:opacity-40"
+                >
+                  {task.calendarEventId ? t.taskCard.updateCalendarEvent : t.taskCard.reserveTime}
+                </button>
+              ) : null}
             </div>
           </div>
 
@@ -674,14 +857,6 @@ export function TaskCard({
           ) : null}
 
           <div className="flex flex-wrap gap-2 pt-1">
-            {onCreateCalendarEvent && task.scheduledAt ? (
-              <button
-                onClick={() => onCreateCalendarEvent(task.id)}
-                className="rounded-full border border-base-border px-3 py-1 text-xs font-medium hover:bg-base-border/40"
-              >
-                {t.taskCard.createCalendarEvent}
-              </button>
-            ) : null}
             {onExportTodoist ? (
               <button
                 onClick={() => onExportTodoist(task.id)}

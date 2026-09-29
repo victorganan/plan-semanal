@@ -30,6 +30,7 @@ interface Props {
   onStarChange: (v: number) => Promise<void>;
   onExportTodoist?: (id: string) => Promise<void>;
   onCreateCalendarEvent?: (id: string) => Promise<void>;
+  focusMode?: boolean;
 }
 
 export function DayCard({
@@ -50,6 +51,7 @@ export function DayCard({
   onStarChange,
   onExportTodoist,
   onCreateCalendarEvent,
+  focusMode,
 }: Props) {
   const { top3Tasks, pendingTop3, handleToggleTop3, pendingSwap, swapBusy, confirmSwap, cancelSwap } = useTop3Toggle(
     tasks,
@@ -112,6 +114,7 @@ export function DayCard({
               onCreateCalendarEvent={onCreateCalendarEvent}
               onToggleTop3={handleToggleTop3}
               pendingTop3Ids={pendingTop3}
+              focusMode={focusMode}
             />
           ))}
         </div>

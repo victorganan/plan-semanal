@@ -47,6 +47,8 @@ interface Props {
   arranqueVisibility: 'LABORABLES' | 'SIEMPRE' | 'NUNCA';
   extendedFocusEnabled: boolean;
   avoidTodaySuggestions: string[];
+  // Aviso de sobrecarga de prioritarias (M1.6e): solo se calcula/pasa en modo semana.
+  priorityOverload?: { currentCount: number; average: number; shouldWarn: boolean };
 }
 
 function tempId() {
@@ -71,10 +73,12 @@ export function PlanWeekClient({
   arranqueVisibility,
   extendedFocusEnabled,
   avoidTodaySuggestions,
+  priorityOverload,
 }: Props) {
   const [week, setWeek] = useState(initialWeek);
   const [inbox, setInbox] = useState(initialInbox);
   const [wizardOpen, setWizardOpen] = useState(false);
+  const [overloadDismissed, setOverloadDismissed] = useState(false);
   const [closeRitualOpen, setCloseRitualOpen] = useState(false);
   const [startCardOpen, setStartCardOpen] = useState(false);
   // Datos de la semana de "mañana"/"ayer" cuando caen fuera de la semana
@@ -100,6 +104,7 @@ export function PlanWeekClient({
   // esta pantalla: publica la tarea creada por aquí para que aparezca en la
   // Bandeja al instante, sin esperar a un recargado.
   useEffect(() => subscribe((task) => setInbox((prev) => [...prev, task])), [subscribe]);
+  useEffect(() => setOverloadDismissed(false), [isoWeek]);
 
   // Tarjeta de Arranque del día: se muestra sola la primera vez que se entra
   // en Hoy cada día (según el ajuste de visibilidad), y se recuerda cerrada
@@ -855,6 +860,7 @@ export function PlanWeekClient({
           onDeleteTask={deleteTask}
           onReorderTasks={reorderTasks}
           onStarChange={(v) => saveStar(viewDow, v)}
+          focusMode={isViewingToday}
           {...exportProps}
           {...calendarProps}
         />
@@ -929,6 +935,18 @@ export function PlanWeekClient({
             bufferPercent={bufferPercent}
             unestimatedCount={weekLoad.unestimatedCount}
           />
+        </div>
+      ) : null}
+
+      {priorityOverload?.shouldWarn && !overloadDismissed ? (
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-card border border-fuchsia-500/40 bg-fuchsia-500/5 px-4 py-3 text-sm">
+          <span>{t.planWeekClient.priorityOverloadMessage(priorityOverload.currentCount, priorityOverload.average)}</span>
+          <button
+            onClick={() => setOverloadDismissed(true)}
+            className="shrink-0 rounded-full border border-base-border px-3 py-1 text-xs font-medium hover:bg-base-border/40"
+          >
+            {t.common.close}
+          </button>
         </div>
       ) : null}
 

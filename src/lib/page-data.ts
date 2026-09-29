@@ -2,7 +2,8 @@ import { prisma } from '@/lib/prisma';
 import { getOrCreateWeek } from '@/lib/recurring';
 import { getTodoistToken } from '@/lib/todoist';
 import { hasCalendarAccess } from '@/lib/google-calendar';
-import { currentIsoWeek, todayDayOfWeek, dateForDayOfWeek } from '@/lib/week';
+import { currentIsoWeek, todayDayOfWeek, dateForDayOfWeek, addWeeks } from '@/lib/week';
+import { shouldWarnOverload, averageCompleted } from '@/lib/priority-overload';
 import type { WeekFull, TaskWithProject } from '@/types';
 
 const INBOX_INCLUDE = {
@@ -45,6 +46,28 @@ export async function getInboxPageData(userId: string) {
   ]);
 
   return { inbox, projects, areas, tags, calendarConnected };
+}
+
+// Aviso de sobrecarga (M1.6e): cuenta las prioritarias de la semana vista y
+// las completadas en las 4 semanas anteriores, para comparar en el cliente
+// (src/lib/priority-overload.ts, con sus propios tests).
+export async function getPriorityOverloadStats(userId: string, isoWeek: string) {
+  const recentIsoWeeks = [1, 2, 3, 4].map((n) => addWeeks(isoWeek, -n));
+  const weeks = await prisma.week.findMany({
+    where: { userId, isoWeek: { in: [isoWeek, ...recentIsoWeeks] } },
+    select: {
+      isoWeek: true,
+      tasks: { where: { isPriority: true }, select: { done: true } },
+    },
+  });
+  const byIso = new Map(weeks.map((w) => [w.isoWeek, w]));
+  const currentCount = byIso.get(isoWeek)?.tasks.length ?? 0;
+  const recentCompletedCounts = recentIsoWeeks.map((iso) => byIso.get(iso)?.tasks.filter((t) => t.done).length ?? 0);
+  return {
+    currentCount,
+    average: Math.round(averageCompleted(recentCompletedCounts)),
+    shouldWarn: shouldWarnOverload(currentCount, recentCompletedCounts),
+  };
 }
 
 export async function getWeekPageData(userId: string, isoWeek: string) {
