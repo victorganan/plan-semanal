@@ -70,32 +70,27 @@ const LAST_AREA_KEY = 'nortvira:last-area-id';
 function AreaQuickPicker({ areas, value, onChange }: { areas: Area[]; value: string; onChange: (id: string) => void }) {
   if (areas.length === 0) return null;
   return (
-    <div>
-      <p className="mb-1.5 text-xs text-base-muted">{text.inboxTriage.areaLabel}</p>
-      <div className="flex flex-wrap gap-1.5">
+    <label className="block">
+      <span className="mb-1.5 block text-xs text-base-muted">{text.inboxTriage.areaLabel}</span>
+      <select
+        value={value}
+        onChange={(e) => {
+          onChange(e.target.value);
+          try {
+            localStorage.setItem(LAST_AREA_KEY, e.target.value);
+          } catch {
+            // localStorage puede no estar disponible (privado, bloqueado): no es crítico.
+          }
+        }}
+        className="w-full rounded-lg border border-base-border bg-base-bg px-2 py-1.5 text-sm"
+      >
         {areas.map((a) => (
-          <button
-            key={a.id}
-            type="button"
-            onClick={() => {
-              onChange(a.id);
-              try {
-                localStorage.setItem(LAST_AREA_KEY, a.id);
-              } catch {
-                // localStorage puede no estar disponible (privado, bloqueado): no es crítico.
-              }
-            }}
-            className={
-              value === a.id
-                ? 'rounded-full border border-accent px-2.5 py-1 text-xs font-medium text-accent'
-                : 'rounded-full border border-base-border px-2.5 py-1 text-xs hover:bg-base-border/40'
-            }
-          >
+          <option key={a.id} value={a.id}>
             {a.name}
-          </button>
+          </option>
         ))}
-      </div>
-    </div>
+      </select>
+    </label>
   );
 }
 

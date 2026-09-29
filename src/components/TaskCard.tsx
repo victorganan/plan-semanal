@@ -11,7 +11,7 @@ import { api } from '@/lib/api-client';
 import { PRIORITY_LABELS, RECURRENCE_LABELS, formatDurationMinutes, areaBgClass } from '@/types';
 import { describeRecurrence } from '@/lib/rrule-helpers';
 import type { RecurrenceValue } from '@/lib/rrule-helpers';
-import { isoWeekOf, mondayBasedDayOfWeek, isoWeekAndDowFor, todayLocalString } from '@/lib/week';
+import { isoWeekAndDowFor, todayLocalString } from '@/lib/week';
 import { QuickDateChips } from '@/components/QuickDateChips';
 import type { Area, ProjectWithAreaAndCollaborators, Task, TaskWithProject, RecurringTaskTemplate, Tag } from '@/types';
 // Alias: el estado local de este componente ya usa el nombre `text` para el título de la tarea.
@@ -293,19 +293,23 @@ export function TaskCard({
   }
 
   async function saveSchedule(nextDate: string, nextTime: string) {
-    if (nextDate && nextTime) {
-      const dt = new Date(`${nextDate}T${nextTime}`);
-      const patch: Record<string, unknown> = { scheduledAt: dt.toISOString() };
-      // Si la tarea es de día y la nueva fecha cae en la semana que se está viendo,
-      // la tarea se mueve automáticamente al día correspondiente.
-      if (task.kind === 'DAY_AREA' && currentIsoWeek && isoWeekOf(dt) === currentIsoWeek) {
-        patch.isoWeek = currentIsoWeek;
-        patch.dayOfWeek = mondayBasedDayOfWeek(dt);
-      }
-      await onUpdate(task.id, patch);
-    } else if (!nextDate && !nextTime && task.scheduledAt) {
-      await onUpdate(task.id, { scheduledAt: null });
+    // H4 (auditoría UX): antes exigía fecha Y hora para guardar nada, y solo
+    // movía la tarea de día cuando la nueva fecha caía en la semana que se
+    // estaba viendo. Ahora la hora es opcional y la tarea se mueve al día
+    // correcto (semana incluida) siempre que haya fecha.
+    if (!nextDate) {
+      if (task.scheduledAt) await onUpdate(task.id, { scheduledAt: null });
+      return;
     }
+    const patch: Record<string, unknown> = {
+      scheduledAt: nextTime ? new Date(`${nextDate}T${nextTime}`).toISOString() : null,
+    };
+    if (task.kind === 'DAY_AREA') {
+      const { isoWeek, dayOfWeek } = isoWeekAndDowFor(nextDate);
+      patch.isoWeek = isoWeek;
+      patch.dayOfWeek = dayOfWeek;
+    }
+    await onUpdate(task.id, patch);
   }
 
   async function submitAssignDate() {
