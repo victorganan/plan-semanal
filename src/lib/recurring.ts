@@ -75,19 +75,31 @@ export async function materializeRecurringTasks(userId: string, weekId: string, 
   const dayByDow = new Map(days.map((d) => [d.dayOfWeek, d]));
 
   const templateIds = Array.from(dowsByTemplate.keys());
+  // Cuántas tareas de cada plantilla YA existen esta semana, dondequiera que
+  // estén ahora mismo (no solo en su día "de origen"): si el Cierre del día
+  // (o un arrastre) movió una de estas tareas a otro día, sigue contando
+  // como generada — si comprobáramos solo el día original, el hueco que deja
+  // se volvería a rellenar en la siguiente carga de la semana, duplicando la
+  // tarea que el usuario ya había movido.
   const existing = await prisma.task.findMany({
     where: { weekId, recurringTemplateId: { in: templateIds } },
-    select: { recurringTemplateId: true, dayId: true },
+    select: { recurringTemplateId: true },
   });
-  const existingKeys = new Set(existing.map((t) => `${t.recurringTemplateId}:${t.dayId}`));
+  const existingCountByTemplate = new Map<string, number>();
+  for (const t of existing) {
+    const key = t.recurringTemplateId!;
+    existingCountByTemplate.set(key, (existingCountByTemplate.get(key) ?? 0) + 1);
+  }
 
   const templateById = new Map(templates.map((t) => [t.id, t]));
 
   for (const [templateId, dows] of dowsByTemplate) {
     const template = templateById.get(templateId)!;
-    for (const dow of dows) {
+    const alreadyGenerated = existingCountByTemplate.get(templateId) ?? 0;
+    const dowsToGenerate = dows.slice(alreadyGenerated);
+    for (const dow of dowsToGenerate) {
       const day = dayByDow.get(dow);
-      if (!day || existingKeys.has(`${templateId}:${day.id}`)) continue;
+      if (!day) continue;
 
       const task = await prisma.task.create({
         data: {
