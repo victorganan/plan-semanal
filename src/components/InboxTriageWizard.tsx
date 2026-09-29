@@ -114,7 +114,19 @@ export function InboxTriageWizard({ items, areas, onUpdate, onDelete, onCreateCa
   }
 
   async function markDone() {
-    await run(() => onUpdate(current.id, { done: true }));
+    // "Hazlo ya" (regla de los 2 minutos): la tarea se hace en el momento,
+    // aquí y ahora, así que además de completarla debe quedar asignada al
+    // día de hoy (no seguir suelta en BACKLOG) para contar en el resumen
+    // del día, el Cierre y las métricas.
+    const patch: Record<string, unknown> = { done: true };
+    if (current.kind === 'BACKLOG') {
+      const { isoWeek, dayOfWeek } = isoWeekAndDowFor(todayLocalString());
+      patch.kind = 'DAY_AREA';
+      patch.isoWeek = isoWeek;
+      patch.dayOfWeek = dayOfWeek;
+      if (areaId) patch.areaId = areaId;
+    }
+    await run(() => onUpdate(current.id, patch));
   }
 
   async function discard() {
