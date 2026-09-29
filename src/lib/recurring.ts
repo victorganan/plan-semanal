@@ -71,58 +71,72 @@ export async function materializeRecurringTasks(userId: string, weekId: string, 
   }
   if (dowsByTemplate.size === 0) return;
 
-  const days = await prisma.day.findMany({ where: { weekId } });
-  const dayByDow = new Map(days.map((d) => [d.dayOfWeek, d]));
-
-  const templateIds = Array.from(dowsByTemplate.keys());
-  // Cuántas tareas de cada plantilla YA existen esta semana, dondequiera que
-  // estén ahora mismo (no solo en su día "de origen"): si el Cierre del día
-  // (o un arrastre) movió una de estas tareas a otro día, sigue contando
-  // como generada — si comprobáramos solo el día original, el hueco que deja
-  // se volvería a rellenar en la siguiente carga de la semana, duplicando la
-  // tarea que el usuario ya había movido.
-  const existing = await prisma.task.findMany({
-    where: { weekId, recurringTemplateId: { in: templateIds } },
-    select: { recurringTemplateId: true },
-  });
-  const existingCountByTemplate = new Map<string, number>();
-  for (const t of existing) {
-    const key = t.recurringTemplateId!;
-    existingCountByTemplate.set(key, (existingCountByTemplate.get(key) ?? 0) + 1);
-  }
-
   const templateById = new Map(templates.map((t) => [t.id, t]));
 
-  for (const [templateId, dows] of dowsByTemplate) {
-    const template = templateById.get(templateId)!;
-    const alreadyGenerated = existingCountByTemplate.get(templateId) ?? 0;
-    const dowsToGenerate = dows.slice(alreadyGenerated);
-    for (const dow of dowsToGenerate) {
-      const day = dayByDow.get(dow);
-      if (!day) continue;
+  // Bloqueo consultivo por semana: si dos peticiones llegan casi a la vez
+  // para la misma semana (dos pestañas abiertas a la vez, una recarga que se
+  // solapa con la carga inicial de la página...), sin esto ambas pueden leer
+  // "no existe todavía" antes de que la otra termine de insertar, y las dos
+  // generan su propia copia de la misma tarea recurrente el mismo día. Esto
+  // serializa las llamadas para una misma semana: la segunda espera a que la
+  // primera termine y entonces ya ve lo que la primera generó.
+  await prisma.$transaction(
+    async (tx) => {
+      await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${weekId}))`;
 
-      const task = await prisma.task.create({
-        data: {
-          userId,
-          weekId,
-          dayId: day.id,
-          kind: 'DAY_AREA',
-          areaId: template.areaId,
-          text: template.text,
-          priority: template.priority,
-          durationMinutes: template.durationMinutes,
-          recurrence: template.freq,
-          recurringTemplateId: template.id,
-        },
+      const days = await tx.day.findMany({ where: { weekId } });
+      const dayByDow = new Map(days.map((d) => [d.dayOfWeek, d]));
+
+      const templateIds = Array.from(dowsByTemplate.keys());
+      // Cuántas tareas de cada plantilla YA existen esta semana, dondequiera
+      // que estén ahora mismo (no solo en su día "de origen"): si el Cierre
+      // del día (o un arrastre) movió una de estas tareas a otro día, sigue
+      // contando como generada — si comprobáramos solo el día original, el
+      // hueco que deja se volvería a rellenar en la siguiente carga de la
+      // semana, duplicando la tarea que el usuario ya había movido.
+      const existing = await tx.task.findMany({
+        where: { weekId, recurringTemplateId: { in: templateIds } },
+        select: { recurringTemplateId: true },
       });
-      await logActivity(prisma, {
-        userId,
-        entityType: 'Task',
-        entityId: task.id,
-        action: 'CREATED',
-        summary: `Tarea recurrente generada: "${task.text}"`,
-        metadata: { fromTemplate: template.id },
-      });
-    }
-  }
+      const existingCountByTemplate = new Map<string, number>();
+      for (const t of existing) {
+        const key = t.recurringTemplateId!;
+        existingCountByTemplate.set(key, (existingCountByTemplate.get(key) ?? 0) + 1);
+      }
+
+      for (const [templateId, dows] of dowsByTemplate) {
+        const template = templateById.get(templateId)!;
+        const alreadyGenerated = existingCountByTemplate.get(templateId) ?? 0;
+        const dowsToGenerate = dows.slice(alreadyGenerated);
+        for (const dow of dowsToGenerate) {
+          const day = dayByDow.get(dow);
+          if (!day) continue;
+
+          const task = await tx.task.create({
+            data: {
+              userId,
+              weekId,
+              dayId: day.id,
+              kind: 'DAY_AREA',
+              areaId: template.areaId,
+              text: template.text,
+              priority: template.priority,
+              durationMinutes: template.durationMinutes,
+              recurrence: template.freq,
+              recurringTemplateId: template.id,
+            },
+          });
+          await logActivity(tx, {
+            userId,
+            entityType: 'Task',
+            entityId: task.id,
+            action: 'CREATED',
+            summary: `Tarea recurrente generada: "${task.text}"`,
+            metadata: { fromTemplate: template.id },
+          });
+        }
+      }
+    },
+    { timeout: 15000 }
+  );
 }
