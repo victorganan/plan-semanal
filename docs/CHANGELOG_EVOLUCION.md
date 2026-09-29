@@ -94,6 +94,20 @@ Registro de lo implementado, decisiones tomadas y pendientes durante la evoluci�
   - Al marcar una 4ª estrella, el selector de sustitución se abría correctamente (sin tocar el servidor: confirmado que ningún camino, cliente o servidor, desmarca las 3 tareas existentes) pero un segundo clic pegado al primero (doble clic accidental, hábito que dejó el bug anterior) caía sobre el fondo del propio modal —a pantalla completa— y lo cerraba al instante: un flash oscuro tapando "Las 3 del día" que daba la sensación de que desaparecían sin selector. Corregido ignorando el cierre por clic en el fondo durante 250ms tras abrirse (`shouldIgnoreBackdropClick`, función pura con test de regresión).
 - Verificado en cada entrega: `tsc --noEmit`, `eslint`, `vitest run` (33/33 al cierre, incluye `src/lib/capacity.test.ts` y `src/lib/top3-swap-modal.test.ts`) y `next build` limpios.
 
+### Módulo 1.5 · Arranque y Cierre del día (M2)
+
+**Completado y confirmado por el Product Owner, en producción.**
+
+- **Arranque del día**: energía, objetivo del día (`dayGoal`), Las 3 del día, primera tarea con inicio directo o cambio desde un desplegable.
+- **Cierre del día**: comprobaciones opcionales en casillas (nunca bloquean), una línea de diario (`journalNote`), y sección de pendientes con aviso claro de qué hay que decidir con cada una — sin el botón "Cerrar día" desactivado: siempre pulsable, con scroll + resalte a la sección de pendientes si se pulsa con tareas sin decidir.
+- **"Pasar todas a [siguiente día laborable]"**: botón en la sección de pendientes del Cierre para reprogramarlas todas de golpe al próximo día laborable (no al día natural siguiente: viernes → lunes), con opción de cambiar alguna individualmente después.
+- **Enfoque diario ampliado** (opcional, activable en Ajustes con `extendedFocusEnabled`, por defecto desactivado): ideas/inspiración del Arranque con envío directo a la Bandeja como idea; cómo quiero sentirme hoy; revisión rápida del día anterior (tareas y aprendizaje de ayer, con carga bajo demanda cuando cruza de semana); tareas clave con búsqueda en la Bandeja y creación directa; pérdidas de tiempo a evitar hoy, con sugerencias de las últimas veces que se rellenó; reflexión/gratitud y aprendizaje de hoy en el Cierre. Seis campos nuevos en `Day` (`inspiration`, `desiredFeeling`, `yesterdayReview`, `avoidToday`, `gratitude`, `learning`), todos opcionales, migración puramente aditiva.
+- **Bugs encontrados en producción y corregidos antes de cerrar el módulo**:
+  - Posponer una tarea recurrente ya materializada creaba un duplicado en vez de moverla: la comprobación de "ya existe esta semana" comparaba contra el día original de la plantilla en lugar de contar cuántas copias de esa plantilla ya existían. Corregido a un recuento por plantilla.
+  - Carrera al cargar la misma semana varias veces a la vez (dos pestañas, doble clic) podía generar el mismo duplicado por una segunda causa distinta: la generación de tareas recurrentes no estaba serializada. Corregido con bloqueo consultivo de Postgres (`pg_advisory_xact_lock`) envolviendo toda la operación en una transacción.
+  - Duplicados ya existentes en producción (anteriores al arreglo, confirmado por fecha de creación) limpiados con una herramienta temporal de diagnóstico + borrado seguro (simulación y copia de seguridad en `ActivityLog` antes de aplicar, alcance limitado al usuario, confirmación explícita), verificados uno a uno por el Product Owner y retirada después.
+- Verificado en cada entrega: `tsc --noEmit`, `eslint`, `vitest run` y `next build` limpios; scripts de verificación contra Postgres local para la lógica de recurrencia y de sugerencias del Enfoque ampliado (descartados tras verificar, no forman parte del repo).
+
 ## Fase 2 · Beta: dirección, foco y aprendizaje
 
 _(sin empezar todavía)_
