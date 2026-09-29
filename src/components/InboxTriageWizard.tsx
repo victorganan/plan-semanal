@@ -61,6 +61,55 @@ function TwoMinuteTimer({ onDone }: { onDone: () => void }) {
   );
 }
 
+const LAST_AREA_KEY = 'nortvira:last-area-id';
+
+// Selector de área de un toque: botones en vez de desplegable, para poder
+// pedir el área en cualquier rama del asistente sin que se sienta como un
+// paso más. Se usa en todas las ramas que dejan la tarea en el sistema
+// (Hazlo ya, Crear tarea, Crear proyecto, Esperar/Delegar, Algún día).
+function AreaQuickPicker({ areas, value, onChange }: { areas: Area[]; value: string; onChange: (id: string) => void }) {
+  if (areas.length === 0) return null;
+  return (
+    <div>
+      <p className="mb-1.5 text-xs text-base-muted">{text.inboxTriage.areaLabel}</p>
+      <div className="flex flex-wrap gap-1.5">
+        {areas.map((a) => (
+          <button
+            key={a.id}
+            type="button"
+            onClick={() => {
+              onChange(a.id);
+              try {
+                localStorage.setItem(LAST_AREA_KEY, a.id);
+              } catch {
+                // localStorage puede no estar disponible (privado, bloqueado): no es crítico.
+              }
+            }}
+            className={
+              value === a.id
+                ? 'rounded-full border border-accent px-2.5 py-1 text-xs font-medium text-accent'
+                : 'rounded-full border border-base-border px-2.5 py-1 text-xs hover:bg-base-border/40'
+            }
+          >
+            {a.name}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function lastUsedAreaId(areas: Area[]): string {
+  let stored: string | null = null;
+  try {
+    stored = localStorage.getItem(LAST_AREA_KEY);
+  } catch {
+    stored = null;
+  }
+  if (stored && areas.some((a) => a.id === stored)) return stored;
+  return areas[0]?.id ?? '';
+}
+
 export function InboxTriageWizard({ items, areas, onUpdate, onDelete, onCreateCalendarEvent, onClose, onRestart }: Props) {
   const [queue] = useState(items);
   const [index, setIndex] = useState(0);
@@ -68,7 +117,7 @@ export function InboxTriageWizard({ items, areas, onUpdate, onDelete, onCreateCa
   const [skippedCount, setSkippedCount] = useState(0);
 
   const [date, setDate] = useState(todayLocalString());
-  const [areaId, setAreaId] = useState(areas[0]?.id ?? '');
+  const [areaId, setAreaId] = useState(() => lastUsedAreaId(areas));
   const [time, setTime] = useState('');
   const [firstStep, setFirstStep] = useState('');
   const [projectFirstStep, setProjectFirstStep] = useState('');
@@ -82,7 +131,7 @@ export function InboxTriageWizard({ items, areas, onUpdate, onDelete, onCreateCa
 
   function resetFormState() {
     setDate(todayLocalString());
-    setAreaId(areas[0]?.id ?? '');
+    setAreaId(lastUsedAreaId(areas));
     setTime('');
     setFirstStep('');
     setProjectFirstStep('');
@@ -144,6 +193,7 @@ export function InboxTriageWizard({ items, areas, onUpdate, onDelete, onCreateCa
   async function submitSomeday() {
     const patch: Record<string, unknown> = { gtdStatus: 'ALGUN_DIA' };
     if (somedayDate) patch.snoozeUntil = new Date(`${somedayDate}T00:00`).toISOString();
+    if (areaId) patch.areaId = areaId;
     await run(() => onUpdate(current.id, patch));
   }
 
@@ -155,17 +205,19 @@ export function InboxTriageWizard({ items, areas, onUpdate, onDelete, onCreateCa
         waitingOn: waitPerson.trim(),
         followUpDate: new Date(waitFollowUp).toISOString(),
         ...(waitMode === 'delegate' ? { assignedTo: waitPerson.trim() } : {}),
+        ...(areaId ? { areaId } : {}),
       })
     );
   }
 
   async function submitSchedule() {
     // "Sin fecha todavía" (date vacío): la tarea se queda en Bandeja, solo
-    // organizada. No se le puede fijar área sin día (el modelo la limpia en
-    // cualquier tarea que no sea DAY_AREA), así que en ese caso no se pide.
+    // organizada, pero el área sí se guarda (es una clasificación aparte
+    // de la semana/día).
     if (!date) {
       const patch: Record<string, unknown> = { markProcessed: true, processedAt: new Date() };
       if (firstStep.trim()) patch.firstStep = firstStep.trim();
+      if (areaId) patch.areaId = areaId;
       await run(() => onUpdate(current.id, patch));
       return;
     }
@@ -207,7 +259,9 @@ export function InboxTriageWizard({ items, areas, onUpdate, onDelete, onCreateCa
     if (!projectFirstStep.trim()) return;
     await run(async () => {
       await api.post('/api/tasks', { kind: 'BACKLOG', text: projectFirstStep.trim(), parentTaskId: current.id });
-      await onUpdate(current.id, { markProcessed: true, processedAt: new Date() });
+      const patch: Record<string, unknown> = { markProcessed: true, processedAt: new Date() };
+      if (areaId) patch.areaId = areaId;
+      await onUpdate(current.id, patch);
     });
   }
 
@@ -327,6 +381,7 @@ export function InboxTriageWizard({ items, areas, onUpdate, onDelete, onCreateCa
                 {text.inboxTriage.clearDate}
               </button>
             ) : null}
+            <AreaQuickPicker areas={areas} value={areaId} onChange={setAreaId} />
             <button
               onClick={submitSomeday}
               disabled={busy}
@@ -357,7 +412,12 @@ export function InboxTriageWizard({ items, areas, onUpdate, onDelete, onCreateCa
           </div>
         ) : null}
 
-        {step === 'timer' ? <TwoMinuteTimer onDone={markDone} /> : null}
+        {step === 'timer' ? (
+          <div className="space-y-3">
+            <TwoMinuteTimer onDone={markDone} />
+            <AreaQuickPicker areas={areas} value={areaId} onChange={setAreaId} />
+          </div>
+        ) : null}
 
         {step === 'yourTurn' ? (
           <div className="space-y-2">
@@ -422,6 +482,7 @@ export function InboxTriageWizard({ items, areas, onUpdate, onDelete, onCreateCa
                 className="mt-1 w-full rounded-lg border border-base-border bg-base-bg px-3 py-2 text-sm"
               />
             </label>
+            <AreaQuickPicker areas={areas} value={areaId} onChange={setAreaId} />
             <button
               onClick={submitWaitForm}
               disabled={!waitPerson.trim() || !waitFollowUp || busy}
@@ -475,19 +536,7 @@ export function InboxTriageWizard({ items, areas, onUpdate, onDelete, onCreateCa
               onChange={(e) => setDate(e.target.value)}
               className="w-full rounded-lg border border-base-border bg-base-bg px-3 py-2 text-sm"
             />
-            {date ? (
-              <select
-                value={areaId}
-                onChange={(e) => setAreaId(e.target.value)}
-                className="w-full rounded-lg border border-base-border bg-base-bg px-2 py-1.5 text-sm"
-              >
-                {areas.map((a) => (
-                  <option key={a.id} value={a.id}>
-                    {a.name}
-                  </option>
-                ))}
-              </select>
-            ) : null}
+            <AreaQuickPicker areas={areas} value={areaId} onChange={setAreaId} />
             {date ? (
               <label className="block text-xs text-base-muted">
                 {text.inboxTriage.optionalTimeLabel}
@@ -546,6 +595,7 @@ export function InboxTriageWizard({ items, areas, onUpdate, onDelete, onCreateCa
               placeholder={text.inboxTriage.firstStepPlaceholder}
               className="w-full rounded-lg border border-base-border bg-base-bg px-3 py-2 text-sm"
             />
+            <AreaQuickPicker areas={areas} value={areaId} onChange={setAreaId} />
             <button
               onClick={submitProject}
               disabled={!projectFirstStep.trim() || busy}

@@ -73,10 +73,15 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     data.tags = { set: owned.map((t) => ({ id: t.id })) };
   }
 
+  // Área: clasificación de la tarea (a qué área de vida pertenece), independiente
+  // de si tiene semana/día asignados — a diferencia de weekId/dayId, no se limpia
+  // por cambiar de kind, para poder pedirla también en Esperando/Algún día/Bandeja
+  // sin fecha todavía.
+  if (areaId !== undefined) data.areaId = areaId;
+
   if (nextKind === 'BACKLOG') {
     data.weekId = null;
     data.dayId = null;
-    data.areaId = null;
   } else {
     let weekId = existing.weekId ?? undefined;
     if (isoWeek) {
@@ -86,14 +91,12 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     }
 
     if (nextKind === 'DAY_AREA') {
-      if (areaId !== undefined) data.areaId = areaId;
       if (dayOfWeek !== undefined && weekId) {
         const day = await prisma.day.findUnique({ where: { weekId_dayOfWeek: { weekId, dayOfWeek } } });
         data.dayId = day?.id ?? null;
       }
     } else {
       data.dayId = null;
-      data.areaId = null;
     }
   }
 
