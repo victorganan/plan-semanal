@@ -773,6 +773,10 @@ export function PlanWeekClient({
       : week.days.find((d) => d.dayOfWeek === yesterdayDow);
     const showChooseTop3Prompt = isViewingToday && !yesterdayCrossesWeek && !!yesterdayDay && !yesterdayDay.closedAt;
     const firstTask = isViewingToday && day?.firstTaskId ? dayTasks.find((task) => task.id === day.firstTaskId) ?? null : null;
+    // Primera tarea hecha (ajuste 1.6/Fase 2): si queda alguna de Las 3 del
+    // día sin hacer, se ofrece como "Siguiente" en vez de dejar el hueco vacío.
+    const nextTop3Task =
+      firstTask?.done ? dayTasks.find((task) => task.isTop3 && !task.done && task.id !== firstTask.id) ?? null : null;
     // Solo se resuelve de verdad cuando hace falta (Enfoque ampliado abierto):
     // en otro caso da igual, DayStartCard no la usa si extendedFocusEnabled es false.
     const yesterdayTasks = yesterdayCrossesWeek
@@ -825,14 +829,29 @@ export function PlanWeekClient({
           </div>
         </div>
 
-        {isViewingToday && firstTask ? (
+        {isViewingToday && firstTask && !firstTask.done ? (
           <PinnedFirstTask
             task={firstTask}
             candidateTasks={dayTasks}
-            onToggleDone={(done) => updateTask(firstTask.id, { done })}
+            onToggleDone={async (done) => {
+              await updateTask(firstTask.id, { done });
+              if (done) showToast(t.pinnedFirstTask.doneToast);
+            }}
             onChange={(taskId) => saveDayFields(viewDow, { firstTaskId: taskId })}
             onStart={() => startFirstTask(firstTask.id)}
           />
+        ) : null}
+
+        {isViewingToday && firstTask?.done && nextTop3Task ? (
+          <div className="flex items-center gap-2 rounded-card border border-accent bg-accent/10 px-4 py-2.5 text-sm">
+            <span className="flex-1 truncate">{t.pinnedFirstTask.nextLabel(nextTop3Task.text)}</span>
+            <button
+              onClick={() => startFirstTask(nextTop3Task.id)}
+              className="shrink-0 rounded-full bg-accent px-3 py-1 text-xs font-medium text-white"
+            >
+              {t.pinnedFirstTask.startButton}
+            </button>
+          </div>
         ) : null}
 
         {isViewingToday && startCardOpen && day ? (

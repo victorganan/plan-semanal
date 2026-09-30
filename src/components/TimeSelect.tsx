@@ -1,29 +1,20 @@
 'use client';
 
-import { useState } from 'react';
-
-const ALL_SLOTS = Array.from({ length: 96 }, (_, i) => {
-  const h = Math.floor(i / 4);
-  const m = (i % 4) * 15;
-  return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
-});
+import { useEffect, useState } from 'react';
+import { digitsOnly, formatDraft, parseDigitsToTime, pad2, shiftQuarterHour } from '@/lib/time-input';
 
 export function nextQuarterHourFromNow(): string {
   const now = new Date();
   const rounded = Math.ceil(now.getMinutes() / 15) * 15;
   const hours = (now.getHours() + (rounded === 60 ? 1 : 0)) % 24;
   const minutes = rounded % 60;
-  return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
+  return `${pad2(hours)}:${pad2(minutes)}`;
 }
 
-// Reordena la lista para que empiece en el próximo cuarto de hora: así al
-// abrir el desplegable no hay que bajar entre decenas de horas ya pasadas.
-function orderedFromNow(): string[] {
-  const start = ALL_SLOTS.indexOf(nextQuarterHourFromNow());
-  if (start <= 0) return ALL_SLOTS;
-  return [...ALL_SLOTS.slice(start), ...ALL_SLOTS.slice(0, start)];
-}
-
+// Campo de hora escribible con máscara HH:MM (sustituye al desplegable de
+// 96 franjas, demasiado largo para navegar). Los minutos se redondean
+// siempre al cuarto de hora; ↑/↓ suman o restan 15 minutos al valor ya
+// confirmado.
 export function TimeSelect({
   value,
   onChange,
@@ -33,16 +24,44 @@ export function TimeSelect({
   onChange: (v: string) => void;
   className?: string;
 }) {
-  const [options] = useState(orderedFromNow);
+  const [draft, setDraft] = useState(value);
+
+  useEffect(() => {
+    setDraft(value);
+  }, [value]);
+
+  function commit(nextDraft: string) {
+    const normalized = parseDigitsToTime(digitsOnly(nextDraft));
+    setDraft(normalized);
+    if (normalized !== value) onChange(normalized);
+  }
 
   return (
-    <select value={value} onChange={(e) => onChange(e.target.value)} className={className}>
-      <option value="">--:--</option>
-      {options.map((t) => (
-        <option key={t} value={t}>
-          {t}
-        </option>
-      ))}
-    </select>
+    <input
+      type="text"
+      inputMode="numeric"
+      placeholder="--:--"
+      value={draft}
+      onChange={(e) => setDraft(formatDraft(digitsOnly(e.target.value)))}
+      onBlur={(e) => commit(e.target.value)}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter') {
+          commit(draft);
+          e.currentTarget.blur();
+        } else if (e.key === 'ArrowUp') {
+          e.preventDefault();
+          const next = shiftQuarterHour(value || '00:00', 15);
+          setDraft(next);
+          onChange(next);
+        } else if (e.key === 'ArrowDown') {
+          e.preventDefault();
+          const next = shiftQuarterHour(value || '00:00', -15);
+          setDraft(next);
+          onChange(next);
+        }
+      }}
+      maxLength={5}
+      className={className}
+    />
   );
 }

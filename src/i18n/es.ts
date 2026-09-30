@@ -152,6 +152,19 @@ export const text = {
     noProject: 'Sin proyecto',
     assignedTo: 'Asignado a',
     assignedToPlaceholder: 'Tú mismo',
+    delegatedToLabel: (name: string) => `Delegada a ${name}`,
+    waitingOnLabel: (name: string) => `En espera de ${name}`,
+    delegatedToFieldLabel: 'Delegada a',
+    waitingOnFieldLabel: 'En espera de',
+    followUpDateLabel: 'Fecha de seguimiento',
+    followUpLabel: (date: string) => `Seguimiento: ${date}`,
+    overdueLabel: (days: number) => (days === 1 ? 'Vencido hace 1 día' : `Vencido hace ${days} días`),
+    copyClaimMessageButton: 'Copiar mensaje para reclamar',
+    claimMessageWithDate: (person: string, taskText: string, date: string) =>
+      `Hola ${person}, ¿cómo va "${taskText}"? Lo necesitaría para el ${date}. Si te puedo ayudar en algo, dime.`,
+    claimMessageNoDate: (person: string, taskText: string) =>
+      `Hola ${person}, ¿cómo va "${taskText}"? Si te puedo ayudar en algo, dime.`,
+    claimMessageCopied: 'Mensaje copiado. Pégalo en tu correo o WhatsApp.',
     dateAndTime: 'Fecha y hora',
     tags: 'Etiquetas',
     removeTagAriaLabel: (name: string) => `Quitar etiqueta ${name}`,
@@ -229,7 +242,7 @@ export const text = {
 
   inboxList: {
     tabBandeja: 'Bandeja',
-    tabEsperando: 'Esperando',
+    tabEsperando: 'Delegadas y en espera',
     tabAlgunDia: 'Algún día',
     processButton: (n: number) => `Procesar ${n}`,
     description: 'Todo lo que no quieres olvidar. Queda aquí hasta que decidas moverlo a un día concreto.',
@@ -250,12 +263,10 @@ export const text = {
   },
 
   esperandoView: {
-    empty: 'Nada en espera.',
+    empty: 'Nada delegado ni en espera.',
     groupFallback: 'Sin persona asignada',
-    overdue: (days: number) => (days === 1 ? 'Vencido hace 1 día' : `Vencido hace ${days} días`),
-    followUpLabel: (date: string) => `Seguimiento: ${date}`,
-    remindButton: 'Recordar',
-    remindCopied: 'Mensaje de seguimiento copiado al portapapeles',
+    delegatedSectionTitle: 'Delegadas',
+    waitingSectionTitle: 'En espera',
   },
 
   algunDiaView: {
@@ -480,6 +491,8 @@ export const text = {
     completeAriaLabel: 'Completar',
     startButton: 'Empezar →',
     changeAriaLabel: 'Cambiar primera tarea',
+    doneToast: 'Primera tarea hecha',
+    nextLabel: (taskText: string) => `Siguiente: ${taskText}`,
   },
 
   planWeekClient: {

@@ -1,6 +1,21 @@
 # Changelog — Evolución Nortvira
 
-Registro de lo implementado, decisiones tomadas y pendientes durante la evolución descrita en `Nortvira — Especificación de Evolución de Producto v1.0` y su complemento `Mejoras basadas en nuevas fuentes`. Un bloque por módulo, en orden cronológico.
+Registro de lo implementado, decisiones tomadas y pendientes durante la evolución descrita en `Nortvira — Especificación de Evolución de Producto v1.0` y su complemento `Mejoras basadas en nuevas fuentes`, y desde la Fase 2 también la auditoría de usabilidad `docs/UX_AUDIT.md`. Un bloque por módulo, en orden cronológico.
+
+**Regla de trabajo:** al empezar cada sesión, lee primero la sección PENDIENTE de abajo, antes de hacer nada más. Cada tarea nueva que se pida se añade a PENDIENTE; cada una que se termine (verificada: `tsc`/`eslint`/`vitest`/`build` limpios y desplegada) se mueve de PENDIENTE al bloque de lo hecho correspondiente, con detalle suficiente para retomarlo sin el historial de la conversación.
+
+## PENDIENTE
+
+En este orden:
+
+1. **Resto de la Fase 2 de la auditoría de usabilidad** (`docs/UX_AUDIT.md` §2-§3). Ya hecho: H4 (mover de día), selector de área en el asistente de Bandeja, Fase 1 completa (arreglos rápidos), y de Fase 2: "Empezar"/Modo foco (sustituye al Pomodoro independiente), botón de ritual único contextual + los 3 rituales siempre accesibles desde "Más" con atajo (I/C/R), menú "Más" (Áreas y proyectos, Estadísticas, Matriz, Tiempo, Ajustes), atajos globales de navegación (G+H/S/B) y ayuda con `?`. Falta:
+   - **Paneles flotantes**: Objetivos, Proyectos en foco, Hábitos, Estado, Llamadas, Acciones prioritarias — con hoja inferior en móvil. Atajos previstos por la auditoría: `O`/`P`/`H`/`E`/`L`/`A` (pendiente comprobar que no choquen con los atajos ya wireados I/C/R/G).
+   - **Columna de navegación plegable en escritorio** (200px↔56px, persistida) **y barra inferior real en móvil** (Hoy · Semana · [+] · Bandeja · Más — sin "Tareas" hasta que exista esa página). De momento se ha quedado en una cabecera responsive con "Más", no en el shell de dos formas que describe la auditoría §2.
+   - **Atajos por fila** (J/K roving focus, X completar, M mover a 1/2/3/D, F empezar foco, Enter editar, S marcar Top3) — deliberadamente no implementados en el primer pase de Fase 2; se sustituyeron por acciones "Mover"/"Empezar" clicables. Decidir si merece la pena antes de dar Fase 2 por cerrada.
+2. **Módulo Lista de tareas** (página "Tareas"): filtros, ordenar, agrupar, vistas guardadas en base de datos, endpoint batch y selección múltiple en todas las vistas (Hoy, Semana, Bandeja y Tareas). Una vez exista, añadir su enlace a la navegación principal (hasta ahora deliberadamente ausente) y añadir "Delegadas y en espera" como filtro/vista guardada ahí (ver módulo 1.3/M3 en el bloque de lo hecho).
+3. **Mini-módulo Estadísticas**: selector de periodo para todos los widgets, gráfico de barras con multiselección de áreas y proyectos, comparativa estimado frente a real por proyecto, selección guardada en base de datos.
+4. **Módulo 1.7** (avisos: Filtro de imprevistos, Alertas de rumbo) **y módulo 1.8** (Momento de reflexión y Cuaderno de bitácora), según `Nortvira — Especificación de Evolución de Producto v1.0`. **El texto completo de esa especificación no está en este repo** — antes de empezar, pedir al Product Owner el documento (o la parte de las secciones 1.7/1.8) si no está ya disponible en la conversación.
+5. **Fase 3 de la auditoría de usabilidad** (visual: tokens de color de DESIGN.md, `--faro` magenta, un único elemento de acento por pantalla — G3), al final de todo.
 
 ## Decisiones de alcance (previas al módulo 1.1)
 
@@ -110,7 +125,27 @@ Registro de lo implementado, decisiones tomadas y pendientes durante la evoluci�
 
 ## Fase 2 · Beta: dirección, foco y aprendizaje
 
-_(sin empezar todavía)_
+**En curso.** Desde aquí, el trabajo de esta fase se rige por la auditoría de usabilidad `docs/UX_AUDIT.md` (integrada en `main`), no por la especificación de evolución original — su numeración (H1-H12, S1-S9, B1-B4, C1-C3, M1.6a-e, Fase 0/1/2/3 de la propia auditoría) es la que aparece en los commits desde este punto.
+
+**Completado y confirmado por el Product Owner, en producción:**
+
+- **Fase 0 (urgente)**: H4 — "mover de día" guarda solo con fecha (antes exigía también hora) y mueve la tarea entre semanas distintas de la que se está viendo. Selector de área en el asistente de Bandeja (antes botones), preseleccionando la última área usada.
+- **Módulo 1.6 (a-e)**: "Acción prioritaria" unificada vía `Task.isPriority` (antes repartida entre `kind='PRIORITY_ACTION'` y otros criterios); comprobación al marcar prioritaria (resultado esperado, agenda, prerrequisitos — con campo de texto para el resultado, `Task.desiredOutcome`); primer gesto + "Hazlo ahora (2 min)" para tareas pospuestas 2+ veces; aviso de sobrecarga de prioritarias con botón "Revisar prioritarias" para desmarcar sin salir del aviso; Reservar tiempo reescrito para no fallar a la primera (esperaba a que el PATCH de fecha/hora aterrizara antes de crear el evento) y reutilizable para actualizar el evento ya creado en vez de duplicarlo (`Task.calendarEventId`).
+- **Fase 1 (arreglos rápidos)**: 18 ítems de la auditoría — accesibilidad de objetivos táctiles (botones a 44px), estados vacíos, `aria-current` en la navegación, StarRating movido al Cierre, insignia/borde "Hoy" y Las 3 del día en modo compacto solo en Semana (no en Hoy, redundante con el título), emoji de metadatos a texto plano, etc. Detalle completo en el propio `docs/UX_AUDIT.md` y en los mensajes de commit de esa entrega.
+- **Fase 2, parcial**:
+  - "Empezar" + Modo foco (`FocusMode.tsx`) sustituye a la página independiente del Pomodoro (retirada, con `PomodoroTimer.tsx` y `/herramientas/pomodoro`): mismo motor de temporizador, registro en `/api/focus-sessions` y pregunta "¿Has terminado?".
+  - H1: botón de ritual único contextual en la cabecera de Hoy (viernes/domingo → Momento de reflexión; antes de las 17:00 viendo hoy → Arrancar el día; resto → Cerrar el día) — con los 3 rituales siempre accesibles además desde el menú "Más" (enlaces `?ritual=start|close|reflection`) y atajos de teclado `I`/`C`/`R`.
+  - Menú "Más" en la cabecera (Áreas y proyectos, Estadísticas, Matriz, Tiempo, Ajustes, rituales): sustituye al dropdown "Herramientas"; navegación principal queda en Hoy · Semana · Bandeja + Más. "Tareas" no se añade — la página no existe todavía.
+  - Atajos de teclado globales (`GlobalShortcuts.tsx`, montado en el layout): `G` luego `H`/`S`/`B` para navegar, `I`/`C`/`R` para los rituales, `?` abre una ayuda con la lista completa. No incluye el modelo de atajos por fila (J/K/X/M/F/S) de la auditoría — deliberadamente fuera de este primer pase.
+  - Renombres de vocabulario aplicados a la navegación real (antes solo en DESIGN.md): "Tu espacio" → "Áreas y proyectos", "Dashboard" → "Estadísticas".
+  - **3 cambios de feedback de pruebas del Product Owner:**
+    - **Primera tarea**: al completarla, el bloque superior desaparece con un toast "Primera tarea hecha"; si queda alguna de Las 3 del día sin hacer, aparece en su lugar "Siguiente: [tarea]" con un clic para ir a ella (resaltado + scroll, mismo mecanismo que "Empezar →"); si se deshace el completado, el bloque original vuelve (se recalcula del estado real de la tarea, no hay bandera aparte).
+    - **Selector de hora**: los desplegables de 96 franjas (`TimeSelect`) sustituidos por un campo escribible con máscara HH:MM (`src/lib/time-input.ts`, con test unitario — 15 casos). Los minutos se redondean siempre al cuarto de hora más cercano (53-59 sube a la hora siguiente); flechas ↑/↓ suman/restan 15 minutos al valor ya confirmado. Mismo componente en los 3 sitios donde se elegía hora (ficha de tarea, asistente de triaje, Matriz de Eisenhower): un único cambio cubre los tres.
+    - **Delegadas y en espera** (M3): pestaña "Esperando" de la Bandeja renombrada, con dos grupos dentro de `gtdStatus=ESPERANDO` — "Delegadas" (`assignedTo` relleno) y "En espera" (solo `waitingOn`, sin delegar), cada uno agrupado por persona. Cada tarea es ahora una `TaskCard` completa (editable: hecha, texto, persona, fecha de seguimiento, asignar fecha) en vez de una tarjeta de solo lectura. "Copiar mensaje para reclamar" (sustituye a "Recordar") es ahora una acción de `TaskCard` — visible en la tarjeta y en su ficha de edición, en cualquier vista donde aparezca una tarea Delegada o En espera, no solo en esta pestaña. Resaltado en rojo del seguimiento vencido, ahora aplicado a nivel de `TaskCard` (antes solo en esta pestaña).
+  - **3 plugins de terceros instalados a nivel de proyecto** (revisados antes de instalar: repos clonados, hooks y scripts leídos, sin llamadas de red no solicitadas ni comandos destructivos): Ponytail (nivel `lite`, regla dura de no tocar tests/validaciones/accesibilidad, en CLAUDE.md), Agent Skills (24 skills + 9 comandos + 4 subagentes), Graphify (skill bajo demanda, sin hooks automáticos). Omniroute descartado a propósito (decisión explícita: nada de código/datos por pasarelas de terceros). Jerarquía de prioridad entre reglas/DESIGN.md/skills oficiales/resto de plugins documentada en CLAUDE.md.
+- Verificado en cada entrega de Fase 2: `tsc --noEmit`, `eslint`, `vitest run` (68/68 al cierre de los 3 cambios de feedback, incluye `src/lib/time-input.test.ts`) y `next build` limpios. Sin pruebas en navegador real (login requiere Google OAuth, no disponible en este entorno) — verificación solo estática + revisión de código.
+
+**Pendiente de Fase 2**: ver sección PENDIENTE al principio de este documento.
 
 ## Fase 3 · Post-Beta: autoconocimiento y bienestar
 

@@ -13,6 +13,7 @@ import { describeRecurrence } from '@/lib/rrule-helpers';
 import type { RecurrenceValue } from '@/lib/rrule-helpers';
 import { isoWeekAndDowFor, todayLocalString } from '@/lib/week';
 import { QuickDateChips } from '@/components/QuickDateChips';
+import { useToast } from '@/components/Toast';
 import type { Area, ProjectWithAreaAndCollaborators, Task, TaskWithProject, RecurringTaskTemplate, Tag } from '@/types';
 // Alias: el estado local de este componente ya usa el nombre `text` para el título de la tarea.
 import { text as t } from '@/i18n/es';
@@ -60,6 +61,10 @@ function templateToValue(t: RecurringTaskTemplate): RecurrenceValue {
   };
 }
 
+function formatDate(d: Date | string): string {
+  return new Date(d).toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric' });
+}
+
 function splitScheduled(scheduledAt: Date | string | null) {
   if (!scheduledAt) return { date: '', time: '' };
   const d = new Date(scheduledAt);
@@ -92,6 +97,10 @@ export function TaskCard({
   const [text, setText] = useState(task.text);
   const [description, setDescription] = useState(task.description ?? '');
   const [assignedTo, setAssignedTo] = useState(task.assignedTo ?? '');
+  const [waitingOn, setWaitingOn] = useState(task.waitingOn ?? '');
+  const initialFollowUp = task.followUpDate ? splitScheduled(task.followUpDate).date : '';
+  const [followUpDate, setFollowUpDate] = useState(initialFollowUp);
+  const { showToast } = useToast();
   const [newTagName, setNewTagName] = useState('');
   const [busy, setBusy] = useState(false);
   const initialSplit = splitScheduled(task.scheduledAt);
@@ -240,6 +249,33 @@ export function TaskCard({
   async function saveAssignedTo() {
     const next = assignedTo.trim() || null;
     if (next !== (task.assignedTo ?? null)) await onUpdate(task.id, { assignedTo: next });
+  }
+
+  async function saveWaitingOn() {
+    const next = waitingOn.trim() || null;
+    if (next !== (task.waitingOn ?? null)) await onUpdate(task.id, { waitingOn: next });
+  }
+
+  async function saveFollowUpDate(next: string) {
+    setFollowUpDate(next);
+    const iso = next ? new Date(`${next}T00:00`).toISOString() : null;
+    await onUpdate(task.id, { followUpDate: iso });
+  }
+
+  async function copyClaimMessage() {
+    const person = (task.assignedTo?.trim() || task.waitingOn?.trim() || '').trim();
+    const dateLabel = task.followUpDate
+      ? new Date(task.followUpDate).toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric' })
+      : '';
+    const message = dateLabel
+      ? t.taskCard.claimMessageWithDate(person, task.text, dateLabel)
+      : t.taskCard.claimMessageNoDate(person, task.text);
+    try {
+      await navigator.clipboard.writeText(message);
+      showToast(t.taskCard.claimMessageCopied);
+    } catch {
+      showToast(t.taskCard.claimMessageCopied, 'error');
+    }
   }
 
   async function saveDescription() {
@@ -409,6 +445,18 @@ export function TaskCard({
   );
   const assignedToListId = `assigned-to-${task.id}`;
 
+  // Delegadas y en espera (M3): dentro de gtdStatus=ESPERANDO, "Delegada" es
+  // la que además tiene assignedTo (se ha pasado a otra persona); "En
+  // espera" es la que solo depende de alguien (waitingOn) sin haberla
+  // delegado. Válido en cualquier vista, no solo en la pestaña de Bandeja.
+  const isEsperando = task.gtdStatus === 'ESPERANDO';
+  const delegated = isEsperando && !!task.assignedTo?.trim();
+  const waitingPerson = delegated ? task.assignedTo : task.waitingOn;
+  const followUpOverdueDays = task.followUpDate
+    ? Math.floor((Date.now() - new Date(task.followUpDate).getTime()) / 86400000)
+    : null;
+  const followUpOverdue = isEsperando && followUpOverdueDays !== null && followUpOverdueDays >= 0;
+
   return (
     <div
       id={`task-${task.id}`}
@@ -429,7 +477,8 @@ export function TaskCard({
         e.dataTransfer.effectAllowed = 'move';
       }}
       className={clsx(
-        'rounded-card border border-base-border bg-base-surface transition',
+        'rounded-card border bg-base-surface transition',
+        followUpOverdue ? 'border-priority-high bg-priority-high/5' : 'border-base-border',
         task.done && 'opacity-60',
         (task.kind === 'DAY_AREA' || dragEnabled) && 'cursor-grab active:cursor-grabbing'
       )}
@@ -474,7 +523,16 @@ export function TaskCard({
               <span className="rounded-full bg-base-border/50 px-2 py-0.5">{task.project.name}</span>
             ) : null}
             {scheduledLabel ? <span>{scheduledLabel}</span> : null}
-            {task.assignedTo ? <span>{task.assignedTo}</span> : null}
+            {isEsperando && waitingPerson ? (
+              <span className={followUpOverdue ? 'font-medium text-priority-high' : undefined}>
+                {delegated ? t.taskCard.delegatedToLabel(waitingPerson) : t.taskCard.waitingOnLabel(waitingPerson)}
+                {task.followUpDate
+                  ? ` · ${followUpOverdue ? t.taskCard.overdueLabel(followUpOverdueDays!) : t.taskCard.followUpLabel(formatDate(task.followUpDate))}`
+                  : ''}
+              </span>
+            ) : task.assignedTo ? (
+              <span>{task.assignedTo}</span>
+            ) : null}
             {task.tags.map((t) => (
               <span key={t.id} className={clsx('rounded-full px-2 py-0.5 text-white', areaBgClass(t.colorIndex))}>
                 #{t.name}
@@ -499,6 +557,11 @@ export function TaskCard({
               {onStartFocus ? (
                 <button onClick={() => onStartFocus(task.id)} className="text-xs font-medium text-accent hover:underline">
                   {t.taskCard.startFocusButton}
+                </button>
+              ) : null}
+              {isEsperando ? (
+                <button onClick={copyClaimMessage} className="text-xs font-medium text-accent hover:underline">
+                  {t.taskCard.copyClaimMessageButton}
                 </button>
               ) : null}
               {assignOpen ? (
@@ -723,6 +786,38 @@ export function TaskCard({
                 </datalist>
               ) : null}
             </label>
+            {isEsperando ? (
+              <label className="space-y-1">
+                <span className="block text-xs text-base-muted">
+                  {delegated ? t.taskCard.delegatedToFieldLabel : t.taskCard.waitingOnFieldLabel}
+                </span>
+                <input
+                  value={waitingOn}
+                  onChange={(e) => setWaitingOn(e.target.value)}
+                  onBlur={saveWaitingOn}
+                  placeholder={t.taskCard.assignedToPlaceholder}
+                  className="w-full rounded-lg border border-base-border bg-base-bg px-2 py-1.5 text-sm"
+                />
+              </label>
+            ) : null}
+            {isEsperando ? (
+              <label className="space-y-1">
+                <span className="block text-xs text-base-muted">{t.taskCard.followUpDateLabel}</span>
+                <input
+                  type="date"
+                  value={followUpDate}
+                  onChange={(e) => saveFollowUpDate(e.target.value)}
+                  className="w-full rounded-lg border border-base-border bg-base-bg px-2 py-1.5 text-sm"
+                />
+                <button
+                  type="button"
+                  onClick={copyClaimMessage}
+                  className="mt-1 rounded-full border border-base-border px-3 py-1 text-xs font-medium hover:bg-base-border/40"
+                >
+                  {t.taskCard.copyClaimMessageButton}
+                </button>
+              </label>
+            ) : null}
             <div className="space-y-1">
               <span className="block text-xs text-base-muted">{t.taskCard.dateAndTime}</span>
               <div className="flex gap-1">

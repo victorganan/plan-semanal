@@ -6,7 +6,6 @@ import { AddTaskInline } from '@/components/AddTaskInline';
 import { TaskCard } from '@/components/TaskCard';
 import { InboxTriageWizard } from '@/components/InboxTriageWizard';
 import { QuickDateChips } from '@/components/QuickDateChips';
-import { useToast } from '@/components/Toast';
 import { hasReappeared, isPendingProcess } from '@/lib/inbox';
 import type { Area, ProjectWithAreaAndCollaborators, Tag, TaskWithProject } from '@/types';
 import { text } from '@/i18n/es';
@@ -74,7 +73,6 @@ export function InboxList({ tasks, projects, areas, tags, currentIsoWeek, onAdd,
   const [triageOpen, setTriageOpen] = useState(false);
   const [wizardKey, setWizardKey] = useState(0);
   const [tab, setTab] = useState<Tab>('bandeja');
-  const { showToast } = useToast();
   const router = useRouter();
 
   // El contador de "Bandeja (N)" del menú se calcula en el layout (servidor)
@@ -107,22 +105,24 @@ export function InboxList({ tasks, projects, areas, tags, currentIsoWeek, onAdd,
   const esperandoTasks = pending.filter((t) => t.gtdStatus === 'ESPERANDO');
   const algunDiaTasks = pending.filter((t) => t.gtdStatus === 'ALGUN_DIA' && !hasReappeared(t, today));
 
-  const esperandoGroups = esperandoTasks.reduce<Record<string, TaskWithProject[]>>((acc, t) => {
-    const key = t.waitingOn?.trim() || text.esperandoView.groupFallback;
-    acc[key] = acc[key] ? [...acc[key], t] : [t];
-    return acc;
-  }, {});
-
-  async function remind(t: TaskWithProject) {
-    const dateLabel = t.followUpDate ? formatDate(t.followUpDate) : '';
-    const message = `Hola ${t.waitingOn ?? ''}, ¿cómo va "${t.text}"? Lo necesitaría para el ${dateLabel}. Si te puedo ayudar en algo, dime.`;
-    try {
-      await navigator.clipboard.writeText(message);
-      showToast(text.esperandoView.remindCopied);
-    } catch {
-      showToast(text.esperandoView.remindCopied, 'error');
-    }
+  // Delegadas y en espera (M3): dentro de gtdStatus=ESPERANDO, "Delegada" es
+  // la que además tiene assignedTo (se ha pasado a otra persona); "En
+  // espera" es la que solo depende de alguien (waitingOn) sin delegarla.
+  function groupByPerson(list: TaskWithProject[], personOf: (t: TaskWithProject) => string | null) {
+    return list.reduce<Record<string, TaskWithProject[]>>((acc, task) => {
+      const key = personOf(task)?.trim() || text.esperandoView.groupFallback;
+      acc[key] = acc[key] ? [...acc[key], task] : [task];
+      return acc;
+    }, {});
   }
+  const delegatedGroups = groupByPerson(
+    esperandoTasks.filter((t) => t.assignedTo?.trim()),
+    (t) => t.assignedTo
+  );
+  const waitingGroups = groupByPerson(
+    esperandoTasks.filter((t) => !t.assignedTo?.trim()),
+    (t) => t.waitingOn
+  );
 
   return (
     <div className="rounded-card border border-base-border bg-base-surface p-4">
@@ -224,45 +224,68 @@ export function InboxList({ tasks, projects, areas, tags, currentIsoWeek, onAdd,
       ) : null}
 
       {tab === 'esperando' ? (
-        <div className="space-y-4">
-          {Object.keys(esperandoGroups).length === 0 ? (
+        <div className="space-y-5">
+          {esperandoTasks.length === 0 ? (
             <p className="text-sm text-base-muted">{text.esperandoView.empty}</p>
           ) : (
-            Object.entries(esperandoGroups).map(([person, group]) => (
-              <div key={person}>
-                <h4 className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-base-muted">{person}</h4>
-                <div className="space-y-1.5">
-                  {group.map((t) => {
-                    const overdueDays = t.followUpDate ? Math.floor((today.getTime() - new Date(t.followUpDate).getTime()) / 86400000) : null;
-                    const overdue = overdueDays !== null && overdueDays >= 0;
-                    return (
-                      <div
-                        key={t.id}
-                        className={
-                          overdue
-                            ? 'rounded-card border border-priority-high bg-priority-high/5 p-3'
-                            : 'rounded-card border border-base-border p-3'
-                        }
-                      >
-                        <p className="text-sm">{t.text}</p>
-                        <div className="mt-1 flex items-center justify-between gap-2">
-                          <span className={overdue ? 'text-xs font-medium text-priority-high' : 'text-xs text-base-muted'}>
-                            {overdue && overdueDays !== null
-                              ? text.esperandoView.overdue(overdueDays)
-                              : t.followUpDate
-                                ? text.esperandoView.followUpLabel(formatDate(t.followUpDate))
-                                : ''}
-                          </span>
-                          <button onClick={() => remind(t)} className="shrink-0 text-xs font-medium text-accent hover:underline">
-                            {text.esperandoView.remindButton}
-                          </button>
-                        </div>
+            <>
+              {Object.keys(delegatedGroups).length > 0 ? (
+                <div className="space-y-3">
+                  <h3 className="text-xs font-semibold uppercase tracking-wide text-base-muted">
+                    {text.esperandoView.delegatedSectionTitle}
+                  </h3>
+                  {Object.entries(delegatedGroups).map(([person, group]) => (
+                    <div key={person}>
+                      <h4 className="mb-1.5 text-xs font-semibold text-base-muted">{person}</h4>
+                      <div className="space-y-1.5">
+                        {group.map((t) => (
+                          <TaskCard
+                            key={t.id}
+                            task={t}
+                            projects={projects}
+                            areas={areas}
+                            tags={tags}
+                            onUpdate={onUpdate}
+                            onDelete={onDelete}
+                            currentIsoWeek={currentIsoWeek}
+                            onCreateCalendarEvent={onCreateCalendarEvent}
+                            onStartFocus={onStartFocus}
+                          />
+                        ))}
                       </div>
-                    );
-                  })}
+                    </div>
+                  ))}
                 </div>
-              </div>
-            ))
+              ) : null}
+              {Object.keys(waitingGroups).length > 0 ? (
+                <div className="space-y-3">
+                  <h3 className="text-xs font-semibold uppercase tracking-wide text-base-muted">
+                    {text.esperandoView.waitingSectionTitle}
+                  </h3>
+                  {Object.entries(waitingGroups).map(([person, group]) => (
+                    <div key={person}>
+                      <h4 className="mb-1.5 text-xs font-semibold text-base-muted">{person}</h4>
+                      <div className="space-y-1.5">
+                        {group.map((t) => (
+                          <TaskCard
+                            key={t.id}
+                            task={t}
+                            projects={projects}
+                            areas={areas}
+                            tags={tags}
+                            onUpdate={onUpdate}
+                            onDelete={onDelete}
+                            currentIsoWeek={currentIsoWeek}
+                            onCreateCalendarEvent={onCreateCalendarEvent}
+                            onStartFocus={onStartFocus}
+                          />
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : null}
+            </>
           )}
         </div>
       ) : null}

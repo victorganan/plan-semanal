@@ -1,3 +1,7 @@
+## Arranque de sesión
+
+Al empezar cada sesión, lee la sección PENDIENTE de docs/CHANGELOG_EVOLUCION.md antes de hacer nada. Cada tarea nueva que se pida se añade ahí; cada una que se termine se mueve de PENDIENTE al bloque de lo hecho correspondiente en el mismo documento.
+
 ## Jerarquía de prioridad (reglas, diseño y plugins)
 
 Cuando dos fuentes de instrucciones se contradigan, manda la de mayor rango:
