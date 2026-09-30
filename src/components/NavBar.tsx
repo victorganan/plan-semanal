@@ -1,11 +1,21 @@
 'use client';
 
 import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 import { useEffect, useRef, useState } from 'react';
 import clsx from 'clsx';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import { LogoutButton } from '@/components/LogoutButton';
 import { text } from '@/i18n/es';
+
+// G1 (auditoría UX): el menú no marcaba la sección activa.
+function navLinkClass(active: boolean, shrink = false) {
+  return clsx(
+    'rounded-full px-3 py-1.5 text-sm font-medium transition',
+    shrink && 'shrink-0',
+    active ? 'bg-base-border/40 font-semibold text-base-text' : 'text-base-muted hover:bg-base-border/40 hover:text-base-text'
+  );
+}
 
 const LINKS_BEFORE = [
   { href: '/hoy', label: text.nav.hoy },
@@ -76,6 +86,18 @@ export function NavBar({
   pendingBandeja?: number;
 }) {
   const bandejaLabel = text.inboxList.bandejaNavLabel(pendingBandeja ?? 0);
+  const pathname = usePathname();
+  const isActive = (href: string) => pathname === href || pathname.startsWith(`${href}/`);
+
+  function renderLink(link: { href: string; label: string }, shrink = false) {
+    const active = isActive(link.href);
+    return (
+      <Link key={link.href} href={link.href} aria-current={active ? 'page' : undefined} className={navLinkClass(active, shrink)}>
+        {link.label}
+      </Link>
+    );
+  }
+
   return (
     <header className="sticky top-0 z-40 border-b border-base-border bg-base-bg/90 backdrop-blur">
       <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-3 sm:px-6">
@@ -83,40 +105,11 @@ export function NavBar({
           Nortvira
         </Link>
         <nav className="hidden items-center gap-1 sm:flex">
-          {LINKS_BEFORE.map((link) => (
-            <Link
-              key={link.href}
-              href={link.href}
-              className="rounded-full px-3 py-1.5 text-sm font-medium text-base-muted transition hover:bg-base-border/40 hover:text-base-text"
-            >
-              {link.label}
-            </Link>
-          ))}
-          <Link
-            href="/bandeja"
-            className="rounded-full px-3 py-1.5 text-sm font-medium text-base-muted transition hover:bg-base-border/40 hover:text-base-text"
-          >
-            {bandejaLabel}
-          </Link>
-          {LINKS_MID.map((link) => (
-            <Link
-              key={link.href}
-              href={link.href}
-              className="rounded-full px-3 py-1.5 text-sm font-medium text-base-muted transition hover:bg-base-border/40 hover:text-base-text"
-            >
-              {link.label}
-            </Link>
-          ))}
+          {LINKS_BEFORE.map((link) => renderLink(link))}
+          {renderLink({ href: '/bandeja', label: bandejaLabel })}
+          {LINKS_MID.map((link) => renderLink(link))}
           <HerramientasMenu />
-          {LINKS_AFTER.map((link) => (
-            <Link
-              key={link.href}
-              href={link.href}
-              className="rounded-full px-3 py-1.5 text-sm font-medium text-base-muted transition hover:bg-base-border/40 hover:text-base-text"
-            >
-              {link.label}
-            </Link>
-          ))}
+          {LINKS_AFTER.map((link) => renderLink(link))}
         </nav>
         <div className="flex items-center gap-3">
           <ThemeToggle />
@@ -128,40 +121,11 @@ export function NavBar({
         </div>
       </div>
       <nav className="flex items-center gap-1 overflow-x-auto border-t border-base-border px-4 py-2 sm:hidden">
-        {LINKS_BEFORE.map((link) => (
-          <Link
-            key={link.href}
-            href={link.href}
-            className="shrink-0 rounded-full px-3 py-1.5 text-sm font-medium text-base-muted transition hover:bg-base-border/40 hover:text-base-text"
-          >
-            {link.label}
-          </Link>
-        ))}
-        <Link
-          href="/bandeja"
-          className="shrink-0 rounded-full px-3 py-1.5 text-sm font-medium text-base-muted transition hover:bg-base-border/40 hover:text-base-text"
-        >
-          {bandejaLabel}
-        </Link>
-        {LINKS_MID.map((link) => (
-          <Link
-            key={link.href}
-            href={link.href}
-            className="shrink-0 rounded-full px-3 py-1.5 text-sm font-medium text-base-muted transition hover:bg-base-border/40 hover:text-base-text"
-          >
-            {link.label}
-          </Link>
-        ))}
+        {LINKS_BEFORE.map((link) => renderLink(link, true))}
+        {renderLink({ href: '/bandeja', label: bandejaLabel }, true)}
+        {LINKS_MID.map((link) => renderLink(link, true))}
         <HerramientasMenu />
-        {LINKS_AFTER.map((link) => (
-          <Link
-            key={link.href}
-            href={link.href}
-            className="shrink-0 rounded-full px-3 py-1.5 text-sm font-medium text-base-muted transition hover:bg-base-border/40 hover:text-base-text"
-          >
-            {link.label}
-          </Link>
-        ))}
+        {LINKS_AFTER.map((link) => renderLink(link, true))}
       </nav>
     </header>
   );

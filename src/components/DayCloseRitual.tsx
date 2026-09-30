@@ -6,6 +6,8 @@ import type { TaskWithProject } from '@/types';
 import { text } from '@/i18n/es';
 import { useTop3Toggle } from '@/components/useTop3Toggle';
 import { Top3SwapModal } from '@/components/Top3SwapModal';
+import { StarRating } from '@/components/StarRating';
+import { useEscapeToClose } from '@/components/useEscapeToClose';
 import { CLOSE_CHECK_IDS, PREP_OFFER_CHECK_IDS, type CloseCheckId } from '@/lib/day-close';
 
 export type PendingTaskDecision = 'MANANA' | 'OTRA_FECHA' | 'ALGUN_DIA' | 'HECHA' | 'ELIMINAR';
@@ -18,6 +20,8 @@ interface Props {
   tomorrowFirstTaskId: string | null;
   initialJournalNote: string;
   onSaveJournal: (note: string) => Promise<void>;
+  starRating: number | null;
+  onStarChange: (v: number) => Promise<void>;
   extendedFocusEnabled: boolean;
   initialGratitude: string;
   initialLearning: string;
@@ -47,6 +51,8 @@ export function DayCloseRitual({
   tomorrowFirstTaskId,
   initialJournalNote,
   onSaveJournal,
+  starRating,
+  onStarChange,
   extendedFocusEnabled,
   initialGratitude,
   initialLearning,
@@ -59,6 +65,7 @@ export function DayCloseRitual({
   onFinishClose,
   onClose,
 }: Props) {
+  useEscapeToClose(true, onClose);
   const [journal, setJournal] = useState(initialJournalNote);
   const [gratitude, setGratitude] = useState(initialGratitude);
   const [learning, setLearning] = useState(initialLearning);
@@ -70,7 +77,6 @@ export function DayCloseRitual({
   const [checkedIds, setCheckedIds] = useState<Set<CloseCheckId>>(new Set());
   const [prepTaskCreated, setPrepTaskCreated] = useState<Partial<Record<CloseCheckId, boolean>>>({});
   const [closing, setClosing] = useState(false);
-  const [closed, setClosed] = useState(false);
   const pendingSectionRef = useRef<HTMLDivElement>(null);
 
   const {
@@ -137,23 +143,12 @@ export function DayCloseRitual({
     setClosing(true);
     try {
       await onFinishClose(Array.from(checkedIds));
-      setClosed(true);
+      // C3 (auditoría UX): ya no hay pantalla "Día cerrado" con su propio
+      // botón; el padre muestra el aviso y esto vuelve directo a Hoy.
+      onClose();
     } finally {
       setClosing(false);
     }
-  }
-
-  if (closed) {
-    return (
-      <div className="fixed inset-0 z-40 flex items-end justify-center bg-black/40 p-0 sm:items-center sm:p-4">
-        <div className="w-full max-w-sm rounded-t-2xl bg-base-surface p-6 text-center shadow-xl sm:rounded-card">
-          <p className="text-base font-medium">{text.dayCloseRitual.closedMessage}</p>
-          <button onClick={onClose} className="mt-4 w-full rounded-full bg-accent px-5 py-2 text-sm font-semibold text-white">
-            {text.dayCloseRitual.closedCloseButton}
-          </button>
-        </div>
-      </div>
-    );
   }
 
   return (
@@ -352,6 +347,11 @@ export function DayCloseRitual({
                 </div>
               ))}
             </div>
+          </section>
+
+          <section className="flex items-center justify-between gap-3">
+            <span className="text-xs font-semibold uppercase tracking-wide text-base-muted">{text.dayCloseRitual.starRatingLabel}</span>
+            <StarRating value={starRating} onChange={onStarChange} />
           </section>
 
           <section>

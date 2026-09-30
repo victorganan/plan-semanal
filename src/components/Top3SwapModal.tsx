@@ -2,6 +2,7 @@ import { useRef } from 'react';
 import type { TaskWithProject } from '@/types';
 import { text } from '@/i18n/es';
 import { shouldIgnoreBackdropClick } from '@/lib/top3-swap-modal';
+import { useEscapeToClose } from '@/components/useEscapeToClose';
 
 interface Props {
   currentTop3: TaskWithProject[];
@@ -15,6 +16,7 @@ interface Props {
 // las tres actuales para sustituir" (M4.1).
 export function Top3SwapModal({ currentTop3, incomingTaskText, busy, onSwap, onCancel }: Props) {
   const openedAtRef = useRef(Date.now());
+  useEscapeToClose(true, onCancel);
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"

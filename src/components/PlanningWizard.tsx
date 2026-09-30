@@ -6,6 +6,7 @@ import { ProjectFocusPicker } from '@/components/ProjectFocusPicker';
 import { PriorityListSection } from '@/components/PriorityListSection';
 import { InboxList } from '@/components/InboxList';
 import { ObjectivesForm } from '@/components/WeekMetaForm';
+import { useEscapeToClose } from '@/components/useEscapeToClose';
 import type { WeekFull, ProjectWithAreaAndCollaborators, Area, Tag, TaskWithProject } from '@/types';
 import { text } from '@/i18n/es';
 
@@ -44,6 +45,7 @@ export function PlanningWizard({
   onAddBacklog,
   onClose,
 }: Props) {
+  useEscapeToClose(true, onClose);
   const [step, setStep] = useState(0);
   const focusIds = week.projectFocus.map((f) => f.projectId);
   const priorityTasks = week.tasks.filter((t) => t.isPriority);

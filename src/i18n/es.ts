@@ -26,12 +26,8 @@ export const text = {
     ajustes: 'Ajustes',
     herramientasViewAll: 'Ver todas',
     herramientasMatriz: '🎯 Matriz de Eisenhower',
-    herramientasPomodoro: '🍅 Pomodoro',
+    herramientasPomodoro: 'Pomodoro',
     herramientasTiempo: '⏱️ Real vs. Estimado',
-  },
-
-  footer: {
-    tagline: 'tu semana, con rumbo',
   },
 
   logoutButton: {
@@ -143,6 +139,7 @@ export const text = {
     estimatedDuration: 'Duración estimada',
     executedTime: 'Tiempo ejecutado',
     executedSuffix: 'ejecutado',
+    hasNotes: 'notas',
     project: 'Proyecto',
     noProject: 'Sin proyecto',
     assignedTo: 'Asignado a',
@@ -223,12 +220,10 @@ export const text = {
   },
 
   inboxList: {
-    title: 'Vaciado de mente / Bandeja de entrada',
     tabBandeja: 'Bandeja',
     tabEsperando: 'Esperando',
     tabAlgunDia: 'Algún día',
-    processButton: '🧹 Procesar bandeja',
-    pendingCount: (n: number) => (n === 1 ? '1 por procesar' : `${n} por procesar`),
+    processButton: (n: number) => `Procesar ${n}`,
     description: 'Todo lo que no quieres olvidar. Queda aquí hasta que decidas moverlo a un día concreto.',
     empty: 'Vacía por ahora.',
     addPlaceholder: 'Anota algo que no quieres olvidar…',
@@ -369,11 +364,11 @@ export const text = {
     prevButton: '← Anterior',
     nextButton: 'Siguiente →',
     finishButton: 'Ir a la semana →',
-    openButton: '✨ Momento de reflexión',
+    openButton: 'Momento de reflexión',
   },
 
   dayCloseRitual: {
-    heading: (dayLabel: string) => `🌙 Cerrar ${dayLabel.toLowerCase()}`,
+    heading: (dayLabel: string) => `Cerrar ${dayLabel.toLowerCase()}`,
     closeAriaLabel: 'Cerrar',
     doneTodaySection: 'Lo hecho hoy',
     noPlannedTasks: 'No había tareas de día planificadas.',
@@ -401,6 +396,7 @@ export const text = {
     prepTaskPrefix: 'Preparar',
     prepTaskFirstTaskFallback: 'la primera tarea de mañana',
     prepTaskMeetings: 'Preparar reuniones y llamadas de mañana',
+    starRatingLabel: 'Valora el día',
     journalLabel: 'Una línea de diario',
     journalPlaceholder: '¿Qué te llevas de hoy?',
     tomorrowTop3Section: (tomorrowLabel: string) => `Las 3 de ${tomorrowLabel.toLowerCase()}`,
@@ -409,7 +405,6 @@ export const text = {
     toggleTop3AriaLabel: (isTop3: boolean) => (isTop3 ? 'Quitar de Las 3 del día' : 'Marcar como una de Las 3 del día'),
     finishButton: 'Cerrar día',
     closedMessage: 'Día cerrado. Mañana empiezas con ventaja.',
-    closedCloseButton: 'Cerrar',
     extendedSectionTitle: 'Reflexión del día',
     extendedSectionShow: 'Mostrar',
     extendedSectionHide: 'Ocultar',
@@ -420,7 +415,7 @@ export const text = {
   },
 
   dayStartCard: {
-    title: '☀️ Arranca el día',
+    title: 'Arranca el día',
     dismissAriaLabel: 'Cerrar',
     tipPrefix: '💡 ',
     tips: [
@@ -480,11 +475,11 @@ export const text = {
   },
 
   planWeekClient: {
-    openReflectionMoment: '✨ Momento de reflexión',
+    openReflectionMoment: 'Momento de reflexión',
     weekTitle: 'Semana',
     todayTitle: 'Hoy',
-    startDayButton: '☀️ Arrancar el día',
-    closeDayButton: '🌙 Cerrar el día',
+    startDayButton: 'Arrancar el día',
+    closeDayButton: 'Cerrar el día',
     dayLabelToday: 'hoy',
     dayLabelOther: (day: string) => `el ${day.toLowerCase()}`,
     todayHabits: 'Hábitos de hoy',
@@ -534,7 +529,7 @@ export const text = {
     subtitle: 'Aplicaciones complementarias de ayuda a la productividad.',
     matrixTitle: '🎯 Matriz de Eisenhower',
     matrixDescription: 'Clasifica tus tareas pendientes de la semana por urgencia e importancia.',
-    pomodoroTitle: '🍅 Temporizador Pomodoro',
+    pomodoroTitle: 'Temporizador Pomodoro',
     pomodoroDescription: 'Bloques de enfoque de 25 minutos con descansos, vinculados a tus tareas de hoy.',
     timeReportTitle: '⏱️ Real vs. Estimado',
     timeReportDescription: 'Compara cuánto estimaste cada tarea con el tiempo que realmente le dedicaste.',
@@ -550,7 +545,7 @@ export const text = {
     phaseWork: 'Enfoque',
     phaseShortBreak: 'Descanso corto',
     phaseLongBreak: 'Descanso largo',
-    todayStats: (count: number, minutes: number) => `· 🍅 ${count} hoy · ${minutes} min`,
+    todayStats: (count: number, minutes: number) => `· ${count} hoy · ${minutes} min`,
     noTaskLinked: 'Sin vincular a una tarea',
     reset: 'Reiniciar',
     pause: 'Pausar',
@@ -564,7 +559,7 @@ export const text = {
     shortBreakMinutesLabel: 'Descanso corto (min)',
     longBreakMinutesLabel: 'Descanso largo (min)',
     cyclesLabel: 'Pomodoros hasta descanso largo',
-    completedNotifTitle: '¡Pomodoro completado! 🍅',
+    completedNotifTitle: 'Pomodoro completado',
     completedNotifBody: 'Toca descansar un momento.',
     breakOverNotifTitle: 'Descanso terminado',
     breakOverNotifBody: 'A por el siguiente pomodoro cuando quieras.',

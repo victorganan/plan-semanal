@@ -7,6 +7,7 @@ import { isoWeekAndDowFor, todayLocalString } from '@/lib/week';
 import { summarizeTriageSession } from '@/lib/inbox';
 import { TimeSelect } from '@/components/TimeSelect';
 import { QuickDateChips } from '@/components/QuickDateChips';
+import { useEscapeToClose } from '@/components/useEscapeToClose';
 import { text } from '@/i18n/es';
 
 interface Props {
@@ -106,6 +107,7 @@ function lastUsedAreaId(areas: Area[]): string {
 }
 
 export function InboxTriageWizard({ items, areas, onUpdate, onDelete, onCreateCalendarEvent, onClose, onRestart }: Props) {
+  useEscapeToClose(true, onClose);
   const [queue] = useState(items);
   const [index, setIndex] = useState(0);
   const [step, setStep] = useState<Step>('actionable');

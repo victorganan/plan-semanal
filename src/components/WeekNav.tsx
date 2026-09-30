@@ -17,10 +17,7 @@ export function WeekNav({ isoWeek }: { isoWeek: string }) {
       >
         {text.weekNav.prev}
       </Link>
-      <div className="text-center">
-        <div className="text-sm font-semibold">{isoWeek}</div>
-        <div className="text-xs text-base-muted">{formatWeekRange(isoWeek)}</div>
-      </div>
+      <div className="text-center text-sm font-semibold">{formatWeekRange(isoWeek)}</div>
       <Link
         href={`/semana/${next}`}
         className="rounded-full border border-base-border px-3 py-1.5 text-sm hover:bg-base-border/40"

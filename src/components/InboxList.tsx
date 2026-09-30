@@ -125,11 +125,6 @@ export function InboxList({ tasks, projects, areas, tags, currentIsoWeek, onAdd,
 
   return (
     <div className="rounded-card border border-base-border bg-base-surface p-4">
-      <div className="mb-1 flex items-center justify-between gap-2">
-        <h3 className="text-sm font-semibold">{text.inboxList.title}</h3>
-      </div>
-      <p className="mb-3 text-xs text-base-muted">{text.inboxList.description}</p>
-
       <div className="mb-3 flex gap-1 border-b border-base-border text-sm">
         {(
           [
@@ -156,15 +151,12 @@ export function InboxList({ tasks, projects, areas, tags, currentIsoWeek, onAdd,
       {tab === 'bandeja' ? (
         <>
           {queueTasks.length > 0 ? (
-            <div className="mb-3 flex items-center justify-between gap-2">
-              <span className="text-xs text-base-muted">{text.inboxList.pendingCount(queueTasks.length)}</span>
-              <button
-                onClick={() => setTriageOpen(true)}
-                className="shrink-0 rounded-full border border-accent px-3 py-1 text-xs font-medium text-accent hover:bg-accent/10"
-              >
-                {text.inboxList.processButton}
-              </button>
-            </div>
+            <button
+              onClick={() => setTriageOpen(true)}
+              className="mb-3 w-full rounded-full bg-accent px-4 py-2 text-sm font-semibold text-white hover:brightness-110"
+            >
+              {text.inboxList.processButton(queueTasks.length)}
+            </button>
           ) : null}
           {triageOpen ? (
             <InboxTriageWizard
@@ -192,7 +184,10 @@ export function InboxList({ tasks, projects, areas, tags, currentIsoWeek, onAdd,
               />
             ))}
             {queueTasks.length === 0 && organizedTasks.length === 0 ? (
-              <p className="text-sm text-base-muted">{text.inboxList.empty}</p>
+              <div>
+                <p className="text-sm font-medium">{text.inboxList.empty}</p>
+                <p className="mt-1 text-xs text-base-muted">{text.inboxList.description}</p>
+              </div>
             ) : null}
           </div>
           <div className="mt-2 border-t border-base-border pt-2">

@@ -435,12 +435,16 @@ export function TaskCard({
           onClick={toggleDone}
           disabled={busy}
           aria-label={t.taskCard.toggleDoneAriaLabel(task.done)}
-          className={clsx(
-            'mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full border-2 text-xs transition',
-            task.done ? 'border-accent bg-accent text-white' : 'border-base-border text-transparent hover:border-accent'
-          )}
+          className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full"
         >
-          ✓
+          <span
+            className={clsx(
+              'flex h-5 w-5 items-center justify-center rounded-full border-2 text-xs transition',
+              task.done ? 'border-accent bg-accent text-white' : 'border-base-border text-transparent hover:border-accent'
+            )}
+          >
+            ✓
+          </span>
         </button>
 
         <div className="min-w-0 flex-1">
@@ -454,17 +458,19 @@ export function TaskCard({
             )}
           />
           <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-base-muted">
-            <span className="inline-flex items-center gap-1">
-              <PriorityDot priority={task.priority} /> {PRIORITY_LABELS[task.priority]}
-            </span>
+            {task.priority === 'HIGH' ? (
+              <span className="inline-flex items-center gap-1">
+                <PriorityDot priority={task.priority} /> {PRIORITY_LABELS[task.priority]}
+              </span>
+            ) : null}
             {task.durationMinutes ? <span>· {formatDurationMinutes(task.durationMinutes)}</span> : null}
             {task.executedMinutes > 0 ? <span>⏱ {formatDurationMinutes(task.executedMinutes)} {t.taskCard.executedSuffix}</span> : null}
-            {task.description ? <span title={task.description}>📝</span> : null}
+            {task.description ? <span title={task.description}>{t.taskCard.hasNotes}</span> : null}
             {task.project ? (
               <span className="rounded-full bg-base-border/50 px-2 py-0.5">{task.project.name}</span>
             ) : null}
-            {scheduledLabel ? <span>📅 {scheduledLabel}</span> : null}
-            {task.assignedTo ? <span>👤 {task.assignedTo}</span> : null}
+            {scheduledLabel ? <span>{scheduledLabel}</span> : null}
+            {task.assignedTo ? <span>{task.assignedTo}</span> : null}
             {task.tags.map((t) => (
               <span key={t.id} className={clsx('rounded-full px-2 py-0.5 text-white', areaBgClass(t.colorIndex))}>
                 #{t.name}
@@ -526,7 +532,7 @@ export function TaskCard({
           aria-label={t.taskCard.priorityAriaLabel(task.isPriority)}
           title={t.taskCard.priorityAriaLabel(task.isPriority)}
           className={clsx(
-            'shrink-0 rounded-full p-1.5 transition hover:bg-base-border/40',
+            'flex h-11 w-11 shrink-0 items-center justify-center rounded-full transition hover:bg-base-border/40',
             task.isPriority ? 'text-fuchsia-600' : 'text-base-muted/50 hover:text-base-muted'
           )}
         >
@@ -542,7 +548,7 @@ export function TaskCard({
             aria-label={t.taskCard.top3AriaLabel(task.isTop3)}
             title={t.taskCard.top3AriaLabel(task.isTop3)}
             className={clsx(
-              'shrink-0 rounded-full p-1.5 transition hover:bg-base-border/40 disabled:opacity-50',
+              'flex h-11 w-11 shrink-0 items-center justify-center rounded-full transition hover:bg-base-border/40 disabled:opacity-50',
               task.isTop3 ? 'text-amber-500' : 'text-base-muted/50 hover:text-base-muted'
             )}
           >
@@ -553,7 +559,7 @@ export function TaskCard({
         <button
           onClick={() => setOpen((v) => !v)}
           aria-label={t.taskCard.editAriaLabel}
-          className="shrink-0 rounded-full p-1.5 text-base-muted transition hover:bg-base-border/40 hover:text-base-text"
+          className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-base-muted transition hover:bg-base-border/40 hover:text-base-text"
         >
           ✏️
         </button>

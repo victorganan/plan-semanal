@@ -215,7 +215,7 @@ export function EisenhowerMatrix({ tasks, projects, calendarConnected, onUpdate,
           </div>
         ) : null}
 
-        {quadrant && task.assignedTo ? <p className="text-[10px] text-base-muted">👤 {task.assignedTo}</p> : null}
+        {quadrant && task.assignedTo ? <p className="text-[10px] text-base-muted">{task.assignedTo}</p> : null}
       </div>
     );
   }

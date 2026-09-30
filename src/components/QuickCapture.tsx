@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { api } from '@/lib/api-client';
 import { useToast } from '@/components/Toast';
 import { useInboxCapture } from '@/components/InboxCaptureContext';
+import { useEscapeToClose } from '@/components/useEscapeToClose';
 import type { TaskWithProject } from '@/types';
 import { text } from '@/i18n/es';
 
@@ -44,6 +45,8 @@ export function QuickCapture() {
   useEffect(() => {
     if (open) inputRef.current?.focus();
   }, [open]);
+
+  useEscapeToClose(open, () => setOpen(false));
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();

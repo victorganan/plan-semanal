@@ -1,7 +1,6 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
 import { api, ApiError } from '@/lib/api-client';
 import { currentIsoWeek } from '@/lib/week';
 import { useToast } from '@/components/Toast';
@@ -89,7 +88,6 @@ export function PlanWeekClient({
   const [yesterdayWeekData, setYesterdayWeekData] = useState<WeekFull | null>(null);
   const { showToast } = useToast();
   const { subscribe } = useInboxCapture();
-  const router = useRouter();
   const weekIsoOfToday = currentIsoWeek();
 
   const isViewingToday = isoWeek === weekIsoOfToday && viewDow === todayDow;
@@ -184,10 +182,21 @@ export function PlanWeekClient({
   async function setTomorrowFirstTask(taskId: string | null) {
     if (!tomorrowCrossesWeek) {
       await saveDayFields(tomorrowDow, { firstTaskId: taskId });
-      return;
+    } else {
+      await api.patch(`/api/weeks/${tomorrowIsoWeek}`, { days: [{ dayOfWeek: tomorrowDow, firstTaskId: taskId }] });
+      await refreshTomorrowWeekData();
     }
-    await api.patch(`/api/weeks/${tomorrowIsoWeek}`, { days: [{ dayOfWeek: tomorrowDow, firstTaskId: taskId }] });
-    await refreshTomorrowWeekData();
+    // C2 (auditoría UX): la primera tarea de mañana se marca sola como una
+    // de Las 3, para no elegirla dos veces. Si ya hay 3 marcadas, el PATCH
+    // lo rechaza (400): se ignora, elegir la primera tarea no debe fallar
+    // por eso.
+    if (taskId) {
+      try {
+        await updateTomorrowTask(taskId, { isTop3: true });
+      } catch {
+        // ya hay 3 marcadas ese día: se deja como estaba
+      }
+    }
   }
 
   // "Ayer" (revisión rápida del Enfoque diario ampliado) puede caer en una
@@ -592,6 +601,10 @@ export function PlanWeekClient({
 
   async function finishClose(closeChecks: string[]) {
     await saveDayFields(viewDow, { closeChecks, closedAt: new Date().toISOString() });
+    // C3 (auditoría UX): en vez de una pantalla extra "Día cerrado" con su
+    // propio botón, un aviso y vuelta directa a Hoy.
+    setCloseRitualOpen(false);
+    showToast(t.dayCloseRitual.closedMessage);
   }
 
   // ---------- Enfoque diario ampliado (Arranque/Cierre, opcional) ----------
@@ -740,6 +753,7 @@ export function PlanWeekClient({
             <p className="text-sm text-base-muted">
               {viewDate.toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long', timeZone: 'UTC' })}
             </p>
+            {day?.dayGoal ? <p className="mt-0.5 text-[13px] text-base-muted">{day.dayGoal}</p> : null}
           </div>
           <div className="flex flex-wrap items-center gap-2">
             <button
@@ -822,10 +836,7 @@ export function PlanWeekClient({
             onUpdateTask={updateTask}
             onDeleteTask={deleteTask}
             onAddBacklog={addBacklog}
-            onClose={() => {
-              setWizardOpen(false);
-              router.push(`/semana/${isoWeek}`);
-            }}
+            onClose={() => setWizardOpen(false)}
           />
         ) : null}
 
@@ -838,6 +849,8 @@ export function PlanWeekClient({
             tomorrowFirstTaskId={tomorrowDay?.firstTaskId ?? null}
             initialJournalNote={day?.journalNote ?? ''}
             onSaveJournal={(note) => saveJournal(viewDow, note)}
+            starRating={day?.starRating ?? null}
+            onStarChange={(v) => saveStar(viewDow, v)}
             extendedFocusEnabled={extendedFocusEnabled}
             initialGratitude={day?.gratitude ?? ''}
             initialLearning={day?.learning ?? ''}
@@ -855,7 +868,6 @@ export function PlanWeekClient({
         <DayCard
           isoWeek={isoWeek}
           dayOfWeek={viewDow}
-          day={day}
           tasks={dayTasks}
           projects={projects}
           areas={areas}
@@ -867,7 +879,6 @@ export function PlanWeekClient({
           onUpdateTask={updateTask}
           onDeleteTask={deleteTask}
           onReorderTasks={reorderTasks}
-          onStarChange={(v) => saveStar(viewDow, v)}
           focusMode={isViewingToday}
           {...exportProps}
           {...calendarProps}
@@ -1006,8 +1017,6 @@ export function PlanWeekClient({
         />
       ) : null}
 
-      <MoodSliders mentalState={week.mentalState} physicalState={week.physicalState} onChange={saveWeekMeta} />
-
       <div className="space-y-4">
         {week.days
           .slice()
@@ -1017,7 +1026,6 @@ export function PlanWeekClient({
               key={day.id}
               isoWeek={isoWeek}
               dayOfWeek={day.dayOfWeek}
-              day={day}
               tasks={week.tasks.filter((t) => t.kind === 'DAY_AREA' && t.dayId === day.id)}
               projects={projects}
               areas={areas}
@@ -1029,7 +1037,6 @@ export function PlanWeekClient({
               onUpdateTask={updateTask}
               onDeleteTask={deleteTask}
               onReorderTasks={reorderTasks}
-              onStarChange={(v) => saveStar(day.dayOfWeek, v)}
               {...exportProps}
               {...calendarProps}
             />
@@ -1064,6 +1071,10 @@ export function PlanWeekClient({
       <ProjectFocusPicker projects={projects} focusedIds={focusIds} onToggle={toggleProjectFocus} />
 
       <ObjectivesForm week={week} onSave={saveWeekMeta} />
+
+      {/* S3 (auditoría UX): deja de ser lo primero bajo la cabecera; una versión
+          compacta en panel llega en la Fase 2. */}
+      <MoodSliders mentalState={week.mentalState} physicalState={week.physicalState} onChange={saveWeekMeta} />
 
       <BandejaSummaryLink pendingCount={countPendingProcess(inbox)} />
 
