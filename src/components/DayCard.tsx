@@ -27,6 +27,7 @@ interface Props {
   onReorderTasks: (orderedIds: string[]) => Promise<void>;
   onExportTodoist?: (id: string) => Promise<void>;
   onCreateCalendarEvent?: (id: string) => Promise<void>;
+  onStartFocus?: (id: string) => void;
   // Hoy (H9 de la auditoría UX): oculta la insignia "Hoy" y el borde de
   // acento (redundantes con el título de la página) y usa la versión
   // compacta de Las 3 del día (S5). En Semana siguen puestos: distinguir la
@@ -50,6 +51,7 @@ export function DayCard({
   onReorderTasks,
   onExportTodoist,
   onCreateCalendarEvent,
+  onStartFocus,
   focusMode,
 }: Props) {
   const { top3Tasks, pendingTop3, handleToggleTop3, pendingSwap, swapBusy, confirmSwap, cancelSwap } = useTop3Toggle(
@@ -114,6 +116,7 @@ export function DayCard({
               onReorder={(orderedIds) => onReorderTasks(orderedIds)}
               onExportTodoist={onExportTodoist}
               onCreateCalendarEvent={onCreateCalendarEvent}
+              onStartFocus={onStartFocus}
               onToggleTop3={handleToggleTop3}
               pendingTop3Ids={pendingTop3}
               focusMode={focusMode}

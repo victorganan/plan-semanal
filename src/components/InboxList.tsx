@@ -21,6 +21,7 @@ interface Props {
   onUpdate: (id: string, patch: Record<string, unknown>) => Promise<void>;
   onDelete: (id: string) => Promise<void>;
   onCreateCalendarEvent?: (id: string) => Promise<void>;
+  onStartFocus?: (id: string) => void;
 }
 
 type Tab = 'bandeja' | 'esperando' | 'algunDia';
@@ -69,7 +70,7 @@ function SetReminderControl({ onSet }: { onSet: (isoDate: string) => Promise<voi
   );
 }
 
-export function InboxList({ tasks, projects, areas, tags, currentIsoWeek, onAdd, onUpdate, onDelete, onCreateCalendarEvent }: Props) {
+export function InboxList({ tasks, projects, areas, tags, currentIsoWeek, onAdd, onUpdate, onDelete, onCreateCalendarEvent, onStartFocus }: Props) {
   const [triageOpen, setTriageOpen] = useState(false);
   const [wizardKey, setWizardKey] = useState(0);
   const [tab, setTab] = useState<Tab>('bandeja');
@@ -181,6 +182,8 @@ export function InboxList({ tasks, projects, areas, tags, currentIsoWeek, onAdd,
                 onUpdate={onUpdate}
                 onDelete={onDelete}
                 currentIsoWeek={currentIsoWeek}
+                onCreateCalendarEvent={onCreateCalendarEvent}
+                onStartFocus={onStartFocus}
               />
             ))}
             {queueTasks.length === 0 && organizedTasks.length === 0 ? (
@@ -210,6 +213,8 @@ export function InboxList({ tasks, projects, areas, tags, currentIsoWeek, onAdd,
                     onDelete={onDelete}
                     currentIsoWeek={currentIsoWeek}
                     dragEnabled
+                    onCreateCalendarEvent={onCreateCalendarEvent}
+                    onStartFocus={onStartFocus}
                   />
                 ))}
               </div>

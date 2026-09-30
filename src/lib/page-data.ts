@@ -157,24 +157,3 @@ export async function getAvoidTodaySuggestions(userId: string, limit = 10): Prom
   }
   return suggestions;
 }
-
-export async function getTodayPendingTasks(userId: string): Promise<{ id: string; text: string }[]> {
-  const week = await getOrCreateWeek(userId, currentIsoWeek());
-  const today = await prisma.day.findUnique({
-    where: { weekId_dayOfWeek: { weekId: week.id, dayOfWeek: todayDayOfWeek() } },
-  });
-
-  return prisma.task.findMany({
-    where: {
-      userId,
-      done: false,
-      parentTaskId: null,
-      OR: [
-        { kind: 'DAY_AREA', dayId: today?.id ?? '__none__' },
-        { kind: { in: ['PRIORITY_ACTION', 'CALL'] }, weekId: week.id },
-      ],
-    },
-    select: { id: true, text: true },
-    orderBy: [{ order: 'asc' }, { createdAt: 'asc' }],
-  });
-}

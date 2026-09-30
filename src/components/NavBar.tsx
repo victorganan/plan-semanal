@@ -22,21 +22,24 @@ const LINKS_BEFORE = [
   { href: '/semana', label: text.nav.semana },
 ];
 
-const LINKS_MID = [{ href: '/tu-espacio', label: text.nav.tuEspacio }];
+// "Más" (Fase 2, estructura de navegación): agrupa lo secundario para dejar
+// solo Hoy · Semana · Bandeja + Más como destinos principales. Los tres
+// rituales están siempre aquí, además del botón contextual según la hora.
+const MORE_RITUAL_ITEMS = [
+  { href: '/hoy?ritual=start', label: text.nav.ritualStartDay },
+  { href: '/hoy?ritual=close', label: text.nav.ritualCloseDay },
+  { href: '/semana?ritual=reflection', label: text.nav.ritualReflection },
+];
 
-const LINKS_AFTER = [
+const MORE_ITEMS = [
+  { href: '/tu-espacio', label: text.nav.tuEspacio },
   { href: '/dashboard', label: text.nav.dashboard },
+  { href: '/herramientas/matriz', label: text.nav.herramientasMatriz },
+  { href: '/herramientas/tiempo', label: text.nav.herramientasTiempo },
   { href: '/ajustes', label: text.nav.ajustes },
 ];
 
-const HERRAMIENTAS_ITEMS = [
-  { href: '/herramientas', label: text.nav.herramientasViewAll },
-  { href: '/herramientas/matriz', label: text.nav.herramientasMatriz },
-  { href: '/herramientas/pomodoro', label: text.nav.herramientasPomodoro },
-  { href: '/herramientas/tiempo', label: text.nav.herramientasTiempo },
-];
-
-function HerramientasMenu() {
+function MoreMenu() {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
@@ -55,12 +58,26 @@ function HerramientasMenu() {
         onClick={() => setOpen((v) => !v)}
         className="flex items-center gap-1 rounded-full px-3 py-1.5 text-sm font-medium text-base-muted transition hover:bg-base-border/40 hover:text-base-text"
       >
-        {text.nav.herramientas}
+        {text.nav.more}
         <span className={clsx('text-[9px] transition-transform', open && 'rotate-180')}>▼</span>
       </button>
       {open ? (
-        <div className="absolute left-0 top-full z-50 mt-1 w-52 rounded-lg border border-base-border bg-base-bg py-1 shadow-lg">
-          {HERRAMIENTAS_ITEMS.map((item) => (
+        <div className="absolute left-0 top-full z-50 mt-1 w-56 rounded-lg border border-base-border bg-base-bg py-1 shadow-lg">
+          <p className="px-3 pb-1 pt-2 text-[11px] font-semibold uppercase tracking-wide text-base-muted">
+            {text.nav.ritualsGroupLabel}
+          </p>
+          {MORE_RITUAL_ITEMS.map((item) => (
+            <Link
+              key={item.href}
+              href={item.href}
+              onClick={() => setOpen(false)}
+              className="block px-3 py-2 text-sm text-base-text hover:bg-base-border/40"
+            >
+              {item.label}
+            </Link>
+          ))}
+          <div className="my-1 border-t border-base-border" />
+          {MORE_ITEMS.map((item) => (
             <Link
               key={item.href}
               href={item.href}
@@ -107,9 +124,7 @@ export function NavBar({
         <nav className="hidden items-center gap-1 sm:flex">
           {LINKS_BEFORE.map((link) => renderLink(link))}
           {renderLink({ href: '/bandeja', label: bandejaLabel })}
-          {LINKS_MID.map((link) => renderLink(link))}
-          <HerramientasMenu />
-          {LINKS_AFTER.map((link) => renderLink(link))}
+          <MoreMenu />
         </nav>
         <div className="flex items-center gap-3">
           <ThemeToggle />
@@ -123,9 +138,7 @@ export function NavBar({
       <nav className="flex items-center gap-1 overflow-x-auto border-t border-base-border px-4 py-2 sm:hidden">
         {LINKS_BEFORE.map((link) => renderLink(link, true))}
         {renderLink({ href: '/bandeja', label: bandejaLabel }, true)}
-        {LINKS_MID.map((link) => renderLink(link, true))}
-        <HerramientasMenu />
-        {LINKS_AFTER.map((link) => renderLink(link, true))}
+        <MoreMenu />
       </nav>
     </header>
   );

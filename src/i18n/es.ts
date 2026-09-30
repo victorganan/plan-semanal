@@ -20,14 +20,21 @@ export const text = {
     hoy: 'Hoy',
     semana: 'Semana',
     bandeja: 'Bandeja',
-    tuEspacio: 'Tu espacio',
+    // "Tu espacio" → "Áreas y proyectos" (glosario DESIGN.md §6): "Plan de
+    // navegación" queda reservado para los Nortes.
+    tuEspacio: 'Áreas y proyectos',
     herramientas: 'Herramientas',
-    dashboard: 'Dashboard',
+    // "Dashboard" → "Estadísticas" (glosario DESIGN.md §6).
+    dashboard: 'Estadísticas',
     ajustes: 'Ajustes',
     herramientasViewAll: 'Ver todas',
     herramientasMatriz: '🎯 Matriz de Eisenhower',
-    herramientasPomodoro: 'Pomodoro',
     herramientasTiempo: '⏱️ Real vs. Estimado',
+    more: 'Más',
+    ritualsGroupLabel: 'Rituales',
+    ritualStartDay: 'Arrancar el día',
+    ritualCloseDay: 'Cerrar el día',
+    ritualReflection: 'Momento de reflexión',
   },
 
   logoutButton: {
@@ -131,8 +138,9 @@ export const text = {
     focusContinueYes: 'Seguir',
     focusContinueNo: 'Lo dejo aquí',
     editAriaLabel: 'Editar tarea',
-    assignDateButton: 'Asignar fecha',
+    assignDateButton: 'Mover',
     assignDateSubmit: 'Asignar fecha',
+    startFocusButton: 'Empezar',
     description: 'Descripción',
     descriptionPlaceholder: 'Notas, contexto o detalles de esta tarea…',
     priority: 'Prioridad',
@@ -529,18 +537,22 @@ export const text = {
     subtitle: 'Aplicaciones complementarias de ayuda a la productividad.',
     matrixTitle: '🎯 Matriz de Eisenhower',
     matrixDescription: 'Clasifica tus tareas pendientes de la semana por urgencia e importancia.',
-    pomodoroTitle: 'Temporizador Pomodoro',
-    pomodoroDescription: 'Bloques de enfoque de 25 minutos con descansos, vinculados a tus tareas de hoy.',
     timeReportTitle: '⏱️ Real vs. Estimado',
     timeReportDescription: 'Compara cuánto estimaste cada tarea con el tiempo que realmente le dedicaste.',
     matrixPageTitle: 'Matriz de Eisenhower',
     matrixPageSubtitle: 'Clasifica las tareas pendientes de esta semana por urgencia e importancia.',
-    pomodoroPageTitle: 'Temporizador Pomodoro',
-    pomodoroPageSubtitle: 'Bloques de enfoque de 25 minutos con descansos, vinculados a tus tareas de hoy.',
     timeReportPageTitle: 'Real vs. Estimado',
     timeReportPageSubtitle: 'Compara el tiempo estimado de tus tareas con el tiempo que realmente les has dedicado.',
   },
 
+  focusMode: {
+    exitButton: 'Salir del modo foco',
+    exitAriaLabel: 'Salir del modo foco',
+  },
+
+  globalShortcuts: {
+    title: 'Atajos de teclado',
+  },
   pomodoro: {
     phaseWork: 'Enfoque',
     phaseShortBreak: 'Descanso corto',

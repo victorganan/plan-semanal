@@ -13,6 +13,7 @@ interface Props {
   onDelete: (id: string) => Promise<void>;
   onExportTodoist?: (id: string) => Promise<void>;
   onCreateCalendarEvent?: (id: string) => Promise<void>;
+  onStartFocus?: (id: string) => void;
 }
 
 export function PriorityListSection({
@@ -25,6 +26,7 @@ export function PriorityListSection({
   onDelete,
   onExportTodoist,
   onCreateCalendarEvent,
+  onStartFocus,
 }: Props) {
   return (
     <div className="rounded-card border border-base-border bg-base-surface p-4">
@@ -40,6 +42,7 @@ export function PriorityListSection({
             onDelete={onDelete}
             onExportTodoist={onExportTodoist}
             onCreateCalendarEvent={onCreateCalendarEvent}
+            onStartFocus={onStartFocus}
           />
         ))}
         {tasks.length === 0 ? <p className="text-sm text-base-muted">{text.priorityListSection.empty}</p> : null}

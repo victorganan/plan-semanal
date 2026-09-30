@@ -19,14 +19,6 @@ export default function HerramientasPage() {
         </Link>
 
         <Link
-          href="/herramientas/pomodoro"
-          className="block rounded-card border border-base-border bg-base-surface p-5 transition hover:border-accent"
-        >
-          <h2 className="text-lg font-semibold">{text.herramientas.pomodoroTitle}</h2>
-          <p className="mt-1 text-sm text-base-muted">{text.herramientas.pomodoroDescription}</p>
-        </Link>
-
-        <Link
           href="/herramientas/tiempo"
           className="block rounded-card border border-base-border bg-base-surface p-5 transition hover:border-accent"
         >

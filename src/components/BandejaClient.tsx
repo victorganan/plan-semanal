@@ -6,6 +6,7 @@ import { currentIsoWeek } from '@/lib/week';
 import { useToast } from '@/components/Toast';
 import { useInboxCapture } from '@/components/InboxCaptureContext';
 import { InboxList } from '@/components/InboxList';
+import { FocusMode } from '@/components/FocusMode';
 import type { Area, ProjectWithAreaAndCollaborators, Tag, TaskWithProject } from '@/types';
 import { text as t } from '@/i18n/es';
 
@@ -28,6 +29,7 @@ function tempId() {
 // de la lista, no hay otro sitio al que añadirla en esta página).
 export function BandejaClient({ initialInbox, projects, areas, tags, calendarConnected }: Props) {
   const [inbox, setInbox] = useState(initialInbox);
+  const [focusTask, setFocusTask] = useState<{ id: string; text: string } | null>(null);
   const { showToast } = useToast();
   const { subscribe } = useInboxCapture();
   const isoWeek = currentIsoWeek();
@@ -119,6 +121,11 @@ export function BandejaClient({ initialInbox, projects, areas, tags, calendarCon
     }
   }
 
+  function startFocus(id: string) {
+    const task = inbox.find((t) => t.id === id);
+    if (task) setFocusTask({ id: task.id, text: task.text });
+  }
+
   async function createCalendarEvent(id: string) {
     try {
       await api.post('/api/integrations/calendar/create-event', { taskId: id });
@@ -130,6 +137,9 @@ export function BandejaClient({ initialInbox, projects, areas, tags, calendarCon
 
   return (
     <div className="space-y-6">
+      {focusTask ? (
+        <FocusMode task={focusTask} onClose={() => setFocusTask(null)} onTaskDone={() => updateTask(focusTask.id, { done: true })} />
+      ) : null}
       <h1 className="text-2xl font-semibold">{t.nav.bandeja}</h1>
       <InboxList
         tasks={inbox}
@@ -140,6 +150,7 @@ export function BandejaClient({ initialInbox, projects, areas, tags, calendarCon
         onAdd={addBacklog}
         onUpdate={updateTask}
         onDelete={deleteTask}
+        onStartFocus={startFocus}
         {...(calendarConnected ? { onCreateCalendarEvent: createCalendarEvent } : {})}
       />
     </div>

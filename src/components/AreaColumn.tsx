@@ -22,6 +22,7 @@ interface Props {
   onReorder: (orderedIds: string[]) => Promise<void>;
   onExportTodoist?: (id: string) => Promise<void>;
   onCreateCalendarEvent?: (id: string) => Promise<void>;
+  onStartFocus?: (id: string) => void;
   onToggleTop3?: (id: string, next: boolean) => void;
   pendingTop3Ids?: Set<string>;
   focusMode?: boolean;
@@ -40,6 +41,7 @@ export function AreaColumn({
   onReorder,
   onExportTodoist,
   onCreateCalendarEvent,
+  onStartFocus,
   onToggleTop3,
   pendingTop3Ids,
   focusMode,
@@ -132,6 +134,7 @@ export function AreaColumn({
               onDelete={onDelete}
               onExportTodoist={onExportTodoist}
               onCreateCalendarEvent={onCreateCalendarEvent}
+              onStartFocus={onStartFocus}
               onToggleTop3={onToggleTop3}
               isTop3Pending={pendingTop3Ids?.has(t.id)}
               showRecurrence

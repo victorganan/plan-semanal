@@ -43,6 +43,9 @@ interface Props {
   // veces con primer gesto definido. No se activa en Semana (ahí interesa
   // ver la tarea completa para planificar, no reducirla a un paso).
   focusMode?: boolean;
+  // Abre el Modo foco a pantalla completa para esta tarea (sustituye al
+  // Pomodoro independiente). Si no se pasa, el botón "Empezar" no se muestra.
+  onStartFocus?: (id: string) => void;
 }
 
 function templateToValue(t: RecurringTaskTemplate): RecurrenceValue {
@@ -83,6 +86,7 @@ export function TaskCard({
   onToggleTop3,
   isTop3Pending,
   focusMode,
+  onStartFocus,
 }: Props) {
   const [open, setOpen] = useState(false);
   const [text, setText] = useState(task.text);
@@ -485,13 +489,19 @@ export function TaskCard({
             ) : null}
           </div>
 
-          {task.kind === 'BACKLOG' ? (
-            <div className="mt-2">
+          {!task.done ? (
+            <div className="mt-2 flex flex-wrap items-center gap-3">
               {!assignOpen ? (
                 <button onClick={() => setAssignOpen(true)} className="text-xs font-medium text-accent hover:underline">
                   {t.taskCard.assignDateButton}
                 </button>
-              ) : (
+              ) : null}
+              {onStartFocus ? (
+                <button onClick={() => onStartFocus(task.id)} className="text-xs font-medium text-accent hover:underline">
+                  {t.taskCard.startFocusButton}
+                </button>
+              ) : null}
+              {assignOpen ? (
                 <div className="space-y-1.5 rounded-lg border border-base-border p-2">
                   <QuickDateChips onPick={setAssignDate} />
                   <div className="flex flex-wrap items-center gap-1.5">
@@ -522,7 +532,7 @@ export function TaskCard({
                     </button>
                   </div>
                 </div>
-              )}
+              ) : null}
             </div>
           ) : null}
         </div>

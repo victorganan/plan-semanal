@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { api, ApiError } from '@/lib/api-client';
 import { currentIsoWeek } from '@/lib/week';
 import { useToast } from '@/components/Toast';
@@ -18,6 +19,7 @@ import { PlanningWizard } from '@/components/PlanningWizard';
 import { DayCloseRitual } from '@/components/DayCloseRitual';
 import type { PendingTaskDecision } from '@/components/DayCloseRitual';
 import { DayStartCard } from '@/components/DayStartCard';
+import { FocusMode } from '@/components/FocusMode';
 import { PinnedFirstTask } from '@/components/PinnedFirstTask';
 import { WeekNav } from '@/components/WeekNav';
 import { DayNav } from '@/components/DayNav';
@@ -54,6 +56,18 @@ function tempId() {
   return `tmp_${Math.random().toString(36).slice(2)}`;
 }
 
+// H1 (auditoría UX): un único botón de ritual según el momento, en vez de
+// los 3 siempre visibles. Viernes o domingo → Momento de reflexión; viendo
+// hoy antes de las 17:00 → Arrancar el día; el resto → Cerrar el día. Los
+// tres siguen accesibles siempre desde "Más" (ajuste 1 de la Fase 2).
+function getContextualRitual(isViewingToday: boolean): 'reflection' | 'start' | 'close' {
+  if (!isViewingToday) return 'close';
+  const now = new Date();
+  const dow = now.getDay(); // 0 = domingo, 5 = viernes
+  if (dow === 5 || dow === 0) return 'reflection';
+  return now.getHours() < 17 ? 'start' : 'close';
+}
+
 export function PlanWeekClient({
   initialWeek,
   initialInbox,
@@ -81,6 +95,9 @@ export function PlanWeekClient({
   const [overloadReviewOpen, setOverloadReviewOpen] = useState(false);
   const [closeRitualOpen, setCloseRitualOpen] = useState(false);
   const [startCardOpen, setStartCardOpen] = useState(false);
+  // Modo foco (M1.6d + Fase 2 ajuste 3): sustituye a la página independiente
+  // del Pomodoro. Se lanza desde el botón "Empezar" de cualquier tarea.
+  const [focusTask, setFocusTask] = useState<{ id: string; text: string } | null>(null);
   // Datos de la semana de "mañana"/"ayer" cuando caen fuera de la semana
   // cargada (p.ej. al cerrar un viernes, o al arrancar un lunes): se cargan
   // solo cuando hacen falta, desde el Cierre o el Arranque respectivamente.
@@ -89,6 +106,22 @@ export function PlanWeekClient({
   const { showToast } = useToast();
   const { subscribe } = useInboxCapture();
   const weekIsoOfToday = currentIsoWeek();
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+
+  // Los 3 rituales son siempre accesibles desde "Más" (Fase 2, ajuste 1):
+  // sus enlaces navegan aquí con ?ritual=..., que abre el modal y se limpia
+  // de la URL para no reabrirlo en un refresco de página.
+  useEffect(() => {
+    const ritual = searchParams.get('ritual');
+    if (!ritual) return;
+    if (ritual === 'start') setStartCardOpen(true);
+    else if (ritual === 'close') setCloseRitualOpen(true);
+    else if (ritual === 'reflection') setWizardOpen(true);
+    router.replace(pathname, { scroll: false });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams]);
 
   const isViewingToday = isoWeek === weekIsoOfToday && viewDow === todayDow;
   // "Mañana" en el Cierre es siempre el próximo día LABORABLE (nunca sábado
@@ -134,6 +167,11 @@ export function PlanWeekClient({
     } catch {
       // sin almacenamiento disponible: la tarjeta podrá reaparecer, sin más consecuencia
     }
+  }
+
+  function startFocus(id: string) {
+    const found = findTask(id);
+    if (found) setFocusTask({ id: found.task.id, text: found.task.text });
   }
 
   function startFirstTask(taskId: string) {
@@ -721,6 +759,7 @@ export function PlanWeekClient({
     const day = week.days.find((d) => d.dayOfWeek === viewDow);
     const dayTasks = week.tasks.filter((t) => t.kind === 'DAY_AREA' && t.dayId === day?.id);
     const viewDate = dateForDayOfWeek(isoWeek, viewDow);
+    const contextualRitual = getContextualRitual(isViewingToday);
     const tomorrowDay = tomorrowCrossesWeek
       ? tomorrowWeekData?.days.find((d) => d.dayOfWeek === tomorrowDow)
       : week.days.find((d) => d.dayOfWeek === tomorrowDow);
@@ -747,6 +786,9 @@ export function PlanWeekClient({
 
     return (
       <div className="space-y-6">
+        {focusTask ? (
+          <FocusMode task={focusTask} onClose={() => setFocusTask(null)} onTaskDone={() => updateTask(focusTask.id, { done: true })} />
+        ) : null}
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div>
             <h1 className="text-2xl font-semibold">{isViewingToday ? t.planWeekClient.todayTitle : DAY_NAMES[viewDow]}</h1>
@@ -756,26 +798,28 @@ export function PlanWeekClient({
             {day?.dayGoal ? <p className="mt-0.5 text-[13px] text-base-muted">{day.dayGoal}</p> : null}
           </div>
           <div className="flex flex-wrap items-center gap-2">
-            <button
-              onClick={() => setWizardOpen(true)}
-              className="rounded-full border border-accent px-3 py-1.5 text-sm font-medium text-accent hover:bg-accent/10"
-            >
-              {t.planWeekClient.openReflectionMoment}
-            </button>
-            {isViewingToday ? (
+            {contextualRitual === 'reflection' ? (
+              <button
+                onClick={() => setWizardOpen(true)}
+                className="rounded-full border border-accent px-3 py-1.5 text-sm font-medium text-accent hover:bg-accent/10"
+              >
+                {t.planWeekClient.openReflectionMoment}
+              </button>
+            ) : contextualRitual === 'start' ? (
               <button
                 onClick={() => setStartCardOpen(true)}
-                className="rounded-full border border-base-border px-3 py-1.5 text-sm font-medium hover:bg-base-border/40"
+                className="rounded-full border border-accent px-3 py-1.5 text-sm font-medium text-accent hover:bg-accent/10"
               >
                 {t.planWeekClient.startDayButton}
               </button>
-            ) : null}
-            <button
-              onClick={() => setCloseRitualOpen(true)}
-              className="rounded-full border border-base-border px-3 py-1.5 text-sm font-medium hover:bg-base-border/40"
-            >
-              {t.planWeekClient.closeDayButton}
-            </button>
+            ) : (
+              <button
+                onClick={() => setCloseRitualOpen(true)}
+                className="rounded-full border border-accent px-3 py-1.5 text-sm font-medium text-accent hover:bg-accent/10"
+              >
+                {t.planWeekClient.closeDayButton}
+              </button>
+            )}
             <ViewSwitcher mode="day" isoWeek={isoWeek} />
             <DayNav isoWeek={isoWeek} dayOfWeek={viewDow} />
           </div>
@@ -880,6 +924,7 @@ export function PlanWeekClient({
           onDeleteTask={deleteTask}
           onReorderTasks={reorderTasks}
           focusMode={isViewingToday}
+          onStartFocus={startFocus}
           {...exportProps}
           {...calendarProps}
         />
@@ -902,6 +947,7 @@ export function PlanWeekClient({
               onAdd={(text) => addTask('PRIORITY_ACTION', text)}
               onUpdate={updateTask}
               onDelete={deleteTask}
+              onStartFocus={startFocus}
               {...exportProps}
               {...calendarProps}
             />
@@ -913,6 +959,7 @@ export function PlanWeekClient({
               onAdd={(text) => addTask('CALL', text)}
               onUpdate={updateTask}
               onDelete={deleteTask}
+              onStartFocus={startFocus}
               {...exportProps}
               {...calendarProps}
             />
@@ -931,6 +978,9 @@ export function PlanWeekClient({
 
   return (
     <div className="space-y-6">
+      {focusTask ? (
+        <FocusMode task={focusTask} onClose={() => setFocusTask(null)} onTaskDone={() => updateTask(focusTask.id, { done: true })} />
+      ) : null}
       <div className="flex flex-wrap items-center justify-between gap-4">
         <h1 className="text-2xl font-semibold">{t.planWeekClient.weekTitle}</h1>
         <div className="flex flex-wrap items-center gap-2">
@@ -1037,6 +1087,7 @@ export function PlanWeekClient({
               onUpdateTask={updateTask}
               onDeleteTask={deleteTask}
               onReorderTasks={reorderTasks}
+              onStartFocus={startFocus}
               {...exportProps}
               {...calendarProps}
             />
@@ -1052,6 +1103,7 @@ export function PlanWeekClient({
           onAdd={(text) => addTask('PRIORITY_ACTION', text)}
           onUpdate={updateTask}
           onDelete={deleteTask}
+          onStartFocus={startFocus}
           {...exportProps}
           {...calendarProps}
         />
@@ -1063,6 +1115,7 @@ export function PlanWeekClient({
           onAdd={(text) => addTask('CALL', text)}
           onUpdate={updateTask}
           onDelete={deleteTask}
+          onStartFocus={startFocus}
           {...exportProps}
           {...calendarProps}
         />
