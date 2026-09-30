@@ -254,9 +254,6 @@ export const text = {
     organizedSectionTitle: 'Organizadas, sin fecha',
     organizedSectionHint: 'Ya están claras. Arrástralas a un día o asígnales fecha con el botón.',
     bandejaNavLabel: (n: number) => (n > 0 ? `Bandeja (${n})` : 'Bandeja'),
-    summaryLine: (n: number) =>
-      n === 0 ? 'Bandeja vacía.' : n === 1 ? 'Bandeja: 1 pendiente de procesar.' : `Bandeja: ${n} pendientes de procesar.`,
-    summaryLink: 'Ir a la Bandeja →',
   },
 
   quickDate: {
@@ -506,9 +503,6 @@ export const text = {
     closeDayButton: 'Cerrar el día',
     dayLabelToday: 'hoy',
     dayLabelOther: (day: string) => `el ${day.toLowerCase()}`,
-    todayHabits: 'Hábitos de hoy',
-    dayHabits: (day: string) => `Hábitos del ${day.toLowerCase()}`,
-    weekHabits: 'Hábitos (lunes a viernes)',
     priorityActionsTitle: 'Acciones prioritarias / No olvidar',
     callsTitle: 'Llamadas',
     priorityOverloadMessage: (current: number, average: number) =>
@@ -568,6 +562,18 @@ export const text = {
 
   globalShortcuts: {
     title: 'Atajos de teclado',
+  },
+
+  panels: {
+    objetivosLabel: 'Objetivos',
+    proyectosLabel: 'Proyectos en foco',
+    habitosLabel: 'Hábitos',
+    estadoLabel: 'Estado',
+    llamadasLabel: 'Llamadas',
+    prioritariasLabel: 'Acciones prioritarias',
+    openAriaLabel: (label: string, shortcutKey: string) => `Abrir panel ${label} (atajo ${shortcutKey})`,
+    habitosTodaySection: 'Hoy',
+    habitosWeekSection: 'Semana',
   },
   pomodoro: {
     phaseWork: 'Enfoque',

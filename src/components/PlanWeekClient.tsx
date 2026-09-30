@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { api, ApiError } from '@/lib/api-client';
 import { currentIsoWeek } from '@/lib/week';
@@ -14,7 +14,7 @@ import { MoodSliders } from '@/components/MoodSliders';
 import { ObjectivesForm, EvaluationForm } from '@/components/WeekMetaForm';
 import { PriorityListSection } from '@/components/PriorityListSection';
 import { ProjectFocusPicker } from '@/components/ProjectFocusPicker';
-import { BandejaSummaryLink } from '@/components/BandejaSummaryLink';
+import { FloatingPanel } from '@/components/panels/FloatingPanel';
 import { PlanningWizard } from '@/components/PlanningWizard';
 import { DayCloseRitual } from '@/components/DayCloseRitual';
 import type { PendingTaskDecision } from '@/components/DayCloseRitual';
@@ -25,7 +25,6 @@ import { WeekNav } from '@/components/WeekNav';
 import { DayNav } from '@/components/DayNav';
 import { ViewSwitcher } from '@/components/ViewSwitcher';
 import { DAY_NAMES, dateForDayOfWeek, nextBusinessDay, previousBusinessDay, todayLocalString, isoWeekAndDowFor } from '@/lib/week';
-import { countPendingProcess } from '@/lib/inbox';
 import { summarizeLoad } from '@/lib/capacity';
 // Alias: muchos callbacks locales de este componente usan `text` como nombre de parámetro.
 import { text as t } from '@/i18n/es';
@@ -55,6 +54,20 @@ interface Props {
 function tempId() {
   return `tmp_${Math.random().toString(36).slice(2)}`;
 }
+
+type PanelKey = 'objetivos' | 'proyectos' | 'habitos' | 'estado' | 'llamadas' | 'prioritarias';
+
+// Atajos de los paneles flotantes (auditoría UX §3.4): O/P/H/E/L/A, activos
+// solo cuando el foco no está en un campo de texto. No chocan con G/I/C/R
+// (navegación y rituales, en GlobalShortcuts.tsx) ni entre sí.
+const PANEL_SHORTCUT_KEYS: Record<string, PanelKey> = {
+  o: 'objetivos',
+  p: 'proyectos',
+  h: 'habitos',
+  e: 'estado',
+  l: 'llamadas',
+  a: 'prioritarias',
+};
 
 // H1 (auditoría UX): un único botón de ritual según el momento, en vez de
 // los 3 siempre visibles. Viernes o domingo → Momento de reflexión; viendo
@@ -755,6 +768,136 @@ export function PlanWeekClient({
   const exportProps = todoistConnected ? { onExportTodoist: exportTodoist } : {};
   const calendarProps = calendarConnected ? { onCreateCalendarEvent: createCalendarEvent } : {};
 
+  // Paneles flotantes (auditoría UX §3): Objetivos, Proyectos en foco,
+  // Hábitos, Estado, Llamadas y Acciones prioritarias salen del scroll
+  // continuo de Semana (y de los bloques fijos de Hoy) y pasan a paneles
+  // bajo demanda, con atajo de teclado y un solo panel abierto a la vez.
+  const [openPanel, setOpenPanel] = useState<PanelKey | null>(null);
+  const panelTriggerRefs = useRef<Record<PanelKey, HTMLButtonElement | null>>({
+    objetivos: null,
+    proyectos: null,
+    habitos: null,
+    estado: null,
+    llamadas: null,
+    prioritarias: null,
+  });
+
+  useEffect(() => {
+    function onKeyDown(e: KeyboardEvent) {
+      if (e.metaKey || e.ctrlKey || e.altKey) return;
+      const target = e.target;
+      const isTyping =
+        target instanceof HTMLElement && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.tagName === 'SELECT' || target.isContentEditable);
+      if (isTyping) return;
+      const key = e.key.toLowerCase();
+      const panel = PANEL_SHORTCUT_KEYS[key];
+      if (!panel) return;
+      e.preventDefault();
+      setOpenPanel((current) => (current === panel ? null : panel));
+    }
+    document.addEventListener('keydown', onKeyDown);
+    return () => document.removeEventListener('keydown', onKeyDown);
+  }, []);
+
+  const habitsDoneToday = habits.filter((h) =>
+    week.habitCompletions.some((c) => c.habitId === h.id && c.dayOfWeek === todayDow && c.done)
+  ).length;
+  const pendingCallsCount = callTasks.filter((task) => !task.done).length;
+  const pendingPriorityCount = priorityTasks.filter((task) => !task.done).length;
+
+  const PANEL_CONFIG: { key: PanelKey; label: string; shortcut: string; badge: string | null }[] = [
+    { key: 'objetivos', label: t.panels.objetivosLabel, shortcut: 'O', badge: null },
+    { key: 'proyectos', label: t.panels.proyectosLabel, shortcut: 'P', badge: focusIds.length > 0 ? String(focusIds.length) : null },
+    { key: 'habitos', label: t.panels.habitosLabel, shortcut: 'H', badge: habits.length > 0 ? `${habitsDoneToday}/${habits.length}` : null },
+    { key: 'estado', label: t.panels.estadoLabel, shortcut: 'E', badge: null },
+    { key: 'llamadas', label: t.panels.llamadasLabel, shortcut: 'L', badge: pendingCallsCount > 0 ? String(pendingCallsCount) : null },
+    { key: 'prioritarias', label: t.panels.prioritariasLabel, shortcut: 'A', badge: pendingPriorityCount > 0 ? String(pendingPriorityCount) : null },
+  ];
+
+  function renderPanelTriggerBar() {
+    return (
+      <div className="flex flex-wrap gap-1.5">
+        {PANEL_CONFIG.map((p) => (
+          <button
+            key={p.key}
+            ref={(el) => {
+              panelTriggerRefs.current[p.key] = el;
+            }}
+            onClick={() => setOpenPanel((current) => (current === p.key ? null : p.key))}
+            aria-expanded={openPanel === p.key}
+            aria-label={t.panels.openAriaLabel(p.label, p.shortcut)}
+            className={
+              openPanel === p.key
+                ? 'rounded-full border border-accent bg-accent/10 px-2.5 py-1 text-xs font-medium text-accent'
+                : 'rounded-full border border-base-border px-2.5 py-1 text-xs font-medium hover:bg-base-border/40'
+            }
+          >
+            {p.label}
+            {p.badge ? <span className="ml-1 text-base-muted">{p.badge}</span> : null}
+          </button>
+        ))}
+      </div>
+    );
+  }
+
+  function renderActivePanel() {
+    if (!openPanel) return null;
+    const config = PANEL_CONFIG.find((p) => p.key === openPanel)!;
+    const close = () => setOpenPanel(null);
+    const triggerRef = { current: panelTriggerRefs.current[openPanel] };
+    return (
+      <FloatingPanel title={config.label} onClose={close} triggerRef={triggerRef}>
+        {openPanel === 'objetivos' ? <ObjectivesForm week={week} onSave={saveWeekMeta} /> : null}
+        {openPanel === 'proyectos' ? (
+          <ProjectFocusPicker projects={projects} focusedIds={focusIds} onToggle={toggleProjectFocus} />
+        ) : null}
+        {openPanel === 'estado' ? (
+          <MoodSliders mentalState={week.mentalState} physicalState={week.physicalState} onChange={saveWeekMeta} />
+        ) : null}
+        {openPanel === 'habitos' ? (
+          <div className="space-y-4">
+            <div>
+              <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-base-muted">{t.panels.habitosTodaySection}</h3>
+              <HabitGrid habits={habits} completions={week.habitCompletions} onToggle={toggleHabit} mode="today" todayDow={todayDow} />
+            </div>
+            <div>
+              <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-base-muted">{t.panels.habitosWeekSection}</h3>
+              <HabitGrid habits={habits} completions={week.habitCompletions} onToggle={toggleHabit} mode="week" todayDow={todayDow} />
+            </div>
+          </div>
+        ) : null}
+        {openPanel === 'llamadas' ? (
+          <PriorityListSection
+            title={t.planWeekClient.callsTitle}
+            tasks={callTasks}
+            projects={projects}
+            tags={tags}
+            onAdd={(text) => addTask('CALL', text)}
+            onUpdate={updateTask}
+            onDelete={deleteTask}
+            onStartFocus={startFocus}
+            {...exportProps}
+            {...calendarProps}
+          />
+        ) : null}
+        {openPanel === 'prioritarias' ? (
+          <PriorityListSection
+            title={t.planWeekClient.priorityActionsTitle}
+            tasks={priorityTasks}
+            projects={projects}
+            tags={tags}
+            onAdd={(text) => addTask('PRIORITY_ACTION', text)}
+            onUpdate={updateTask}
+            onDelete={deleteTask}
+            onStartFocus={startFocus}
+            {...exportProps}
+            {...calendarProps}
+          />
+        ) : null}
+      </FloatingPanel>
+    );
+  }
+
   if (mode === 'day') {
     const day = week.days.find((d) => d.dayOfWeek === viewDow);
     const dayTasks = week.tasks.filter((t) => t.kind === 'DAY_AREA' && t.dayId === day?.id);
@@ -948,42 +1091,8 @@ export function PlanWeekClient({
           {...calendarProps}
         />
 
-        <BandejaSummaryLink pendingCount={countPendingProcess(inbox)} />
-
-        <div className="grid gap-4 lg:grid-cols-2">
-          <div>
-            <h3 className="mb-2 text-sm font-semibold text-base-muted">
-              {isViewingToday ? t.planWeekClient.todayHabits : t.planWeekClient.dayHabits(DAY_NAMES[viewDow])}
-            </h3>
-            <HabitGrid habits={habits} completions={week.habitCompletions} onToggle={toggleHabit} mode="today" todayDow={viewDow} />
-          </div>
-          <div className="space-y-4">
-            <PriorityListSection
-              title={t.planWeekClient.priorityActionsTitle}
-              tasks={priorityTasks}
-              projects={projects}
-              tags={tags}
-              onAdd={(text) => addTask('PRIORITY_ACTION', text)}
-              onUpdate={updateTask}
-              onDelete={deleteTask}
-              onStartFocus={startFocus}
-              {...exportProps}
-              {...calendarProps}
-            />
-            <PriorityListSection
-              title={t.planWeekClient.callsTitle}
-              tasks={callTasks}
-              projects={projects}
-              tags={tags}
-              onAdd={(text) => addTask('CALL', text)}
-              onUpdate={updateTask}
-              onDelete={deleteTask}
-              onStartFocus={startFocus}
-              {...exportProps}
-              {...calendarProps}
-            />
-          </div>
-        </div>
+        {renderPanelTriggerBar()}
+        {renderActivePanel()}
       </div>
     );
   }
@@ -1113,49 +1222,8 @@ export function PlanWeekClient({
           ))}
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-2">
-        <PriorityListSection
-          title={t.planWeekClient.priorityActionsTitle}
-          tasks={priorityTasks}
-          projects={projects}
-          tags={tags}
-          onAdd={(text) => addTask('PRIORITY_ACTION', text)}
-          onUpdate={updateTask}
-          onDelete={deleteTask}
-          onStartFocus={startFocus}
-          {...exportProps}
-          {...calendarProps}
-        />
-        <PriorityListSection
-          title={t.planWeekClient.callsTitle}
-          tasks={callTasks}
-          projects={projects}
-          tags={tags}
-          onAdd={(text) => addTask('CALL', text)}
-          onUpdate={updateTask}
-          onDelete={deleteTask}
-          onStartFocus={startFocus}
-          {...exportProps}
-          {...calendarProps}
-        />
-      </div>
-
-      <ProjectFocusPicker projects={projects} focusedIds={focusIds} onToggle={toggleProjectFocus} />
-
-      <ObjectivesForm week={week} onSave={saveWeekMeta} />
-
-      {/* S3 (auditoría UX): deja de ser lo primero bajo la cabecera; una versión
-          compacta en panel llega en la Fase 2. */}
-      <MoodSliders mentalState={week.mentalState} physicalState={week.physicalState} onChange={saveWeekMeta} />
-
-      <BandejaSummaryLink pendingCount={countPendingProcess(inbox)} />
-
-      <div>
-        <h3 className="mb-2 text-sm font-semibold text-base-muted">{t.planWeekClient.weekHabits}</h3>
-        <div className="rounded-card border border-base-border bg-base-surface p-4">
-          <HabitGrid habits={habits} completions={week.habitCompletions} onToggle={toggleHabit} mode="week" todayDow={todayDow} />
-        </div>
-      </div>
+      {renderPanelTriggerBar()}
+      {renderActivePanel()}
 
       <EvaluationForm
         week={week}

@@ -25,6 +25,12 @@ const SHORTCUT_ROWS: { keys: string; label: string }[] = [
   { keys: 'C', label: 'Cerrar el día' },
   { keys: 'R', label: 'Momento de reflexión' },
   { keys: 'N', label: 'Captura rápida' },
+  { keys: 'O', label: 'Panel Objetivos (Hoy/Semana)' },
+  { keys: 'P', label: 'Panel Proyectos en foco (Hoy/Semana)' },
+  { keys: 'H', label: 'Panel Hábitos (Hoy/Semana)' },
+  { keys: 'E', label: 'Panel Estado (Hoy/Semana)' },
+  { keys: 'L', label: 'Panel Llamadas (Hoy/Semana)' },
+  { keys: 'A', label: 'Panel Acciones prioritarias (Hoy/Semana)' },
   { keys: 'Esc', label: 'Cerrar panel abierto' },
   { keys: '?', label: 'Esta ayuda' },
 ];
