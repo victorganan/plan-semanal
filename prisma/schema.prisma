@@ -290,6 +290,7 @@ model Task {
 
   isPriority Boolean @default(false) // Acción prioritaria: hace avanzar un Norte o es lo más importante del día/semana
   firstStep  String? // Primer gesto: primer paso físico/digital inmediato (≤120 caracteres)
+  desiredOutcome String? // Resultado esperado al terminarla (comprobación A.1.4 al marcar prioritaria)
   context    String? // contexto GTD, con arroba: @ordenador, @casa, @calle…
 
   gtdStatus    GtdStatus @default(ACTIVA) // activa / esperando / algún día

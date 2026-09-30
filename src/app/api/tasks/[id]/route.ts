@@ -32,6 +32,7 @@ const patchSchema = z.object({
   tagIds: z.array(z.string()).max(20).optional(),
   isPriority: z.boolean().optional(),
   firstStep: z.string().max(120).nullable().optional(),
+  desiredOutcome: z.string().max(300).nullable().optional(),
   context: z.string().max(50).nullable().optional(),
   gtdStatus: z.enum(['ACTIVA', 'ESPERANDO', 'ALGUN_DIA']).optional(),
   waitingOn: z.string().max(100).nullable().optional(),

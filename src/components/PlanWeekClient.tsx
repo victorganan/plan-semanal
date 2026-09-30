@@ -79,6 +79,7 @@ export function PlanWeekClient({
   const [inbox, setInbox] = useState(initialInbox);
   const [wizardOpen, setWizardOpen] = useState(false);
   const [overloadDismissed, setOverloadDismissed] = useState(false);
+  const [overloadReviewOpen, setOverloadReviewOpen] = useState(false);
   const [closeRitualOpen, setCloseRitualOpen] = useState(false);
   const [startCardOpen, setStartCardOpen] = useState(false);
   // Datos de la semana de "mañana"/"ayer" cuando caen fuera de la semana
@@ -104,7 +105,10 @@ export function PlanWeekClient({
   // esta pantalla: publica la tarea creada por aquí para que aparezca en la
   // Bandeja al instante, sin esperar a un recargado.
   useEffect(() => subscribe((task) => setInbox((prev) => [...prev, task])), [subscribe]);
-  useEffect(() => setOverloadDismissed(false), [isoWeek]);
+  useEffect(() => {
+    setOverloadDismissed(false);
+    setOverloadReviewOpen(false);
+  }, [isoWeek]);
 
   // Tarjeta de Arranque del día: se muestra sola la primera vez que se entra
   // en Hoy cada día (según el ajuste de visibilidad), y se recuerda cerrada
@@ -242,6 +246,7 @@ export function PlanWeekClient({
       priority: 'MEDIUM',
       durationMinutes: null,
       calendarEventId: null,
+      desiredOutcome: null,
       quadrant: null,
       assignedTo: null,
       isTop3: false,
@@ -299,6 +304,7 @@ export function PlanWeekClient({
       priority: 'MEDIUM',
       durationMinutes: null,
       calendarEventId: null,
+      desiredOutcome: null,
       quadrant: null,
       assignedTo: null,
       isTop3: false,
@@ -464,8 +470,9 @@ export function PlanWeekClient({
       // recarga la semana para que se vea en su día correcto sin F5.
       await hardRefresh();
       showToast(t.planWeekClient.calendarEventCreated);
-    } catch {
-      showToast(t.planWeekClient.calendarEventError, 'error');
+    } catch (err) {
+      const message = err instanceof ApiError ? err.message : t.planWeekClient.calendarEventError;
+      showToast(message, 'error');
     }
   }
 
@@ -622,6 +629,7 @@ export function PlanWeekClient({
       priority: 'MEDIUM',
       durationMinutes: null,
       calendarEventId: null,
+      desiredOutcome: null,
       quadrant: null,
       assignedTo: null,
       isTop3: false,
@@ -939,14 +947,43 @@ export function PlanWeekClient({
       ) : null}
 
       {priorityOverload?.shouldWarn && !overloadDismissed ? (
-        <div className="flex flex-wrap items-center justify-between gap-3 rounded-card border border-fuchsia-500/40 bg-fuchsia-500/5 px-4 py-3 text-sm">
-          <span>{t.planWeekClient.priorityOverloadMessage(priorityOverload.currentCount, priorityOverload.average)}</span>
-          <button
-            onClick={() => setOverloadDismissed(true)}
-            className="shrink-0 rounded-full border border-base-border px-3 py-1 text-xs font-medium hover:bg-base-border/40"
-          >
-            {t.common.close}
-          </button>
+        <div className="space-y-2 rounded-card border border-fuchsia-500/40 bg-fuchsia-500/5 px-4 py-3 text-sm">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <span>{t.planWeekClient.priorityOverloadMessage(priorityOverload.currentCount, priorityOverload.average)}</span>
+            <div className="flex shrink-0 gap-2">
+              <button
+                onClick={() => setOverloadReviewOpen((v) => !v)}
+                className="rounded-full border border-fuchsia-500/40 px-3 py-1 text-xs font-medium text-fuchsia-600 hover:bg-fuchsia-500/10"
+              >
+                {t.planWeekClient.reviewPriorityTasks}
+              </button>
+              <button
+                onClick={() => setOverloadDismissed(true)}
+                className="rounded-full border border-base-border px-3 py-1 text-xs font-medium hover:bg-base-border/40"
+              >
+                {t.common.close}
+              </button>
+            </div>
+          </div>
+          {overloadReviewOpen ? (
+            <div className="space-y-1.5 border-t border-fuchsia-500/20 pt-2">
+              {priorityTasks.length === 0 ? (
+                <p className="text-xs text-base-muted">{t.planWeekClient.noPriorityTasks}</p>
+              ) : (
+                priorityTasks.map((pt) => (
+                  <div key={pt.id} className="flex items-center justify-between gap-2 text-xs">
+                    <span className={`truncate ${pt.done ? 'text-base-muted line-through' : ''}`}>{pt.text}</span>
+                    <button
+                      onClick={() => updateTask(pt.id, { isPriority: false })}
+                      className="shrink-0 rounded-full border border-base-border px-2.5 py-1 font-medium hover:bg-base-border/40"
+                    >
+                      {t.planWeekClient.unmarkPriority}
+                    </button>
+                  </div>
+                ))
+              )}
+            </div>
+          ) : null}
         </div>
       ) : null}
 

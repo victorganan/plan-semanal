@@ -115,7 +115,9 @@ export function TaskCard({
   const [priorityCheckOpen, setPriorityCheckOpen] = useState(false);
   const [priorityCheckPrereq, setPriorityCheckPrereq] = useState('');
   const [priorityCheckBusy, setPriorityCheckBusy] = useState(false);
+  const [desiredOutcome, setDesiredOutcome] = useState(task.desiredOutcome ?? '');
   const [firstStep, setFirstStep] = useState(task.firstStep ?? '');
+  const [reserveBusy, setReserveBusy] = useState(false);
 
   // Modo "solo primer gesto" (Hoy, tarea pospuesta 2+ veces con primer gesto):
   // 'idle' = tarjeta colapsada mostrando solo el primer gesto; 'running' =
@@ -266,6 +268,10 @@ export function TaskCard({
   async function submitPriorityCheck() {
     setPriorityCheckBusy(true);
     try {
+      const trimmedOutcome = desiredOutcome.trim();
+      if (trimmedOutcome !== (task.desiredOutcome ?? '')) {
+        await onUpdate(task.id, { desiredOutcome: trimmedOutcome || null });
+      }
       const lines = priorityCheckPrereq
         .split('\n')
         .map((l) => l.trim())
@@ -284,6 +290,11 @@ export function TaskCard({
   async function saveFirstStep() {
     const next = firstStep.trim() || null;
     if (next !== (task.firstStep ?? null)) await onUpdate(task.id, { firstStep: next });
+  }
+
+  async function saveDesiredOutcome() {
+    const next = desiredOutcome.trim() || null;
+    if (next !== (task.desiredOutcome ?? null)) await onUpdate(task.id, { desiredOutcome: next });
   }
 
   async function toggleDone() {
@@ -310,6 +321,21 @@ export function TaskCard({
       patch.dayOfWeek = dayOfWeek;
     }
     await onUpdate(task.id, patch);
+  }
+
+  async function reserveTime() {
+    if (!onCreateCalendarEvent || !date) return;
+    setReserveBusy(true);
+    try {
+      // Espera a que la fecha/hora elegidas se guarden antes de pedir el
+      // evento: si no, el endpoint puede leer la tarea todavía sin
+      // scheduledAt (carrera entre este clic y el guardado del campo) y
+      // devuelve "la tarea no tiene fecha y hora asignada" a la primera.
+      await saveSchedule(date, time);
+      await onCreateCalendarEvent(task.id);
+    } finally {
+      setReserveBusy(false);
+    }
   }
 
   async function submitAssignDate() {
@@ -536,7 +562,16 @@ export function TaskCard({
       {priorityCheckOpen ? (
         <div className="mx-3 mb-3 space-y-2 rounded-card border border-fuchsia-500/40 bg-fuchsia-500/5 p-3 text-xs">
           <p className="font-medium">{t.taskCard.priorityCheckTitle}</p>
-          <p>{t.taskCard.priorityCheckOutcomeQuestion}</p>
+          <label className="block space-y-1">
+            <span>{t.taskCard.priorityCheckOutcomeQuestion}</span>
+            <input
+              value={desiredOutcome}
+              onChange={(e) => setDesiredOutcome(e.target.value)}
+              maxLength={300}
+              placeholder={t.taskCard.priorityCheckOutcomePlaceholder}
+              className="w-full rounded-lg border border-base-border bg-base-bg px-2 py-1.5 text-xs"
+            />
+          </label>
           <div className="flex items-center justify-between gap-2">
             <span>{t.taskCard.priorityCheckAgendaQuestion}</span>
             {task.scheduledAt ? (
@@ -602,6 +637,20 @@ export function TaskCard({
               className="w-full rounded-lg border border-base-border bg-base-bg px-2 py-1.5 text-sm"
             />
           </label>
+
+          {task.isPriority ? (
+            <label className="block space-y-1">
+              <span className="block text-xs text-base-muted">{t.taskCard.desiredOutcomeLabel}</span>
+              <input
+                value={desiredOutcome}
+                onChange={(e) => setDesiredOutcome(e.target.value)}
+                onBlur={saveDesiredOutcome}
+                maxLength={300}
+                placeholder={t.taskCard.priorityCheckOutcomePlaceholder}
+                className="w-full rounded-lg border border-base-border bg-base-bg px-2 py-1.5 text-sm"
+              />
+            </label>
+          ) : null}
 
           <div className="grid grid-cols-2 gap-3">
             <label className="space-y-1">
@@ -682,8 +731,8 @@ export function TaskCard({
               {onCreateCalendarEvent ? (
                 <button
                   type="button"
-                  onClick={() => onCreateCalendarEvent(task.id)}
-                  disabled={!date}
+                  onClick={reserveTime}
+                  disabled={!date || reserveBusy}
                   title={!date ? t.taskCard.reserveTimeNeedsDate : undefined}
                   className="mt-1 rounded-full border border-base-border px-3 py-1 text-xs font-medium hover:bg-base-border/40 disabled:opacity-40"
                 >
