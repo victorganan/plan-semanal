@@ -12,6 +12,7 @@ import { PRIORITY_LABELS, RECURRENCE_LABELS, formatDurationMinutes, areaBgClass 
 import { describeRecurrence } from '@/lib/rrule-helpers';
 import type { RecurrenceValue } from '@/lib/rrule-helpers';
 import { isoWeekAndDowFor, todayLocalString } from '@/lib/week';
+import { naturalDate } from '@/lib/time-input';
 import { QuickDateChips } from '@/components/QuickDateChips';
 import { useToast } from '@/components/Toast';
 import type { Area, ProjectWithAreaAndCollaborators, Task, TaskWithProject, RecurringTaskTemplate, Tag } from '@/types';
@@ -264,12 +265,12 @@ export function TaskCard({
 
   async function copyClaimMessage() {
     const person = (task.assignedTo?.trim() || task.waitingOn?.trim() || '').trim();
-    const dateLabel = task.followUpDate
-      ? new Date(task.followUpDate).toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric' })
-      : '';
-    const message = dateLabel
-      ? t.taskCard.claimMessageWithDate(person, task.text, dateLabel)
-      : t.taskCard.claimMessageNoDate(person, task.text);
+    const dateLabel = task.followUpDate ? naturalDate(task.followUpDate) : '';
+    const message = !dateLabel
+      ? t.taskCard.claimMessageNoDate(person, task.text)
+      : followUpOverdue
+        ? t.taskCard.claimMessageOverdue(task.text, dateLabel)
+        : t.taskCard.claimMessageWithDate(person, task.text, dateLabel);
     try {
       await navigator.clipboard.writeText(message);
       showToast(t.taskCard.claimMessageCopied);
@@ -820,7 +821,7 @@ export function TaskCard({
             ) : null}
             <div className="space-y-1">
               <span className="block text-xs text-base-muted">{t.taskCard.dateAndTime}</span>
-              <div className="flex gap-1">
+              <div className="flex items-end gap-1">
                 <input
                   type="date"
                   value={date}
@@ -828,16 +829,19 @@ export function TaskCard({
                     setDate(e.target.value);
                     saveSchedule(e.target.value, time);
                   }}
-                  className="w-full min-w-0 rounded-lg border border-base-border bg-base-bg px-2 py-1.5 text-sm"
+                  className="min-w-0 flex-1 rounded-lg border border-base-border bg-base-bg px-2 py-1.5 text-sm"
                 />
-                <TimeSelect
-                  value={time}
-                  onChange={(v) => {
-                    setTime(v);
-                    saveSchedule(date, v);
-                  }}
-                  className="rounded-lg border border-base-border bg-base-bg px-2 py-1.5 text-sm"
-                />
+                <div className="w-16 shrink-0">
+                  <span className="block text-[10px] text-base-muted">{t.taskCard.timeLabel}</span>
+                  <TimeSelect
+                    value={time}
+                    onChange={(v) => {
+                      setTime(v);
+                      saveSchedule(date, v);
+                    }}
+                    className="w-full rounded-lg border border-base-border bg-base-bg px-1.5 py-1.5 text-sm"
+                  />
+                </div>
               </div>
               {onCreateCalendarEvent ? (
                 <button

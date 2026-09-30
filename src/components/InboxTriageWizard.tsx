@@ -537,7 +537,7 @@ export function InboxTriageWizard({ items, areas, onUpdate, onDelete, onCreateCa
             {date ? (
               <label className="block text-xs text-base-muted">
                 {text.inboxTriage.optionalTimeLabel}
-                <TimeSelect value={time} onChange={setTime} className="mt-1 w-full rounded-lg border border-base-border bg-base-bg px-2 py-1.5 text-sm" />
+                <TimeSelect value={time} onChange={setTime} className="mt-1 w-20 rounded-lg border border-base-border bg-base-bg px-2 py-1.5 text-sm" />
               </label>
             ) : null}
             <label className="block text-xs text-base-muted">

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { digitsOnly, formatDraft, parseDigitsToTime, shiftQuarterHour } from './time-input';
+import { digitsOnly, formatDraft, naturalDate, parseDigitsToTime, quarterHourOptionsAround, shiftQuarterHour } from './time-input';
 
 describe('digitsOnly', () => {
   it('strips non-digits and caps at 4 chars', () => {
@@ -75,5 +75,36 @@ describe('shiftQuarterHour', () => {
 
   it('falls back to 00:00 for an unparsable value', () => {
     expect(shiftQuarterHour('', 15)).toBe('00:15');
+  });
+});
+
+describe('quarterHourOptionsAround', () => {
+  it('returns 96 quarter-hour slots covering the full day', () => {
+    expect(quarterHourOptionsAround('09:00')).toHaveLength(96);
+  });
+
+  it('starts 3 quarters (45min) before the given center by default', () => {
+    const options = quarterHourOptionsAround('09:00');
+    expect(options[0]).toBe('08:15');
+    expect(options[3]).toBe('09:00');
+    expect(options[4]).toBe('09:15');
+  });
+
+  it('wraps around midnight when the center is near 00:00', () => {
+    const options = quarterHourOptionsAround('00:00');
+    expect(options[0]).toBe('23:15');
+    expect(options[3]).toBe('00:00');
+  });
+
+  it('centers on now when given an empty value', () => {
+    const options = quarterHourOptionsAround('');
+    expect(options[3]).toBe('00:00');
+  });
+});
+
+describe('naturalDate', () => {
+  it('formats a date as weekday + day + month, in Spanish', () => {
+    // 2026-09-24 es jueves
+    expect(naturalDate('2026-09-24T00:00:00')).toBe('jueves 24 de septiembre');
   });
 });

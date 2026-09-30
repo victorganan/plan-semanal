@@ -64,3 +64,30 @@ export function shiftQuarterHour(value: string, deltaMinutes: number): string {
   const total = (parsed.hour * 60 + parsed.minute + deltaMinutes + 24 * 60) % (24 * 60);
   return `${pad2(Math.floor(total / 60))}:${pad2(total % 60)}`;
 }
+
+// Lista del desplegable de horas en cuartos (M2 usabilidad de PENDIENTE):
+// empieza `beforeCount` cuartos antes del centro (hora ya elegida, o la
+// actual si el campo está vacío) y da una vuelta completa al día desde ahí,
+// para que haya contexto por delante y se pueda seguir bajando con scroll.
+export function quarterHourOptionsAround(centerValue: string, beforeCount = 3): string[] {
+  const center = parseValue(centerValue) ?? { hour: 0, minute: 0 };
+  const centerSlot = Math.round((center.hour * 60 + center.minute) / 15) % 96;
+  const startSlot = ((centerSlot - beforeCount) % 96 + 96) % 96;
+  return Array.from({ length: 96 }, (_, i) => {
+    const slot = (startSlot + i) % 96;
+    return `${pad2(Math.floor((slot * 15) / 60))}:${pad2((slot * 15) % 60)}`;
+  });
+}
+
+const WEEKDAY_NAMES = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado'];
+const MONTH_NAMES = [
+  'enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio',
+  'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre',
+];
+
+// "jueves 24 de septiembre" — fecha en formato natural para el mensaje de
+// reclamación (M4 de PENDIENTE). Sin año: uso conversacional a corto plazo.
+export function naturalDate(d: Date | string): string {
+  const date = new Date(d);
+  return `${WEEKDAY_NAMES[date.getDay()]} ${date.getDate()} de ${MONTH_NAMES[date.getMonth()]}`;
+}

@@ -162,10 +162,13 @@ export const text = {
     copyClaimMessageButton: 'Copiar mensaje para reclamar',
     claimMessageWithDate: (person: string, taskText: string, date: string) =>
       `Hola ${person}, ¿cómo va "${taskText}"? Lo necesitaría para el ${date}. Si te puedo ayudar en algo, dime.`,
+    claimMessageOverdue: (taskText: string, date: string) =>
+      `¿Cómo va "${taskText}"? Lo esperaba para el ${date}. Si te puedo ayudar en algo, dime.`,
     claimMessageNoDate: (person: string, taskText: string) =>
       `Hola ${person}, ¿cómo va "${taskText}"? Si te puedo ayudar en algo, dime.`,
     claimMessageCopied: 'Mensaje copiado. Pégalo en tu correo o WhatsApp.',
     dateAndTime: 'Fecha y hora',
+    timeLabel: 'Hora',
     tags: 'Etiquetas',
     removeTagAriaLabel: (name: string) => `Quitar etiqueta ${name}`,
     addTagPlaceholder: 'Añadir etiqueta…',

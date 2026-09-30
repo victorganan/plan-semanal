@@ -153,14 +153,21 @@ export function EisenhowerMatrix({ tasks, projects, calendarConnected, onUpdate,
 
         {actionFor?.taskId === task.id && actionFor.quadrant === 'DECIDIR' ? (
           <div className="space-y-1.5 border-t border-base-border pt-1.5">
-            <div className="flex gap-1">
+            <div className="flex items-end gap-1">
               <input
                 type="date"
                 value={decideDate}
                 onChange={(e) => setDecideDate(e.target.value)}
-                className="w-full min-w-0 rounded border border-base-border bg-base-bg px-1.5 py-1 text-[11px]"
+                className="min-w-0 flex-1 rounded border border-base-border bg-base-bg px-1.5 py-1 text-[11px]"
               />
-              <TimeSelect value={decideTime} onChange={setDecideTime} className="rounded border border-base-border bg-base-bg px-1.5 py-1 text-[11px]" />
+              <div className="w-14 shrink-0">
+                <span className="block text-[9px] text-base-muted">{text.taskCard.timeLabel}</span>
+                <TimeSelect
+                  value={decideTime}
+                  onChange={setDecideTime}
+                  className="w-full rounded border border-base-border bg-base-bg px-1 py-1 text-[11px]"
+                />
+              </div>
             </div>
             <button
               onClick={() => confirmDecidir(task)}
