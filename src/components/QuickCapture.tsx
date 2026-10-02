@@ -22,6 +22,12 @@ function isTypingTarget(el: EventTarget | null): boolean {
 // por notifyCaptured — quien esté mirando la Bandeja está suscrito y la
 // añade a su propia lista sin esperar a nada. router.refresh() se encarga
 // aparte del contador "Bandeja (N)" del menú, que se calcula en el servidor.
+// El [+] de la barra inferior móvil abre esta misma captura.
+const OPEN_EVENT = 'nortvira:capture';
+export function openQuickCapture() {
+  window.dispatchEvent(new Event(OPEN_EVENT));
+}
+
 export function QuickCapture() {
   const [open, setOpen] = useState(false);
   const [value, setValue] = useState('');
@@ -38,8 +44,13 @@ export function QuickCapture() {
       e.preventDefault();
       setOpen(true);
     }
+    const onOpen = () => setOpen(true);
     document.addEventListener('keydown', onKeyDown);
-    return () => document.removeEventListener('keydown', onKeyDown);
+    window.addEventListener(OPEN_EVENT, onOpen);
+    return () => {
+      document.removeEventListener('keydown', onKeyDown);
+      window.removeEventListener(OPEN_EVENT, onOpen);
+    };
   }, []);
 
   useEffect(() => {
@@ -72,7 +83,7 @@ export function QuickCapture() {
       <button
         onClick={() => setOpen(true)}
         aria-label={text.quickCapture.buttonAriaLabel}
-        className="fixed bottom-20 right-4 z-30 flex h-14 w-14 items-center justify-center rounded-full bg-accent text-2xl font-semibold text-white shadow-lg hover:brightness-110 sm:bottom-6"
+        className="fixed bottom-6 right-4 z-30 hidden h-14 w-14 items-center justify-center rounded-full bg-accent text-2xl font-semibold text-white shadow-lg hover:brightness-110 md:flex"
       >
         +
       </button>

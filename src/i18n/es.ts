@@ -35,6 +35,9 @@ export const text = {
     ritualStartDay: 'Arrancar el día',
     ritualCloseDay: 'Cerrar el día',
     ritualReflection: 'Momento de reflexión',
+    mainAriaLabel: 'Navegación principal',
+    collapse: 'Plegar menú',
+    expand: 'Desplegar menú',
   },
 
   logoutButton: {

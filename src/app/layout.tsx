@@ -43,7 +43,9 @@ export default async function RootLayout({ children }: { children: React.ReactNo
             {session?.user ? (
               <NavBar userName={session.user.name} userImage={session.user.image} pendingBandeja={pendingBandeja} />
             ) : null}
-            <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-6 sm:px-6 sm:py-8">{children}</main>
+            <div className={session?.user ? 'flex-1 pb-24 md:pb-0 md:pl-[var(--nav-w)]' : 'flex-1'}>
+              <main className="mx-auto w-full max-w-6xl px-4 py-6 sm:px-6 sm:py-8">{children}</main>
+            </div>
             {session?.user ? (
               <>
                 <QuickCapture />

@@ -74,7 +74,7 @@ Móvil (vista Hoy):
 │ ◌  3 en espera              │  ← colapsado
 │                             │
 ├─────────────────────────────┤
-│  Hoy   Viaje   Bitácora  [+]│  ← [+] = capturar, siempre visible
+│ Hoy  Semana  [+] Bandeja Más│  ← barra inferior real; [+] = capturar
 └─────────────────────────────┘
 ```
 

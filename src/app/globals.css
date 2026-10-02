@@ -69,3 +69,23 @@ body {
 ::selection {
   background-color: rgb(var(--color-accent) / 0.3);
 }
+
+/* Columna de navegación de escritorio (NavBar): 200px, plegable a 56px
+   solo con iconos. ThemeScript pone html[data-nav="collapsed"] antes de
+   pintar para que no haya salto al cargar. */
+:root {
+  --nav-w: 200px;
+}
+html[data-nav='collapsed'] {
+  --nav-w: 56px;
+}
+.nav-collapsed-only {
+  display: none;
+}
+html[data-nav='collapsed'] .nav-label,
+html[data-nav='collapsed'] .nav-count {
+  display: none;
+}
+html[data-nav='collapsed'] .nav-collapsed-only {
+  display: inline;
+}
