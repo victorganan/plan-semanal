@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { api, ApiError } from '@/lib/api-client';
+import { api, describeApiError } from '@/lib/api-client';
 import { useToast } from '@/components/Toast';
 import { EisenhowerMatrix } from '@/components/EisenhowerMatrix';
 import type { TaskWithProject, ProjectWithAreaAndCollaborators } from '@/types';
@@ -26,7 +26,7 @@ export function HerramientasMatrizClient({ initialTasks, projects, calendarConne
       await api.patch(`/api/tasks/${id}`, patch);
     } catch (err) {
       setTasks((prev) => prev.map((t) => (t.id === id ? previous : t)));
-      showToast(err instanceof ApiError ? err.message : 'No se pudo guardar el cambio', 'error');
+      showToast(describeApiError(err, 'No se pudo guardar el cambio'), 'error');
     }
   }
 
@@ -36,9 +36,9 @@ export function HerramientasMatrizClient({ initialTasks, projects, calendarConne
     setTasks((prev) => prev.filter((t) => t.id !== id));
     try {
       await api.delete(`/api/tasks/${id}`);
-    } catch {
+    } catch (err) {
       setTasks((prev) => [...prev, previous]);
-      showToast('No se pudo eliminar la tarea', 'error');
+      showToast(describeApiError(err, 'No se pudo eliminar la tarea'), 'error');
     }
   }
 
@@ -46,8 +46,8 @@ export function HerramientasMatrizClient({ initialTasks, projects, calendarConne
     try {
       await api.post('/api/integrations/calendar/create-event', { taskId: id });
       showToast('Evento creado correctamente en Google Calendar');
-    } catch {
-      showToast('No se pudo crear el evento en Calendar', 'error');
+    } catch (err) {
+      showToast(describeApiError(err, 'No se pudo crear el evento en Calendar'), 'error');
     }
   }
 

@@ -1,7 +1,7 @@
 import { notFound } from 'next/navigation';
 import { auth } from '@/auth';
 import { todayDayOfWeek } from '@/lib/week';
-import { getWeekPageData, getAvoidTodaySuggestions } from '@/lib/page-data';
+import { getWeekPageData, getAvoidTodaySuggestions, getPlanningNudge } from '@/lib/page-data';
 import { PlanWeekClient } from '@/components/PlanWeekClient';
 
 export default async function DiaPage({ params }: { params: Promise<{ iso: string; dow: string }> }) {
@@ -12,7 +12,11 @@ export default async function DiaPage({ params }: { params: Promise<{ iso: strin
 
   const session = await auth();
   const userId = session!.user.id;
-  const [data, avoidTodaySuggestions] = await Promise.all([getWeekPageData(userId, iso), getAvoidTodaySuggestions(userId)]);
+  const [data, avoidTodaySuggestions, planningNudge] = await Promise.all([
+    getWeekPageData(userId, iso),
+    getAvoidTodaySuggestions(userId),
+    getPlanningNudge(userId),
+  ]);
 
   return (
     <PlanWeekClient
@@ -33,6 +37,7 @@ export default async function DiaPage({ params }: { params: Promise<{ iso: strin
       arranqueVisibility={data.arranqueVisibility}
       extendedFocusEnabled={data.extendedFocusEnabled}
       avoidTodaySuggestions={avoidTodaySuggestions}
+      planningNudge={planningNudge}
     />
   );
 }

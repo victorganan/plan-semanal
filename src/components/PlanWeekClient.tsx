@@ -1,8 +1,9 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
+import Link from 'next/link';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
-import { api, ApiError } from '@/lib/api-client';
+import { api, describeApiError } from '@/lib/api-client';
 import { currentIsoWeek } from '@/lib/week';
 import { useToast } from '@/components/Toast';
 import { useInboxCapture } from '@/components/InboxCaptureContext';
@@ -24,7 +25,7 @@ import { PinnedFirstTask } from '@/components/PinnedFirstTask';
 import { WeekNav } from '@/components/WeekNav';
 import { DayNav } from '@/components/DayNav';
 import { ViewSwitcher } from '@/components/ViewSwitcher';
-import { DAY_NAMES, dateForDayOfWeek, nextBusinessDay, previousBusinessDay, todayLocalString, isoWeekAndDowFor } from '@/lib/week';
+import { DAY_NAMES, dateForDayOfWeek, nextBusinessDay, previousBusinessDay, todayLocalString, todayDayOfWeek, isoWeekAndDowFor } from '@/lib/week';
 import { summarizeLoad } from '@/lib/capacity';
 // Alias: muchos callbacks locales de este componente usan `text` como nombre de parámetro.
 import { text as t } from '@/i18n/es';
@@ -49,6 +50,8 @@ interface Props {
   avoidTodaySuggestions: string[];
   // Aviso de sobrecarga de prioritarias (M1.6e): solo se calcula/pasa en modo semana.
   priorityOverload?: { currentCount: number; average: number; shouldWarn: boolean };
+  // Aviso de planificación (M2f de PENDIENTE): solo se calcula/pasa en modo día.
+  planningNudge?: { show: boolean; nextIsoWeek: string };
 }
 
 function tempId() {
@@ -100,9 +103,11 @@ export function PlanWeekClient({
   extendedFocusEnabled,
   avoidTodaySuggestions,
   priorityOverload,
+  planningNudge,
 }: Props) {
   const [week, setWeek] = useState(initialWeek);
   const [inbox, setInbox] = useState(initialInbox);
+  const [planningNudgeDismissed, setPlanningNudgeDismissed] = useState(false);
   const [wizardOpen, setWizardOpen] = useState(false);
   const [overloadDismissed, setOverloadDismissed] = useState(false);
   const [overloadReviewOpen, setOverloadReviewOpen] = useState(false);
@@ -137,6 +142,25 @@ export function PlanWeekClient({
   }, [searchParams]);
 
   const isViewingToday = isoWeek === weekIsoOfToday && viewDow === todayDow;
+
+  // Si la app estuvo en segundo plano (pestaña o PWA instalada) y se cruzó
+  // la medianoche, Hoy se queda mostrando el día de ayer hasta recargar
+  // (M2a de PENDIENTE). Al recuperar el foco en la pantalla de Hoy, si el
+  // día real ya no es el que se cargó, se va a /hoy (que recalcula fresco).
+  useEffect(() => {
+    if (mode !== 'day' || !isViewingToday) return;
+    function onFocus() {
+      if (currentIsoWeek() !== weekIsoOfToday || todayDayOfWeek() !== todayDow) {
+        router.push('/hoy');
+      }
+    }
+    document.addEventListener('visibilitychange', onFocus);
+    window.addEventListener('focus', onFocus);
+    return () => {
+      document.removeEventListener('visibilitychange', onFocus);
+      window.removeEventListener('focus', onFocus);
+    };
+  }, [mode, isViewingToday, weekIsoOfToday, todayDow, router]);
   // "Mañana" en el Cierre es siempre el próximo día LABORABLE (nunca sábado
   // ni domingo), aunque eso cruce a la semana ISO siguiente.
   const { isoWeek: tomorrowIsoWeek, dayOfWeek: tomorrowDow } = nextBusinessDay(isoWeek, viewDow);
@@ -179,6 +203,27 @@ export function PlanWeekClient({
       localStorage.setItem(`nortvira:arranque-dismissed:${todayLocalString()}`, '1');
     } catch {
       // sin almacenamiento disponible: la tarjeta podrá reaparecer, sin más consecuencia
+    }
+  }
+
+  // Aviso de planificación (M2f): mismo patrón que la tarjeta de Arranque
+  // — se recuerda descartado por navegador hasta el día siguiente.
+  useEffect(() => {
+    try {
+      const key = `nortvira:planning-nudge-dismissed:${todayLocalString()}`;
+      if (localStorage.getItem(key)) setPlanningNudgeDismissed(true);
+    } catch {
+      // sin almacenamiento disponible: el aviso se muestra igualmente
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  function dismissPlanningNudge() {
+    setPlanningNudgeDismissed(true);
+    try {
+      localStorage.setItem(`nortvira:planning-nudge-dismissed:${todayLocalString()}`, '1');
+    } catch {
+      // sin almacenamiento disponible: el aviso podrá reaparecer, sin más consecuencia
     }
   }
 
@@ -342,9 +387,9 @@ export function PlanWeekClient({
           t.id === optimistic.id ? { ...created, project: null, area: optimisticArea, subtasks: [], recurringTemplate: null, tags: [] } : t
         ),
       }));
-    } catch {
+    } catch (err) {
       setWeek((w) => ({ ...w, tasks: w.tasks.filter((t) => t.id !== optimistic.id) }));
-      showToast(t.planWeekClient.createTaskError, 'error');
+      showToast(describeApiError(err, t.planWeekClient.createTaskError), 'error');
     }
   }
 
@@ -397,9 +442,9 @@ export function PlanWeekClient({
       setInbox((prev) =>
         prev.map((t) => (t.id === optimistic.id ? { ...created, project: null, area: null, subtasks: [], recurringTemplate: null, tags: [] } : t))
       );
-    } catch {
+    } catch (err) {
       setInbox((prev) => prev.filter((t) => t.id !== optimistic.id));
-      showToast(t.planWeekClient.saveInboxError, 'error');
+      showToast(describeApiError(err, t.planWeekClient.saveInboxError), 'error');
     }
   }
 
@@ -472,7 +517,7 @@ export function PlanWeekClient({
       } else {
         setInbox((prev) => prev.map((t) => (t.id === id ? previous : t)));
       }
-      showToast(err instanceof ApiError ? err.message : t.planWeekClient.saveChangeError, 'error');
+      showToast(describeApiError(err, t.planWeekClient.saveChangeError), 'error');
     }
   }
 
@@ -488,12 +533,12 @@ export function PlanWeekClient({
     }));
     try {
       await Promise.all(orderedIds.map((id, index) => api.patch(`/api/tasks/${id}`, { order: index })));
-    } catch {
+    } catch (err) {
       setWeek((w) => ({
         ...w,
         tasks: w.tasks.map((t) => (previousOrders.has(t.id) ? { ...t, order: previousOrders.get(t.id)! } : t)),
       }));
-      showToast(t.planWeekClient.reorderError, 'error');
+      showToast(describeApiError(err, t.planWeekClient.reorderError), 'error');
     }
   }
 
@@ -507,10 +552,10 @@ export function PlanWeekClient({
 
     try {
       await api.delete(`/api/tasks/${id}`);
-    } catch {
+    } catch (err) {
       if (location === 'week') setWeek((w) => ({ ...w, tasks: [...w.tasks, previous] }));
       else setInbox((prev) => [...prev, previous]);
-      showToast(t.planWeekClient.deleteTaskError, 'error');
+      showToast(describeApiError(err, t.planWeekClient.deleteTaskError), 'error');
     }
   }
 
@@ -518,8 +563,8 @@ export function PlanWeekClient({
     try {
       await api.post('/api/integrations/todoist/export', { taskId: id });
       showToast(t.planWeekClient.exportedTodoist);
-    } catch {
-      showToast(t.planWeekClient.exportTodoistError, 'error');
+    } catch (err) {
+      showToast(describeApiError(err, t.planWeekClient.exportTodoistError), 'error');
     }
   }
 
@@ -531,8 +576,7 @@ export function PlanWeekClient({
       await hardRefresh();
       showToast(t.planWeekClient.calendarEventCreated);
     } catch (err) {
-      const message = err instanceof ApiError ? err.message : t.planWeekClient.calendarEventError;
-      showToast(message, 'error');
+      showToast(describeApiError(err, t.planWeekClient.calendarEventError), 'error');
     }
   }
 
@@ -548,9 +592,9 @@ export function PlanWeekClient({
 
     try {
       await api.patch(`/api/habits/${habitId}/completions`, { isoWeek, dayOfWeek, done });
-    } catch {
+    } catch (err) {
       setWeek((w) => ({ ...w, habitCompletions: previous }));
-      showToast(t.planWeekClient.saveHabitError, 'error');
+      showToast(describeApiError(err, t.planWeekClient.saveHabitError), 'error');
     }
   }
 
@@ -560,8 +604,8 @@ export function PlanWeekClient({
     setWeek((w) => ({ ...w, ...patch }));
     try {
       await api.patch(`/api/weeks/${isoWeek}`, patch);
-    } catch {
-      showToast(t.planWeekClient.saveGenericError, 'error');
+    } catch (err) {
+      showToast(describeApiError(err, t.planWeekClient.saveGenericError), 'error');
       await hardRefresh();
     }
   }
@@ -574,8 +618,8 @@ export function PlanWeekClient({
     }));
     try {
       await api.patch(`/api/weeks/${isoWeek}`, { days: [{ dayOfWeek, starRating: value }] });
-    } catch {
-      showToast(t.planWeekClient.saveRatingError, 'error');
+    } catch (err) {
+      showToast(describeApiError(err, t.planWeekClient.saveRatingError), 'error');
       await hardRefresh();
     }
   }
@@ -588,8 +632,8 @@ export function PlanWeekClient({
     }));
     try {
       await api.patch(`/api/weeks/${isoWeek}`, { days: [{ dayOfWeek, journalNote: value }] });
-    } catch {
-      showToast(t.planWeekClient.saveJournalError, 'error');
+    } catch (err) {
+      showToast(describeApiError(err, t.planWeekClient.saveJournalError), 'error');
       await hardRefresh();
     }
   }
@@ -605,8 +649,8 @@ export function PlanWeekClient({
     }));
     try {
       await api.patch(`/api/weeks/${isoWeek}`, { days: [{ dayOfWeek, ...fields }] });
-    } catch {
-      showToast(t.planWeekClient.saveGenericError, 'error');
+    } catch (err) {
+      showToast(describeApiError(err, t.planWeekClient.saveGenericError), 'error');
       await hardRefresh();
     }
   }
@@ -729,10 +773,10 @@ export function PlanWeekClient({
       );
       setWeek((w) => ({ ...w, [field]: w[field].map((x: string) => (x === id ? created.id : x)) }));
       await api.patch(`/api/weeks/${isoWeek}`, { [field]: week[field]?.map((x) => (x === id ? created.id : x)) ?? [created.id] });
-    } catch {
+    } catch (err) {
       setInbox((prev) => prev.filter((t) => t.id !== id));
       setWeek((w) => ({ ...w, [field]: (w[field] ?? []).filter((x: string) => x !== id) }));
-      showToast(t.planWeekClient.createTaskError, 'error');
+      showToast(describeApiError(err, t.planWeekClient.createTaskError), 'error');
     }
   }
 
@@ -752,9 +796,9 @@ export function PlanWeekClient({
     try {
       if (focused) await api.post(`/api/weeks/${isoWeek}/project-focus`, { projectId });
       else await api.delete(`/api/weeks/${isoWeek}/project-focus`, { projectId });
-    } catch {
+    } catch (err) {
       setWeek((w) => ({ ...w, projectFocus: previous }));
-      showToast(t.planWeekClient.saveProjectFocusError, 'error');
+      showToast(describeApiError(err, t.planWeekClient.saveProjectFocusError), 'error');
     }
   }
 
@@ -971,6 +1015,26 @@ export function PlanWeekClient({
             <DayNav isoWeek={isoWeek} dayOfWeek={viewDow} />
           </div>
         </div>
+
+        {isViewingToday && planningNudge?.show && !planningNudgeDismissed ? (
+          <div className="flex flex-wrap items-center justify-between gap-3 rounded-card border border-accent/30 bg-accent/5 px-4 py-2.5 text-sm">
+            <span>{t.planWeekClient.planningNudgeMessage}</span>
+            <div className="flex shrink-0 gap-2">
+              <Link
+                href={`/semana/${planningNudge.nextIsoWeek}?ritual=reflection`}
+                className="rounded-full border border-accent px-3 py-1 text-xs font-medium text-accent hover:bg-accent/10"
+              >
+                {t.planWeekClient.planningNudgeButton}
+              </Link>
+              <button
+                onClick={dismissPlanningNudge}
+                className="rounded-full border border-base-border px-3 py-1 text-xs font-medium hover:bg-base-border/40"
+              >
+                {t.common.close}
+              </button>
+            </div>
+          </div>
+        ) : null}
 
         {isViewingToday && firstTask && !firstTask.done ? (
           <PinnedFirstTask

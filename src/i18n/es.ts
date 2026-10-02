@@ -512,6 +512,8 @@ export const text = {
     reviewPriorityTasks: 'Revisar prioritarias',
     noPriorityTasks: 'No hay ninguna marcada esta semana.',
     unmarkPriority: 'Quitar',
+    planningNudgeMessage: 'Todavía no has planificado la semana que viene.',
+    planningNudgeButton: 'Planificar la semana',
     createTaskError: 'No se pudo crear la tarea',
     saveInboxError: 'No se pudo guardar en la bandeja de entrada',
     saveChangeError: 'No se pudo guardar el cambio',

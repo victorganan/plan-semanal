@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import clsx from 'clsx';
-import { api } from '@/lib/api-client';
+import { api, describeApiError } from '@/lib/api-client';
 import { useToast } from '@/components/Toast';
 import { useEscapeToClose } from '@/components/useEscapeToClose';
 import { text } from '@/i18n/es';
@@ -194,8 +194,8 @@ export function FocusMode({ task, onClose, onTaskDone }: { task: { id: string; t
       setTaskDone(true);
       onTaskDone();
       showToast(text.pomodoro.taskMarkedDone);
-    } catch {
-      showToast(text.pomodoro.taskMarkDoneError, 'error');
+    } catch (err) {
+      showToast(describeApiError(err, text.pomodoro.taskMarkDoneError), 'error');
     }
   }
 

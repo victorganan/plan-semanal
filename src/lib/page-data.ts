@@ -4,6 +4,7 @@ import { getTodoistToken } from '@/lib/todoist';
 import { hasCalendarAccess } from '@/lib/google-calendar';
 import { currentIsoWeek, todayDayOfWeek, dateForDayOfWeek, addWeeks } from '@/lib/week';
 import { shouldWarnOverload, averageCompleted } from '@/lib/priority-overload';
+import { shouldShowPlanningNudge } from '@/lib/planning-nudge';
 import type { WeekFull, TaskWithProject } from '@/types';
 
 const INBOX_INCLUDE = {
@@ -67,6 +68,19 @@ export async function getPriorityOverloadStats(userId: string, isoWeek: string) 
     currentCount,
     average: Math.round(averageCompleted(recentCompletedCounts)),
     shouldWarn: shouldWarnOverload(currentCount, recentCompletedCounts),
+  };
+}
+
+export async function getPlanningNudge(userId: string) {
+  const nextIsoWeek = addWeeks(currentIsoWeek(), 1);
+  const nextWeek = await prisma.week.findUnique({
+    where: { userId_isoWeek: { userId, isoWeek: nextIsoWeek } },
+    select: { objective1: true, objective2: true, objective3: true },
+  });
+  const hasObjectives = !!(nextWeek?.objective1 || nextWeek?.objective2 || nextWeek?.objective3);
+  return {
+    show: shouldShowPlanningNudge(new Date().getDay(), hasObjectives),
+    nextIsoWeek,
   };
 }
 

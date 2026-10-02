@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { api, ApiError } from '@/lib/api-client';
+import { api, describeApiError } from '@/lib/api-client';
 import { currentIsoWeek } from '@/lib/week';
 import { useToast } from '@/components/Toast';
 import { useInboxCapture } from '@/components/InboxCaptureContext';
@@ -84,9 +84,9 @@ export function BandejaClient({ initialInbox, projects, areas, tags, calendarCon
       setInbox((prev) =>
         prev.map((task) => (task.id === optimistic.id ? { ...created, project: null, area: null, subtasks: [], recurringTemplate: null, tags: [] } : task))
       );
-    } catch {
+    } catch (err) {
       setInbox((prev) => prev.filter((task) => task.id !== optimistic.id));
-      showToast(t.planWeekClient.saveInboxError, 'error');
+      showToast(describeApiError(err, t.planWeekClient.saveInboxError), 'error');
     }
   }
 
@@ -105,7 +105,7 @@ export function BandejaClient({ initialInbox, projects, areas, tags, calendarCon
     } catch (err) {
       if (leavesInbox) setInbox((prev) => [...prev, previous]);
       else setInbox((prev) => prev.map((task) => (task.id === id ? previous : task)));
-      showToast(err instanceof ApiError ? err.message : t.planWeekClient.saveChangeError, 'error');
+      showToast(describeApiError(err, t.planWeekClient.saveChangeError), 'error');
     }
   }
 
@@ -115,9 +115,9 @@ export function BandejaClient({ initialInbox, projects, areas, tags, calendarCon
     setInbox((prev) => prev.filter((task) => task.id !== id));
     try {
       await api.delete(`/api/tasks/${id}`);
-    } catch {
+    } catch (err) {
       setInbox((prev) => [...prev, previous]);
-      showToast(t.planWeekClient.deleteTaskError, 'error');
+      showToast(describeApiError(err, t.planWeekClient.deleteTaskError), 'error');
     }
   }
 
@@ -130,8 +130,8 @@ export function BandejaClient({ initialInbox, projects, areas, tags, calendarCon
     try {
       await api.post('/api/integrations/calendar/create-event', { taskId: id });
       showToast(t.planWeekClient.calendarEventCreated);
-    } catch {
-      showToast(t.planWeekClient.calendarEventError, 'error');
+    } catch (err) {
+      showToast(describeApiError(err, t.planWeekClient.calendarEventError), 'error');
     }
   }
 

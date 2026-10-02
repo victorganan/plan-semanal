@@ -117,6 +117,7 @@ export function TaskCard({
   const [assignAreaId, setAssignAreaId] = useState('');
   const assignRef = useRef<HTMLDivElement>(null);
   const moveButtonRef = useRef<HTMLButtonElement>(null);
+  const titleRef = useRef<HTMLTextAreaElement>(null);
   const [assignBusy, setAssignBusy] = useState(false);
   const [subtasks, setSubtasks] = useState<Task[]>(task.subtasks);
   const [recurrenceOpen, setRecurrenceOpen] = useState(false);
@@ -147,6 +148,16 @@ export function TaskCard({
   const [focusStep, setFocusStep] = useState<'idle' | 'running' | 'askContinue'>('idle');
   const [focusSeconds, setFocusSeconds] = useState(120);
   const [focusDismissed, setFocusDismissed] = useState(false);
+
+  // El título es una textarea (no un input de una línea) para que se lea
+  // entero en varias líneas en vez de truncarse: se autoajusta a su
+  // contenido en vez de llevar un alto fijo.
+  useEffect(() => {
+    const el = titleRef.current;
+    if (!el) return;
+    el.style.height = 'auto';
+    el.style.height = `${el.scrollHeight}px`;
+  }, [text]);
 
   useEffect(() => {
     if (focusStep !== 'running') return;
@@ -532,12 +543,20 @@ export function TaskCard({
         </button>
 
         <div className="min-w-0 flex-1">
-          <input
+          <textarea
+            ref={titleRef}
             value={text}
             onChange={(e) => setText(e.target.value)}
             onBlur={saveText}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                e.preventDefault();
+                e.currentTarget.blur();
+              }
+            }}
+            rows={1}
             className={clsx(
-              'w-full truncate bg-transparent text-sm leading-snug outline-none',
+              'block w-full resize-none overflow-hidden bg-transparent text-sm leading-snug outline-none',
               task.done && 'line-through'
             )}
           />
@@ -578,117 +597,120 @@ export function TaskCard({
             ) : null}
           </div>
 
-          {!task.done ? (
-            <div className="mt-2 flex flex-wrap items-center gap-3">
-              {!assignOpen ? (
+          {/* Fila única de acciones bajo el título (M2b de PENDIENTE): antes
+              prioritaria/Las 3/editar vivían junto al título y mover/empezar
+              debajo, en dos filas separadas. Los botones-icono conservan los
+              44px de zona táctil; el glifo se reduce a text-sm. */}
+          <div className="mt-1.5 flex flex-wrap items-center gap-1">
+            <button
+              onClick={togglePriority}
+              aria-label={t.taskCard.priorityAriaLabel(task.isPriority)}
+              title={t.taskCard.priorityAriaLabel(task.isPriority)}
+              className={clsx(
+                'flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-sm transition hover:bg-base-border/40',
+                task.isPriority ? 'text-fuchsia-600' : 'text-base-muted/50 hover:text-base-muted'
+              )}
+            >
+              🚩
+            </button>
+
+            {task.kind === 'DAY_AREA' ? (
+              <button
+                onClick={() =>
+                  onToggleTop3 ? onToggleTop3(task.id, !task.isTop3) : onUpdate(task.id, { isTop3: !task.isTop3 })
+                }
+                disabled={isTop3Pending}
+                aria-label={t.taskCard.top3AriaLabel(task.isTop3)}
+                title={t.taskCard.top3AriaLabel(task.isTop3)}
+                className={clsx(
+                  'flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-sm transition hover:bg-base-border/40 disabled:opacity-50',
+                  task.isTop3 ? 'text-amber-500' : 'text-base-muted/50 hover:text-base-muted'
+                )}
+              >
+                {task.isTop3 ? '⭐' : '☆'}
+              </button>
+            ) : null}
+
+            <button
+              onClick={() => setOpen((v) => !v)}
+              aria-label={t.taskCard.editAriaLabel}
+              className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-sm text-base-muted transition hover:bg-base-border/40 hover:text-base-text"
+            >
+              ✏️
+            </button>
+
+            {!task.done && !assignOpen ? (
+              <button
+                ref={moveButtonRef}
+                onClick={() => setAssignOpen(true)}
+                className="text-xs font-medium text-accent hover:underline"
+              >
+                {t.taskCard.assignDateButton}
+              </button>
+            ) : null}
+            {!task.done && onStartFocus ? (
+              <button onClick={() => onStartFocus(task.id)} className="text-xs font-medium text-accent hover:underline">
+                {t.taskCard.startFocusButton}
+              </button>
+            ) : null}
+            {!task.done && isEsperando ? (
+              <button onClick={copyClaimMessage} className="text-xs font-medium text-accent hover:underline">
+                {t.taskCard.copyClaimMessageButton}
+              </button>
+            ) : null}
+          </div>
+
+          {!task.done && assignOpen ? (
+            <div ref={assignRef} className="mt-1.5 space-y-1.5 rounded-lg border border-base-border p-2">
+              <div className="flex items-center justify-between gap-2">
+                <QuickDateChips onPick={setAssignDate} />
                 <button
-                  ref={moveButtonRef}
-                  onClick={() => setAssignOpen(true)}
-                  className="text-xs font-medium text-accent hover:underline"
+                  type="button"
+                  onClick={closeAssign}
+                  aria-label={t.common.close}
+                  className="shrink-0 text-base-muted hover:text-base-text"
                 >
-                  {t.taskCard.assignDateButton}
+                  ✕
                 </button>
-              ) : null}
-              {onStartFocus ? (
-                <button onClick={() => onStartFocus(task.id)} className="text-xs font-medium text-accent hover:underline">
-                  {t.taskCard.startFocusButton}
-                </button>
-              ) : null}
-              {isEsperando ? (
-                <button onClick={copyClaimMessage} className="text-xs font-medium text-accent hover:underline">
-                  {t.taskCard.copyClaimMessageButton}
-                </button>
-              ) : null}
-              {assignOpen ? (
-                <div ref={assignRef} className="space-y-1.5 rounded-lg border border-base-border p-2">
-                  <div className="flex items-center justify-between gap-2">
-                    <QuickDateChips onPick={setAssignDate} />
-                    <button
-                      type="button"
-                      onClick={closeAssign}
-                      aria-label={t.common.close}
-                      className="shrink-0 text-base-muted hover:text-base-text"
-                    >
-                      ✕
-                    </button>
-                  </div>
-                  <div className="flex flex-wrap items-end gap-1.5">
-                    <input
-                      type="date"
-                      value={assignDate}
-                      onChange={(e) => setAssignDate(e.target.value)}
-                      className="rounded-lg border border-base-border bg-base-bg px-2 py-1 text-xs"
-                    />
-                    <div className="w-16 shrink-0">
-                      <span className="block text-[10px] text-base-muted">{t.taskCard.timeLabel}</span>
-                      <TimeSelect
-                        value={assignTime}
-                        onChange={setAssignTime}
-                        className="w-full rounded-lg border border-base-border bg-base-bg px-1.5 py-1 text-xs"
-                      />
-                    </div>
-                    <select
-                      value={assignAreaId}
-                      onChange={(e) => setAssignAreaId(e.target.value)}
-                      className="rounded-lg border border-base-border bg-base-bg px-2 py-1 text-xs"
-                    >
-                      <option value="">{t.taskCard.assignDateNoArea}</option>
-                      {areas.map((a) => (
-                        <option key={a.id} value={a.id}>
-                          {a.name}
-                        </option>
-                      ))}
-                    </select>
-                    <button
-                      onClick={submitAssignDate}
-                      disabled={!assignDate || assignBusy}
-                      className="rounded-full bg-accent px-3 py-1 text-xs font-medium text-white disabled:opacity-40"
-                    >
-                      {t.taskCard.assignDateSubmit}
-                    </button>
-                  </div>
+              </div>
+              <div className="flex flex-wrap items-end gap-1.5">
+                <input
+                  type="date"
+                  value={assignDate}
+                  onChange={(e) => setAssignDate(e.target.value)}
+                  className="rounded-lg border border-base-border bg-base-bg px-2 py-1 text-xs"
+                />
+                <div className="w-16 shrink-0">
+                  <span className="block text-[10px] text-base-muted">{t.taskCard.timeLabel}</span>
+                  <TimeSelect
+                    value={assignTime}
+                    onChange={setAssignTime}
+                    className="w-full rounded-lg border border-base-border bg-base-bg px-1.5 py-1 text-xs"
+                  />
                 </div>
-              ) : null}
+                <select
+                  value={assignAreaId}
+                  onChange={(e) => setAssignAreaId(e.target.value)}
+                  className="rounded-lg border border-base-border bg-base-bg px-2 py-1 text-xs"
+                >
+                  <option value="">{t.taskCard.assignDateNoArea}</option>
+                  {areas.map((a) => (
+                    <option key={a.id} value={a.id}>
+                      {a.name}
+                    </option>
+                  ))}
+                </select>
+                <button
+                  onClick={submitAssignDate}
+                  disabled={!assignDate || assignBusy}
+                  className="rounded-full bg-accent px-3 py-1 text-xs font-medium text-white disabled:opacity-40"
+                >
+                  {t.taskCard.assignDateSubmit}
+                </button>
+              </div>
             </div>
           ) : null}
         </div>
-
-        <button
-          onClick={togglePriority}
-          aria-label={t.taskCard.priorityAriaLabel(task.isPriority)}
-          title={t.taskCard.priorityAriaLabel(task.isPriority)}
-          className={clsx(
-            'flex h-11 w-11 shrink-0 items-center justify-center rounded-full transition hover:bg-base-border/40',
-            task.isPriority ? 'text-fuchsia-600' : 'text-base-muted/50 hover:text-base-muted'
-          )}
-        >
-          🚩
-        </button>
-
-        {task.kind === 'DAY_AREA' ? (
-          <button
-            onClick={() =>
-              onToggleTop3 ? onToggleTop3(task.id, !task.isTop3) : onUpdate(task.id, { isTop3: !task.isTop3 })
-            }
-            disabled={isTop3Pending}
-            aria-label={t.taskCard.top3AriaLabel(task.isTop3)}
-            title={t.taskCard.top3AriaLabel(task.isTop3)}
-            className={clsx(
-              'flex h-11 w-11 shrink-0 items-center justify-center rounded-full transition hover:bg-base-border/40 disabled:opacity-50',
-              task.isTop3 ? 'text-amber-500' : 'text-base-muted/50 hover:text-base-muted'
-            )}
-          >
-            {task.isTop3 ? '⭐' : '☆'}
-          </button>
-        ) : null}
-
-        <button
-          onClick={() => setOpen((v) => !v)}
-          aria-label={t.taskCard.editAriaLabel}
-          className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-base-muted transition hover:bg-base-border/40 hover:text-base-text"
-        >
-          ✏️
-        </button>
       </div>
 
       {priorityCheckOpen ? (

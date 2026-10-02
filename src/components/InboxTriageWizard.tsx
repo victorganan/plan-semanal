@@ -106,6 +106,31 @@ function lastUsedAreaId(areas: Area[]): string {
   return areas[0]?.id ?? '';
 }
 
+function pad2(n: number): string {
+  return String(n).padStart(2, '0');
+}
+
+function dateOnly(d: Date): string {
+  return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
+}
+
+// Bandeja coherente con GTD (M2e de PENDIENTE): la captura solo pide el
+// título; si la tarea ya llegó con datos (área, fecha, persona…) de antes
+// de entrar aquí, el asistente los precarga en vez de volver a preguntar
+// con el formulario en blanco.
+function prefillFor(task: TaskWithProject | undefined, areas: Area[]) {
+  const scheduled = task?.scheduledAt ? new Date(task.scheduledAt) : null;
+  const followUp = task?.followUpDate ? new Date(task.followUpDate) : null;
+  return {
+    date: scheduled ? dateOnly(scheduled) : todayLocalString(),
+    time: scheduled ? `${pad2(scheduled.getHours())}:${pad2(scheduled.getMinutes())}` : '',
+    areaId: task?.areaId || lastUsedAreaId(areas),
+    waitMode: (task?.assignedTo ? 'delegate' : 'wait') as 'wait' | 'delegate',
+    waitPerson: task?.assignedTo || task?.waitingOn || '',
+    waitFollowUp: followUp ? dateOnly(followUp) : '',
+  };
+}
+
 export function InboxTriageWizard({ items, areas, onUpdate, onDelete, onCreateCalendarEvent, onClose, onRestart }: Props) {
   useEscapeToClose(true, onClose);
   const [queue] = useState(items);
@@ -113,28 +138,31 @@ export function InboxTriageWizard({ items, areas, onUpdate, onDelete, onCreateCa
   const [step, setStep] = useState<Step>('actionable');
   const [skippedCount, setSkippedCount] = useState(0);
 
-  const [date, setDate] = useState(todayLocalString());
-  const [areaId, setAreaId] = useState(() => lastUsedAreaId(areas));
-  const [time, setTime] = useState('');
+  const initialFields = prefillFor(queue[0], areas);
+  const [date, setDate] = useState(initialFields.date);
+  const [areaId, setAreaId] = useState(initialFields.areaId);
+  const [time, setTime] = useState(initialFields.time);
   const [firstStep, setFirstStep] = useState('');
   const [projectFirstStep, setProjectFirstStep] = useState('');
   const [somedayDate, setSomedayDate] = useState('');
-  const [waitMode, setWaitMode] = useState<'wait' | 'delegate'>('wait');
-  const [waitPerson, setWaitPerson] = useState('');
-  const [waitFollowUp, setWaitFollowUp] = useState('');
+  const [waitMode, setWaitMode] = useState<'wait' | 'delegate'>(initialFields.waitMode);
+  const [waitPerson, setWaitPerson] = useState(initialFields.waitPerson);
+  const [waitFollowUp, setWaitFollowUp] = useState(initialFields.waitFollowUp);
   const [busy, setBusy] = useState(false);
 
   const current = queue[index];
 
-  function resetFormState() {
-    setDate(todayLocalString());
-    setAreaId(lastUsedAreaId(areas));
-    setTime('');
+  function resetFormState(nextTask: TaskWithProject | undefined) {
+    const fields = prefillFor(nextTask, areas);
+    setDate(fields.date);
+    setAreaId(fields.areaId);
+    setTime(fields.time);
     setFirstStep('');
     setProjectFirstStep('');
     setSomedayDate('');
-    setWaitPerson('');
-    setWaitFollowUp('');
+    setWaitMode(fields.waitMode);
+    setWaitPerson(fields.waitPerson);
+    setWaitFollowUp(fields.waitFollowUp);
   }
 
   function skip() {
@@ -144,7 +172,7 @@ export function InboxTriageWizard({ items, areas, onUpdate, onDelete, onCreateCa
 
   function advance() {
     setStep('actionable');
-    resetFormState();
+    resetFormState(queue[index + 1]);
     setBusy(false);
     setIndex((i) => i + 1);
   }
