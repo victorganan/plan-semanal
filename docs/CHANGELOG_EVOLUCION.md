@@ -8,22 +8,13 @@ Registro de lo implementado, decisiones tomadas y pendientes durante la evoluci�
 
 En este orden:
 
-### Prioridad 1 — Usabilidad rápida
-
-a. Al entrar en la app, abrir siempre en Hoy con la fecha actual.
-b. Tarjetas de tarea: el título debe verse completo en varias líneas (hoy apenas se leen dos palabras, incluso en escritorio maximizado). Los iconos de acción (prioritaria, Las 3 del día, editar, mover, empezar) van en una única fila debajo del título, algo más pequeños, manteniendo zona táctil de 44px.
-c. ~~Selector de hora~~ — **hecho** (ver bloque de lo hecho de Fase 2): anchos proporcionados, etiqueta "Hora", placeholder "hh:mm", formatos rápidos, desplegable de cuartos de hora, ↑/↓ ±15 min, en los 3 sitios.
-d. ~~Mensaje para reclamar~~ — **hecho** (ver bloque de lo hecho de Fase 2): fecha en formato natural, variante para fecha ya vencida.
-e. **Bandeja coherente con GTD**: añadir a la Bandeja (captura rápida o campo "Anota algo" de la página Bandeja) pide solo el título, sin detalles. Los detalles se añaden al procesar. Si una tarea ya tiene datos (área, fecha, persona…), el asistente de procesado los muestra precargados y no vuelve a preguntar lo que ya está.
-f. **Aviso de planificación**: viernes, sábado o domingo, si no se ha hecho el Momento de reflexión de la semana siguiente, mostrar en Hoy un aviso discreto con botón "Planificar la semana" que abre el Momento de reflexión. Se puede descartar hasta el día siguiente.
-
-### Prioridad 2 — Personas para delegar
+### Prioridad 1 — Personas para delegar
 
 - Nueva gestión de personas en Ajustes ("Personas"): nombre y, opcional, email y áreas en las que colaboran. Desde la configuración de un área también se pueden añadir personas.
 - Al delegar o marcar "En espera", la persona se elige de un desplegable (filtrado por el área de la tarea si tiene personas asignadas), con opción "+ Añadir persona" en el propio desplegable.
 - Migrar los nombres ya usados en tareas delegadas a esta lista, sin duplicados.
 
-### Prioridad 3 — Resto de la Fase 2 de la auditoría de usabilidad
+### Prioridad 2 — Resto de la Fase 2 de la auditoría de usabilidad
 
 (`docs/UX_AUDIT.md` §2-§3). Ya hecho: H4 (mover de día), selector de área en el asistente de Bandeja, Fase 1 completa (arreglos rápidos), y de Fase 2: "Empezar"/Modo foco (sustituye al Pomodoro independiente), botón de ritual único contextual + los 3 rituales siempre accesibles desde "Más" con atajo (I/C/R), menú "Más" (Áreas y proyectos, Estadísticas, Matriz, Tiempo, Ajustes), atajos globales de navegación (G+H/S/B) y ayuda con `?`, y paneles flotantes (Objetivos/Proyectos en foco/Hábitos/Estado/Llamadas/Acciones prioritarias, atajos O/P/H/E/L/A — ver detalle en el bloque de lo hecho). Falta:
    - **Dentro de los paneles flotantes**: arrastrar una tarea del panel a un día de Semana; hoja móvil con dos alturas (50%/90%), asa de arrastre y pestañas deslizables entre paneles (de momento cada panel se abre/cierra suelto); recordar el último panel abierto (`localStorage`); enlace directo `?panel=`; accesos contextuales sin toque adicional (p.ej. "Hábitos 2/5" en Hoy abriendo directo en Hábitos); "energía de hoy" dentro del panel Estado; mover el widget de Evaluación de la semana (sigue inline en Semana) al Momento de reflexión cuando exista el módulo 1.8.
@@ -172,7 +163,13 @@ f. **Aviso de planificación**: viernes, sábado o domingo, si no se ha hecho el
   - **2 fallos urgentes de las pruebas del Product Owner, corregidos**:
     - **Botón "Mover"**: el cuadro de fechas no tenía forma de cerrarse (sin botón, sin Esc, sin clic fuera) y exigía elegir también un área para poder enviar, aunque la tarea no fuera a un día/área (Bandeja, prioritarias, llamadas, delegadas) — bloqueaba el envío sin ninguna pista de por qué. Área ahora opcional: sin ella, el botón solo pone o cambia la fecha (reutiliza `saveSchedule`, igual que el campo "Fecha y hora"); con ella, convierte la tarea en día+área como antes. Botón de cerrar + Esc + clic fuera (mismo patrón que el resto de la app); el foco vuelve al botón "Mover" al cerrar.
     - **Eliminar tarea**: confirmación (`window.confirm` con el texto de la tarea) antes de borrar, para cualquier tipo de tarea, incluidas las delegadas/en espera. No se encontró una causa de código (ni cliente ni servidor) que impidiera específicamente borrar una tarea delegada — el `DELETE` no distingue por `gtdStatus`/`assignedTo`; si el fallo persiste tras este cambio, queda pendiente un repro más preciso (¿aparece un toast de error? ¿la tarea reaparece tras el borrado?).
-- Verificado en cada entrega de Fase 2: `tsc --noEmit`, `eslint`, `vitest run` (73/73 al cierre de los 2 fallos urgentes) y `next build` limpios. Sin pruebas en navegador real (login requiere Google OAuth, no disponible en este entorno) — verificación solo estática + revisión de código.
+  - **Resto de Prioridad 1 (usabilidad rápida)**:
+    - **Abrir siempre en Hoy**: en modo día, si la fecha real cambia mientras la app sigue abierta (al recuperar el foco o la pestaña vuelve a ser visible), redirige a `/hoy` en vez de dejar visible un día ya pasado.
+    - **Título de tarea en varias líneas**: la tarjeta (`TaskCard.tsx`) cambia el título de un `input` de una línea a un `textarea` sin borde con autoajuste de altura (crece con el contenido, ya no se trunca a dos palabras). Los iconos de acción (prioritaria, Las 3 del día, editar, Mover, Empezar, Copiar mensaje) se agrupan en una única fila debajo del título, algo más pequeños visualmente pero manteniendo la zona táctil de 44px.
+    - **Bandeja coherente con GTD**: el asistente de procesado (`InboxTriageWizard.tsx`) precarga área/fecha/hora/persona/fecha de seguimiento a partir de los datos que la tarea ya tenga (`prefillFor()`), en vez de empezar siempre en blanco y volver a preguntar lo que ya está guardado.
+    - **Aviso de planificación**: viernes, sábado o domingo, si la semana siguiente todavía no tiene objetivos (`Week.objective1/2/3` vacíos), Hoy muestra un aviso descartable con botón "Planificar la semana" que enlaza directo al Momento de reflexión de esa semana (`?ritual=reflection`). Se puede descartar hasta el día siguiente (mismo patrón de `localStorage` por fecha que la tarjeta de Arranque). Lógica pura nueva en `src/lib/planning-nudge.ts`, con test unitario.
+  - **Diagnóstico de errores de servidor** (petición explícita del Product Owner tras el fallo sin explicar al eliminar una tarea delegada, para poder identificarlo si se repite): `ApiError` (`src/lib/api-client.ts`) ahora lleva el código HTTP de la respuesta, y la nueva `describeApiError(err, fallback)` construye `"mensaje (código N)"` para mostrarlo en el toast en vez de un texto genérico; `fallback` solo se usa si el error no llegó a tener respuesta del servidor (fallo de red). Aplicado a todas las acciones de tarea que ya mostraban un aviso de error: Hoy/Semana (`PlanWeekClient.tsx`), Bandeja (`BandejaClient.tsx`), Matriz de Herramientas (`HerramientasMatrizClient.tsx`) y el Pomodoro/Modo foco (`FocusMode.tsx`).
+- Verificado en cada entrega de Fase 2: `tsc --noEmit`, `eslint`, `vitest run` (78/78 al cierre del resto de Prioridad 1 y el diagnóstico de errores) y `next build` limpios. Sin pruebas en navegador real (login requiere Google OAuth, no disponible en este entorno) — verificación solo estática + revisión de código.
 
 **Pendiente de Fase 2**: ver sección PENDIENTE al principio de este documento.
 

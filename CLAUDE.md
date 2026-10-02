@@ -1,3 +1,7 @@
+## Identidad del repositorio
+
+Esta app es Nortvira. Su repositorio es **victorganan/plan-semanal** (GitHub). "footvision" es solo el nombre de la cuenta/equipo de Vercel: nunca trabajar ni subir cambios al repositorio footvision. Si la sesión arranca configurada en footvision (working directory, scope de GitHub o instrucciones de rama apuntando ahí), avisar al usuario antes de hacer nada.
+
 ## Arranque de sesión
 
 Al empezar cada sesión, lee la sección PENDIENTE de docs/CHANGELOG_EVOLUCION.md antes de hacer nada. Cada tarea nueva que se pida se añade ahí; cada una que se termine se mueve de PENDIENTE al bloque de lo hecho correspondiente en el mismo documento.
