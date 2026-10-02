@@ -15,6 +15,7 @@ import { isoWeekAndDowFor, todayLocalString } from '@/lib/week';
 import { naturalDate } from '@/lib/time-input';
 import { QuickDateChips } from '@/components/QuickDateChips';
 import { useToast } from '@/components/Toast';
+import { useEscapeToClose } from '@/components/useEscapeToClose';
 import type { Area, ProjectWithAreaAndCollaborators, Task, TaskWithProject, RecurringTaskTemplate, Tag } from '@/types';
 // Alias: el estado local de este componente ya usa el nombre `text` para el título de la tarea.
 import { text as t } from '@/i18n/es';
@@ -110,7 +111,12 @@ export function TaskCard({
   const [assignOpen, setAssignOpen] = useState(false);
   const [assignDate, setAssignDate] = useState(todayLocalString());
   const [assignTime, setAssignTime] = useState('');
-  const [assignAreaId, setAssignAreaId] = useState(areas[0]?.id ?? '');
+  // Sin área por defecto (bug Fase 2: forzaba elegir un área para solo
+  // mover de fecha, bloqueando el envío de tareas sin día/área que tenga
+  // sentido tocar, como las de Bandeja/prioritarias/llamadas/delegadas).
+  const [assignAreaId, setAssignAreaId] = useState('');
+  const assignRef = useRef<HTMLDivElement>(null);
+  const moveButtonRef = useRef<HTMLButtonElement>(null);
   const [assignBusy, setAssignBusy] = useState(false);
   const [subtasks, setSubtasks] = useState<Task[]>(task.subtasks);
   const [recurrenceOpen, setRecurrenceOpen] = useState(false);
@@ -379,14 +385,38 @@ export function TaskCard({
     }
   }
 
+  function closeAssign() {
+    setAssignOpen(false);
+    moveButtonRef.current?.focus();
+  }
+
+  useEscapeToClose(assignOpen, closeAssign);
+
+  useEffect(() => {
+    if (!assignOpen) return;
+    function onClickOutside(e: MouseEvent) {
+      if (assignRef.current && !assignRef.current.contains(e.target as Node)) closeAssign();
+    }
+    document.addEventListener('mousedown', onClickOutside);
+    return () => document.removeEventListener('mousedown', onClickOutside);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [assignOpen]);
+
   async function submitAssignDate() {
-    if (!assignDate || !assignAreaId) return;
+    if (!assignDate) return;
     setAssignBusy(true);
     try {
-      const { isoWeek, dayOfWeek } = isoWeekAndDowFor(assignDate);
-      const patch: Record<string, unknown> = { kind: 'DAY_AREA', isoWeek, dayOfWeek, areaId: assignAreaId };
-      if (assignTime) patch.scheduledAt = new Date(`${assignDate}T${assignTime}`).toISOString();
-      await onUpdate(task.id, patch);
+      // Con área: coloca (o traslada) la tarea en el día+área elegidos.
+      // Sin área: solo le pone/cambia la fecha, sin tocar su kind ni área
+      // actual (reutiliza la misma lógica que el campo "Fecha y hora").
+      if (assignAreaId) {
+        const { isoWeek, dayOfWeek } = isoWeekAndDowFor(assignDate);
+        const patch: Record<string, unknown> = { kind: 'DAY_AREA', isoWeek, dayOfWeek, areaId: assignAreaId };
+        if (assignTime) patch.scheduledAt = new Date(`${assignDate}T${assignTime}`).toISOString();
+        await onUpdate(task.id, patch);
+      } else {
+        await saveSchedule(assignDate, assignTime);
+      }
       setAssignOpen(false);
     } finally {
       setAssignBusy(false);
@@ -551,7 +581,11 @@ export function TaskCard({
           {!task.done ? (
             <div className="mt-2 flex flex-wrap items-center gap-3">
               {!assignOpen ? (
-                <button onClick={() => setAssignOpen(true)} className="text-xs font-medium text-accent hover:underline">
+                <button
+                  ref={moveButtonRef}
+                  onClick={() => setAssignOpen(true)}
+                  className="text-xs font-medium text-accent hover:underline"
+                >
                   {t.taskCard.assignDateButton}
                 </button>
               ) : null}
@@ -566,30 +600,48 @@ export function TaskCard({
                 </button>
               ) : null}
               {assignOpen ? (
-                <div className="space-y-1.5 rounded-lg border border-base-border p-2">
-                  <QuickDateChips onPick={setAssignDate} />
-                  <div className="flex flex-wrap items-center gap-1.5">
+                <div ref={assignRef} className="space-y-1.5 rounded-lg border border-base-border p-2">
+                  <div className="flex items-center justify-between gap-2">
+                    <QuickDateChips onPick={setAssignDate} />
+                    <button
+                      type="button"
+                      onClick={closeAssign}
+                      aria-label={t.common.close}
+                      className="shrink-0 text-base-muted hover:text-base-text"
+                    >
+                      ✕
+                    </button>
+                  </div>
+                  <div className="flex flex-wrap items-end gap-1.5">
                     <input
                       type="date"
                       value={assignDate}
                       onChange={(e) => setAssignDate(e.target.value)}
                       className="rounded-lg border border-base-border bg-base-bg px-2 py-1 text-xs"
                     />
+                    <div className="w-16 shrink-0">
+                      <span className="block text-[10px] text-base-muted">{t.taskCard.timeLabel}</span>
+                      <TimeSelect
+                        value={assignTime}
+                        onChange={setAssignTime}
+                        className="w-full rounded-lg border border-base-border bg-base-bg px-1.5 py-1 text-xs"
+                      />
+                    </div>
                     <select
                       value={assignAreaId}
                       onChange={(e) => setAssignAreaId(e.target.value)}
                       className="rounded-lg border border-base-border bg-base-bg px-2 py-1 text-xs"
                     >
+                      <option value="">{t.taskCard.assignDateNoArea}</option>
                       {areas.map((a) => (
                         <option key={a.id} value={a.id}>
                           {a.name}
                         </option>
                       ))}
                     </select>
-                    <TimeSelect value={assignTime} onChange={setAssignTime} className="rounded-lg border border-base-border bg-base-bg px-2 py-1 text-xs" />
                     <button
                       onClick={submitAssignDate}
-                      disabled={!assignDate || !assignAreaId || assignBusy}
+                      disabled={!assignDate || assignBusy}
                       className="rounded-full bg-accent px-3 py-1 text-xs font-medium text-white disabled:opacity-40"
                     >
                       {t.taskCard.assignDateSubmit}
@@ -1034,7 +1086,9 @@ export function TaskCard({
               </button>
             ) : null}
             <button
-              onClick={() => onDelete(task.id)}
+              onClick={() => {
+                if (window.confirm(t.taskCard.deleteConfirm(task.text))) onDelete(task.id);
+              }}
               className="rounded-full px-3 py-1 text-xs font-medium text-priority-high hover:bg-priority-high/10"
             >
               {t.taskCard.delete}

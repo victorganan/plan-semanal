@@ -8,14 +8,42 @@ Registro de lo implementado, decisiones tomadas y pendientes durante la evoluci�
 
 En este orden:
 
-1. **Resto de la Fase 2 de la auditoría de usabilidad** (`docs/UX_AUDIT.md` §2-§3). Ya hecho: H4 (mover de día), selector de área en el asistente de Bandeja, Fase 1 completa (arreglos rápidos), y de Fase 2: "Empezar"/Modo foco (sustituye al Pomodoro independiente), botón de ritual único contextual + los 3 rituales siempre accesibles desde "Más" con atajo (I/C/R), menú "Más" (Áreas y proyectos, Estadísticas, Matriz, Tiempo, Ajustes), atajos globales de navegación (G+H/S/B) y ayuda con `?`, y **paneles flotantes** (Objetivos/Proyectos en foco/Hábitos/Estado/Llamadas/Acciones prioritarias, atajos O/P/H/E/L/A — ver detalle en el bloque de lo hecho de Fase 2). Falta:
-   - **Dentro de los paneles flotantes**, pendiente de un pase posterior (ver también el bloque de lo hecho): arrastrar una tarea del panel a un día de Semana; hoja móvil con dos alturas (50%/90%), asa de arrastre y pestañas deslizables entre paneles (de momento cada panel se abre/cierra suelto); recordar el último panel abierto (`localStorage`); enlace directo `?panel=`; accesos contextuales sin toque adicional (p.ej. "Hábitos 2/5" en Hoy abriendo directo en Hábitos); "energía de hoy" dentro del panel Estado; mover el widget de Evaluación de la semana (sigue inline en Semana) al Momento de reflexión cuando exista el módulo 1.8, tal como pide la auditoría.
+### Prioridad 1 — Fallos (urgente)
+
+a. **Botón "Mover" de la tarjeta**: abre el cuadro de fechas pero no deja elegir ninguna opción ni cerrarlo. Debe permitir Hoy / Mañana / Lunes / Elegir fecha y cerrarse con Esc, clic fuera o un botón de cerrar.
+b. **Las tareas delegadas no se pueden eliminar.** Deben poder eliminarse como cualquier otra, con confirmación.
+
+### Prioridad 2 — Usabilidad rápida
+
+a. Al entrar en la app, abrir siempre en Hoy con la fecha actual.
+b. Tarjetas de tarea: el título debe verse completo en varias líneas (hoy apenas se leen dos palabras, incluso en escritorio maximizado). Los iconos de acción (prioritaria, Las 3 del día, editar, mover, empezar) van en una única fila debajo del título, algo más pequeños, manteniendo zona táctil de 44px.
+c. ~~Selector de hora~~ — **hecho** (ver bloque de lo hecho de Fase 2): anchos proporcionados, etiqueta "Hora", placeholder "hh:mm", formatos rápidos, desplegable de cuartos de hora, ↑/↓ ±15 min, en los 3 sitios.
+d. ~~Mensaje para reclamar~~ — **hecho** (ver bloque de lo hecho de Fase 2): fecha en formato natural, variante para fecha ya vencida.
+e. **Bandeja coherente con GTD**: añadir a la Bandeja (captura rápida o campo "Anota algo" de la página Bandeja) pide solo el título, sin detalles. Los detalles se añaden al procesar. Si una tarea ya tiene datos (área, fecha, persona…), el asistente de procesado los muestra precargados y no vuelve a preguntar lo que ya está.
+f. **Aviso de planificación**: viernes, sábado o domingo, si no se ha hecho el Momento de reflexión de la semana siguiente, mostrar en Hoy un aviso discreto con botón "Planificar la semana" que abre el Momento de reflexión. Se puede descartar hasta el día siguiente.
+
+### Prioridad 3 — Personas para delegar
+
+- Nueva gestión de personas en Ajustes ("Personas"): nombre y, opcional, email y áreas en las que colaboran. Desde la configuración de un área también se pueden añadir personas.
+- Al delegar o marcar "En espera", la persona se elige de un desplegable (filtrado por el área de la tarea si tiene personas asignadas), con opción "+ Añadir persona" en el propio desplegable.
+- Migrar los nombres ya usados en tareas delegadas a esta lista, sin duplicados.
+
+### Prioridad 4 — Resto de la Fase 2 de la auditoría de usabilidad
+
+(`docs/UX_AUDIT.md` §2-§3). Ya hecho: H4 (mover de día), selector de área en el asistente de Bandeja, Fase 1 completa (arreglos rápidos), y de Fase 2: "Empezar"/Modo foco (sustituye al Pomodoro independiente), botón de ritual único contextual + los 3 rituales siempre accesibles desde "Más" con atajo (I/C/R), menú "Más" (Áreas y proyectos, Estadísticas, Matriz, Tiempo, Ajustes), atajos globales de navegación (G+H/S/B) y ayuda con `?`, y paneles flotantes (Objetivos/Proyectos en foco/Hábitos/Estado/Llamadas/Acciones prioritarias, atajos O/P/H/E/L/A — ver detalle en el bloque de lo hecho). Falta:
+   - **Dentro de los paneles flotantes**: arrastrar una tarea del panel a un día de Semana; hoja móvil con dos alturas (50%/90%), asa de arrastre y pestañas deslizables entre paneles (de momento cada panel se abre/cierra suelto); recordar el último panel abierto (`localStorage`); enlace directo `?panel=`; accesos contextuales sin toque adicional (p.ej. "Hábitos 2/5" en Hoy abriendo directo en Hábitos); "energía de hoy" dentro del panel Estado; mover el widget de Evaluación de la semana (sigue inline en Semana) al Momento de reflexión cuando exista el módulo 1.8.
    - **Columna de navegación plegable en escritorio** (200px↔56px, persistida) **y barra inferior real en móvil** (Hoy · Semana · [+] · Bandeja · Más — sin "Tareas" hasta que exista esa página). De momento se ha quedado en una cabecera responsive con "Más", no en el shell de dos formas que describe la auditoría §2.
    - **Atajos por fila** (J/K roving focus, X completar, M mover a 1/2/3/D, F empezar foco, Enter editar, S marcar Top3) — deliberadamente no implementados en el primer pase de Fase 2; se sustituyeron por acciones "Mover"/"Empezar" clicables. Decidir si merece la pena antes de dar Fase 2 por cerrada.
-2. **Módulo Lista de tareas** (página "Tareas"): filtros, ordenar, agrupar, vistas guardadas en base de datos, endpoint batch y selección múltiple en todas las vistas (Hoy, Semana, Bandeja y Tareas). Una vez exista, añadir su enlace a la navegación principal (hasta ahora deliberadamente ausente) y añadir "Delegadas y en espera" como filtro/vista guardada ahí (ver módulo 1.3/M3 en el bloque de lo hecho).
-3. **Mini-módulo Estadísticas**: selector de periodo para todos los widgets, gráfico de barras con multiselección de áreas y proyectos, comparativa estimado frente a real por proyecto, selección guardada en base de datos.
-4. **Módulo 1.7** (avisos: Filtro de imprevistos, Alertas de rumbo) **y módulo 1.8** (Momento de reflexión y Cuaderno de bitácora), según `Nortvira — Especificación de Evolución de Producto v1.0`. **El texto completo de esa especificación no está en este repo** — antes de empezar, pedir al Product Owner el documento (o la parte de las secciones 1.7/1.8) si no está ya disponible en la conversación.
-5. **Fase 3 de la auditoría de usabilidad** (visual: tokens de color de DESIGN.md, `--faro` magenta, un único elemento de acento por pantalla — G3), al final de todo.
+
+### Después, en este orden
+
+5. **Módulo Lista de tareas** (página "Tareas"): filtros, ordenar, agrupar, vistas guardadas en base de datos, endpoint batch y selección múltiple en todas las vistas (Hoy, Semana, Bandeja y Tareas). Una vez exista, añadir su enlace a la navegación principal (hasta ahora deliberadamente ausente) y añadir "Delegadas y en espera" como filtro/vista guardada ahí (ver módulo 1.3/M3 en el bloque de lo hecho).
+6. **Mini-módulo Estadísticas**: selector de periodo para todos los widgets, gráfico de barras con multiselección de áreas y proyectos, comparativa estimado frente a real por proyecto, selección guardada en base de datos.
+7. **Enlaces en tareas**: campo "Enlaces" en la ficha de tarea para adjuntar enlaces (primera versión: pegar URL con título opcional; si es de Google Drive o Docs, mostrar su icono). Más adelante, selector de archivos de Drive.
+8. **Asistente para usuarios nuevos** (antes de la Beta): onboarding que no exige conocer metodologías de productividad. Une "Tu perfil" (M9.1: qué quieres conseguir, qué te frena → activa solo las herramientas útiles) con un recorrido guiado de 4-5 pasos por Hoy, Bandeja, Semana y rituales, en lenguaje sencillo y sin jerga. Incluye ayudas contextuales la primera vez que se usa cada función, que se pueden desactivar.
+9. **Módulo 1.7** (avisos: Filtro de imprevistos, Alertas de rumbo) **y módulo 1.8** (Momento de reflexión y Cuaderno de bitácora), según `Nortvira — Especificación de Evolución de Producto v1.0`. **El texto completo de esa especificación no está en este repo** — antes de empezar, pedir al Product Owner el documento (o la parte de las secciones 1.7/1.8) si no está ya disponible en la conversación.
+10. **Fase 3 de la auditoría de usabilidad** (visual: tokens de color de DESIGN.md, `--faro` magenta, un único elemento de acento por pantalla — G3), al final de todo.
+11. **Fase 4 · IA**: funciones concretas de IA integradas en la app (no un chat genérico), según M13 de `Nortvira — Especificación de Evolución de Producto v1.0` (texto completo no disponible en este repo), usando la API de Anthropic. Diseñar la capa de IA con el proveedor intercambiable (poder pasar a un modelo de código libre en el futuro). **No implementar todavía.**
 
 ## Decisiones de alcance (previas al módulo 1.1)
 
