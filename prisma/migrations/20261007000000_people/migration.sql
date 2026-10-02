@@ -55,12 +55,5 @@ FROM (
   ORDER BY "userId", lower("name"), "createdAt"
 ) AS unique_names;
 
--- Las tareas que usaban otra variante del mismo nombre ("ana" / "Ana ")
--- pasan a la forma guardada, para que agrupen igual en "Delegadas y en espera".
-UPDATE "Task" t SET "assignedTo" = p."name"
-FROM "Person" p
-WHERE p."userId" = t."userId" AND lower(btrim(t."assignedTo")) = lower(p."name") AND t."assignedTo" <> p."name";
-
-UPDATE "Task" t SET "waitingOn" = p."name"
-FROM "Person" p
-WHERE p."userId" = t."userId" AND lower(btrim(t."waitingOn")) = lower(p."name") AND t."waitingOn" <> p."name";
+-- Las tareas no se tocan: si usaban otra variante del nombre ("ana"), el
+-- desplegable la muestra como "ana (no está en Personas)" hasta que se cambie.

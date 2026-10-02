@@ -6,6 +6,10 @@ Esta app es Nortvira. Su repositorio es **victorganan/plan-semanal** (GitHub). "
 
 Al empezar cada sesión, lee la sección PENDIENTE de docs/CHANGELOG_EVOLUCION.md antes de hacer nada. Cada tarea nueva que se pida se añade ahí; cada una que se termine se mueve de PENDIENTE al bloque de lo hecho correspondiente en el mismo documento.
 
+## Despliegue (forma de trabajo)
+
+Se puede trabajar en una rama, pero al terminar cada tarea y verificarla (`tsc`, `eslint`, `vitest`, `build` limpios) se fusiona en `main` y se sube, sin preguntar: Vercel despliega `main` a producción (y el build aplica las migraciones con `prisma migrate deploy`). **Única excepción: preguntar antes si el cambio borra o modifica datos existentes de forma irreversible** (migraciones con `UPDATE`/`DELETE` sobre datos, borrados de columnas o tablas, etc.).
+
 ## Jerarquía de prioridad (reglas, diseño y plugins)
 
 Cuando dos fuentes de instrucciones se contradigan, manda la de mayor rango:
