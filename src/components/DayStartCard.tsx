@@ -1,13 +1,12 @@
 'use client';
 
+import { EnergyPicker } from '@/components/EnergyPicker';
 import type { Day, Habit, HabitCompletion, TaskWithProject } from '@/types';
 import { text } from '@/i18n/es';
 import { Top3Today } from '@/components/Top3Today';
 import { useTop3Toggle } from '@/components/useTop3Toggle';
 import { pickDailyTip } from '@/lib/daily-tip';
 import { DayStartExtendedSection } from '@/components/DayStartExtendedSection';
-
-const ENERGY_VALUES = [1, 2, 3, 4, 5] as const;
 
 interface Props {
   day: Day;
@@ -89,21 +88,7 @@ export function DayStartCard({
       <div className="space-y-4 text-sm">
         <div>
           <p className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-base-muted">{text.dayStartCard.energyTitle}</p>
-          <div className="flex flex-wrap gap-1.5">
-            {ENERGY_VALUES.map((value) => (
-              <button
-                key={value}
-                onClick={() => onSaveEnergy(value)}
-                className={
-                  day.energy === value
-                    ? 'rounded-full bg-accent px-3 py-1.5 text-xs font-medium text-white'
-                    : 'rounded-full border border-base-border px-3 py-1.5 text-xs hover:bg-base-border/40'
-                }
-              >
-                {text.dayStartCard.energyLabels[value - 1]}
-              </button>
-            ))}
-          </div>
+          <EnergyPicker value={day.energy} onChange={onSaveEnergy} />
         </div>
 
         <div>

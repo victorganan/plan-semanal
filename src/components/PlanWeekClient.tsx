@@ -16,6 +16,8 @@ import { ObjectivesForm, EvaluationForm } from '@/components/WeekMetaForm';
 import { PriorityListSection } from '@/components/PriorityListSection';
 import { ProjectFocusPicker } from '@/components/ProjectFocusPicker';
 import { FloatingPanel } from '@/components/panels/FloatingPanel';
+import { EnergyPicker } from '@/components/EnergyPicker';
+import { adjacentPanel, isPanelKey, readLastPanel, writeLastPanel, type PanelKey } from '@/lib/panels';
 import { PlanningWizard } from '@/components/PlanningWizard';
 import { DayCloseRitual } from '@/components/DayCloseRitual';
 import type { PendingTaskDecision } from '@/components/DayCloseRitual';
@@ -58,7 +60,6 @@ function tempId() {
   return `tmp_${Math.random().toString(36).slice(2)}`;
 }
 
-type PanelKey = 'objetivos' | 'proyectos' | 'habitos' | 'estado' | 'llamadas' | 'prioritarias';
 
 // Atajos de los paneles flotantes (auditoría UX §3.4): O/P/H/E/L/A, activos
 // solo cuando el foco no está en un campo de texto. No chocan con G/I/C/R
@@ -816,7 +817,23 @@ export function PlanWeekClient({
   // Hábitos, Estado, Llamadas y Acciones prioritarias salen del scroll
   // continuo de Semana (y de los bloques fijos de Hoy) y pasan a paneles
   // bajo demanda, con atajo de teclado y un solo panel abierto a la vez.
-  const [openPanel, setOpenPanel] = useState<PanelKey | null>(null);
+  const [openPanel, setOpenPanelState] = useState<PanelKey | null>(null);
+  const mobilePanelTriggerRef = useRef<HTMLButtonElement | null>(null);
+  // Se recuerda el último panel abierto (§3.3): el botón "Paneles" del
+  // móvil vuelve a él.
+  const setOpenPanel = useCallback((next: PanelKey | null | ((current: PanelKey | null) => PanelKey | null)) => {
+    setOpenPanelState((current) => {
+      const value = typeof next === 'function' ? next(current) : next;
+      if (value) writeLastPanel(value);
+      return value;
+    });
+  }, []);
+
+  // Enlace directo: ?panel=habitos abre ese panel al cargar.
+  useEffect(() => {
+    const param = new URLSearchParams(window.location.search).get('panel');
+    if (isPanelKey(param)) setOpenPanel(param);
+  }, [setOpenPanel]);
   const panelTriggerRefs = useRef<Record<PanelKey, HTMLButtonElement | null>>({
     objetivos: null,
     proyectos: null,
@@ -841,7 +858,7 @@ export function PlanWeekClient({
     }
     document.addEventListener('keydown', onKeyDown);
     return () => document.removeEventListener('keydown', onKeyDown);
-  }, []);
+  }, [setOpenPanel]);
 
   const habitsDoneToday = habits.filter((h) =>
     week.habitCompletions.some((c) => c.habitId === h.id && c.dayOfWeek === todayDow && c.done)
@@ -859,28 +876,51 @@ export function PlanWeekClient({
   ];
 
   function renderPanelTriggerBar() {
+    const contextual = PANEL_CONFIG.filter((p) => p.badge && (p.key === 'habitos' || p.key === 'llamadas' || p.key === 'prioritarias'));
     return (
-      <div className="flex flex-wrap gap-1.5">
-        {PANEL_CONFIG.map((p) => (
+      <>
+        <div className="hidden flex-wrap gap-1.5 sm:flex">
+          {PANEL_CONFIG.map((p) => (
+            <button
+              key={p.key}
+              ref={(el) => {
+                panelTriggerRefs.current[p.key] = el;
+              }}
+              onClick={() => setOpenPanel((current) => (current === p.key ? null : p.key))}
+              aria-expanded={openPanel === p.key}
+              aria-label={t.panels.openAriaLabel(p.label, p.shortcut)}
+              className={
+                openPanel === p.key
+                  ? 'rounded-full border border-accent bg-accent/10 px-2.5 py-1 text-xs font-medium text-accent'
+                  : 'rounded-full border border-base-border px-2.5 py-1 text-xs font-medium hover:bg-base-border/40'
+              }
+            >
+              {p.label}
+              {p.badge ? <span className="ml-1 text-base-muted">{p.badge}</span> : null}
+            </button>
+          ))}
+        </div>
+        {/* Móvil (§3.5): un solo botón "Paneles" que vuelve al último abierto,
+            y accesos contextuales que abren directamente en su pestaña. */}
+        <div className="flex flex-wrap items-center gap-x-1 text-[13px] text-base-muted sm:hidden">
           <button
-            key={p.key}
-            ref={(el) => {
-              panelTriggerRefs.current[p.key] = el;
-            }}
-            onClick={() => setOpenPanel((current) => (current === p.key ? null : p.key))}
-            aria-expanded={openPanel === p.key}
-            aria-label={t.panels.openAriaLabel(p.label, p.shortcut)}
-            className={
-              openPanel === p.key
-                ? 'rounded-full border border-accent bg-accent/10 px-2.5 py-1 text-xs font-medium text-accent'
-                : 'rounded-full border border-base-border px-2.5 py-1 text-xs font-medium hover:bg-base-border/40'
-            }
+            ref={mobilePanelTriggerRef}
+            onClick={() => setOpenPanel((current) => (current ? null : readLastPanel() ?? 'objetivos'))}
+            aria-expanded={openPanel !== null}
+            className="mr-1 min-h-[44px] rounded-full border border-base-border px-3 text-xs font-medium text-base-text"
           >
-            {p.label}
-            {p.badge ? <span className="ml-1 text-base-muted">{p.badge}</span> : null}
+            {t.panels.mobileButton}
           </button>
-        ))}
-      </div>
+          {contextual.map((p, i) => (
+            <span key={p.key} className="flex items-center">
+              {i > 0 ? <span aria-hidden="true">·</span> : null}
+              <button onClick={() => setOpenPanel(p.key)} className="min-h-[44px] px-1.5 hover:text-base-text">
+                {p.label} {p.badge}
+              </button>
+            </span>
+          ))}
+        </div>
+      </>
     );
   }
 
@@ -888,15 +928,39 @@ export function PlanWeekClient({
     if (!openPanel) return null;
     const config = PANEL_CONFIG.find((p) => p.key === openPanel)!;
     const close = () => setOpenPanel(null);
-    const triggerRef = { current: panelTriggerRefs.current[openPanel] };
+    const desktopTrigger = panelTriggerRefs.current[openPanel];
+    const triggerRef = { current: desktopTrigger?.offsetParent ? desktopTrigger : mobilePanelTriggerRef.current };
+    const panelDragProps = mode === 'week' ? { dragEnabled: true } : {};
+    const todayRecord = isoWeek === weekIsoOfToday ? week.days.find((d) => d.dayOfWeek === todayDow) : undefined;
     return (
-      <FloatingPanel title={config.label} onClose={close} triggerRef={triggerRef}>
+      <FloatingPanel
+        title={config.label}
+        onClose={close}
+        triggerRef={triggerRef}
+        tabs={PANEL_CONFIG.map((p) => ({ key: p.key, label: p.label }))}
+        activeTab={openPanel}
+        onSelectTab={setOpenPanel}
+        onSwipe={(dir) => setOpenPanel(adjacentPanel(openPanel, dir))}
+      >
         {openPanel === 'objetivos' ? <ObjectivesForm week={week} onSave={saveWeekMeta} /> : null}
         {openPanel === 'proyectos' ? (
           <ProjectFocusPicker projects={projects} focusedIds={focusIds} onToggle={toggleProjectFocus} />
         ) : null}
         {openPanel === 'estado' ? (
-          <MoodSliders mentalState={week.mentalState} physicalState={week.physicalState} onChange={saveWeekMeta} />
+          <div className="space-y-4">
+            {todayRecord ? (
+              <div>
+                <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-base-muted">{t.panels.energyTodaySection}</h3>
+                <EnergyPicker value={todayRecord.energy} onChange={(value) => saveDayFields(todayDow, { energy: value })} />
+              </div>
+            ) : null}
+            <div>
+              {todayRecord ? (
+                <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-base-muted">{t.panels.weekStateSection}</h3>
+              ) : null}
+              <MoodSliders mentalState={week.mentalState} physicalState={week.physicalState} onChange={saveWeekMeta} />
+            </div>
+          </div>
         ) : null}
         {openPanel === 'habitos' ? (
           <div className="space-y-4">
@@ -917,6 +981,8 @@ export function PlanWeekClient({
             projects={projects}
             tags={tags}
             onAdd={(text) => addTask('CALL', text)}
+            hint={mode === 'week' ? t.panels.dragHint : undefined}
+            {...panelDragProps}
             onUpdate={updateTask}
             onDelete={deleteTask}
             onStartFocus={startFocus}
@@ -931,6 +997,8 @@ export function PlanWeekClient({
             projects={projects}
             tags={tags}
             onAdd={(text) => addTask('PRIORITY_ACTION', text)}
+            hint={mode === 'week' ? t.panels.dragHint : undefined}
+            {...panelDragProps}
             onUpdate={updateTask}
             onDelete={deleteTask}
             onStartFocus={startFocus}

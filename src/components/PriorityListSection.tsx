@@ -14,6 +14,8 @@ interface Props {
   onExportTodoist?: (id: string) => Promise<void>;
   onCreateCalendarEvent?: (id: string) => Promise<void>;
   onStartFocus?: (id: string) => void;
+  dragEnabled?: boolean; // en Semana: arrastrar desde el panel a un día
+  hint?: string;
 }
 
 export function PriorityListSection({
@@ -27,10 +29,13 @@ export function PriorityListSection({
   onExportTodoist,
   onCreateCalendarEvent,
   onStartFocus,
+  dragEnabled,
+  hint,
 }: Props) {
   return (
     <div className="rounded-card border border-base-border bg-base-surface p-4">
-      <h3 className="mb-3 text-sm font-semibold">{title}</h3>
+      <h3 className={hint ? 'text-sm font-semibold' : 'mb-3 text-sm font-semibold'}>{title}</h3>
+      {hint ? <p className="mb-3 text-xs text-base-muted">{hint}</p> : null}
       <div className="space-y-2">
         {tasks.map((t) => (
           <TaskCard
@@ -43,6 +48,7 @@ export function PriorityListSection({
             onExportTodoist={onExportTodoist}
             onCreateCalendarEvent={onCreateCalendarEvent}
             onStartFocus={onStartFocus}
+            dragEnabled={dragEnabled}
           />
         ))}
         {tasks.length === 0 ? <p className="text-sm text-base-muted">{text.priorityListSection.empty}</p> : null}

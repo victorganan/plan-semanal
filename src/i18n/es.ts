@@ -578,6 +578,12 @@ export const text = {
     openAriaLabel: (label: string, shortcutKey: string) => `Abrir panel ${label} (atajo ${shortcutKey})`,
     habitosTodaySection: 'Hoy',
     habitosWeekSection: 'Semana',
+    handleAriaLabel: 'Cambiar la altura del panel',
+    tabsAriaLabel: 'Paneles',
+    mobileButton: 'Paneles',
+    dragHint: 'Arrastra una tarea a un día para programarla.',
+    energyTodaySection: 'Energía de hoy',
+    weekStateSection: 'Esta semana',
   },
   pomodoro: {
     phaseWork: 'Enfoque',
