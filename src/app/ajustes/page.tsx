@@ -4,6 +4,7 @@ import { getTodoistToken } from '@/lib/todoist';
 import { hasCalendarAccess } from '@/lib/google-calendar';
 import { IntegrationsPanel } from '@/components/settings/IntegrationsPanel';
 import { HabitsManager } from '@/components/settings/HabitsManager';
+import { PeopleManager } from '@/components/settings/PeopleManager';
 import { RecurringTemplatesManager } from '@/components/settings/RecurringTemplatesManager';
 import { ActivityLogPanel } from '@/components/settings/ActivityLogPanel';
 import { PushReminderSettings } from '@/components/settings/PushReminderSettings';
@@ -62,6 +63,7 @@ export default async function AjustesPage({ searchParams }: { searchParams: Prom
         initialDayOfWeek={user?.weeklyReminderDayOfWeek ?? null}
         initialSlot={user?.weeklyReminderTime ?? null}
       />
+      <PeopleManager areas={areas} />
       <HabitsManager initialHabits={habits} />
       <RecurringTemplatesManager initialTemplates={templates} areas={areas} />
       <ActivityLogPanel

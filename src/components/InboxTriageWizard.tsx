@@ -7,6 +7,7 @@ import { isoWeekAndDowFor, todayLocalString } from '@/lib/week';
 import { summarizeTriageSession } from '@/lib/inbox';
 import { TimeSelect } from '@/components/TimeSelect';
 import { QuickDateChips } from '@/components/QuickDateChips';
+import { PersonSelect } from '@/components/PersonSelect';
 import { useEscapeToClose } from '@/components/useEscapeToClose';
 import { text } from '@/i18n/es';
 
@@ -492,11 +493,13 @@ export function InboxTriageWizard({ items, areas, onUpdate, onDelete, onCreateCa
             <p className="text-center text-sm text-base-muted">
               {waitMode === 'delegate' ? text.inboxTriage.waitFormTitleDelegate : text.inboxTriage.waitFormTitleWait}
             </p>
-            <input
+            <PersonSelect
               value={waitPerson}
-              onChange={(e) => setWaitPerson(e.target.value)}
-              placeholder={text.inboxTriage.waitFormPersonPlaceholder}
-              className="w-full rounded-lg border border-base-border bg-base-bg px-3 py-2 text-sm"
+              onChange={setWaitPerson}
+              areaId={areaId}
+              emptyLabel={text.personSelect.choose}
+              ariaLabel={text.inboxTriage.waitFormPersonPlaceholder}
+              className="px-3 py-2 text-sm"
             />
             <label className="block text-xs text-base-muted">
               {text.inboxTriage.waitFormFollowUpLabel}

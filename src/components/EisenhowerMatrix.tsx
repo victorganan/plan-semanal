@@ -1,16 +1,16 @@
 'use client';
 
 import { useState } from 'react';
+import { PersonSelect } from '@/components/PersonSelect';
 import clsx from 'clsx';
 import { TimeSelect, nextQuarterHourFromNow } from '@/components/TimeSelect';
 import { EISENHOWER_QUADRANTS, EISENHOWER_LABELS, EISENHOWER_HINTS } from '@/types';
 import type { EisenhowerQuadrantValue } from '@/types';
-import type { ProjectWithAreaAndCollaborators, TaskWithProject } from '@/types';
+import type { TaskWithProject } from '@/types';
 import { text } from '@/i18n/es';
 
 interface Props {
   tasks: TaskWithProject[];
-  projects: ProjectWithAreaAndCollaborators[];
   calendarConnected: boolean;
   onUpdate: (id: string, patch: Record<string, unknown>) => Promise<void>;
   onDelete: (id: string) => Promise<void>;
@@ -38,7 +38,7 @@ const QUADRANT_STYLES: Record<EisenhowerQuadrantValue, string> = {
   ALGUN_DIA: 'border-base-border bg-base-bg/50',
 };
 
-export function EisenhowerMatrix({ tasks, projects, calendarConnected, onUpdate, onDelete, onCreateCalendarEvent, defaultOpen }: Props) {
+export function EisenhowerMatrix({ tasks, calendarConnected, onUpdate, onDelete, onCreateCalendarEvent, defaultOpen }: Props) {
   const [open, setOpen] = useState(defaultOpen ?? false);
   const [dragOverQuadrant, setDragOverQuadrant] = useState<EisenhowerQuadrantValue | null>(null);
   const [actionFor, setActionFor] = useState<{ taskId: string; quadrant: EisenhowerQuadrantValue } | null>(null);
@@ -50,11 +50,6 @@ export function EisenhowerMatrix({ tasks, projects, calendarConnected, onUpdate,
   const unclassified = relevant.filter((t) => !t.quadrant);
   const byQuadrant = (q: EisenhowerQuadrantValue) => relevant.filter((t) => t.quadrant === q);
 
-  function collaboratorsFor(task: TaskWithProject): string[] {
-    const fromProject = task.project?.collaborators ?? [];
-    const all = fromProject.length > 0 ? fromProject : projects.flatMap((p) => p.collaborators);
-    return Array.from(new Set(all.map((c) => c.name)));
-  }
 
   async function classify(task: TaskWithProject, quadrant: EisenhowerQuadrantValue) {
     if (quadrant === 'HACER') {
@@ -73,8 +68,7 @@ export function EisenhowerMatrix({ tasks, projects, calendarConnected, onUpdate,
       return;
     }
     if (quadrant === 'DELEGAR') {
-      const suggestions = collaboratorsFor(task);
-      setDelegateTo(task.assignedTo ?? suggestions[0] ?? '');
+      setDelegateTo(task.assignedTo ?? '');
       setActionFor({ taskId: task.id, quadrant });
       await onUpdate(task.id, { quadrant });
       return;
@@ -113,8 +107,6 @@ export function EisenhowerMatrix({ tasks, projects, calendarConnected, onUpdate,
   }
 
   function TaskChip({ task, quadrant }: { task: TaskWithProject; quadrant?: EisenhowerQuadrantValue }) {
-    const suggestions = collaboratorsFor(task);
-    const listId = `matrix-delegate-${task.id}`;
     return (
       <div
         draggable
@@ -181,20 +173,14 @@ export function EisenhowerMatrix({ tasks, projects, calendarConnected, onUpdate,
 
         {actionFor?.taskId === task.id && actionFor.quadrant === 'DELEGAR' ? (
           <div className="space-y-1.5 border-t border-base-border pt-1.5">
-            <input
+            <PersonSelect
               value={delegateTo}
-              onChange={(e) => setDelegateTo(e.target.value)}
-              placeholder={text.eisenhowerMatrix.personNamePlaceholder}
-              list={listId}
-              className="w-full rounded border border-base-border bg-base-bg px-1.5 py-1 text-[11px]"
+              onChange={setDelegateTo}
+              areaId={task.areaId ?? task.project?.areaId}
+              emptyLabel={text.personSelect.choose}
+              ariaLabel={text.eisenhowerMatrix.personNamePlaceholder}
+              className="px-1.5 py-1 text-[11px]"
             />
-            {suggestions.length > 0 ? (
-              <datalist id={listId}>
-                {suggestions.map((name) => (
-                  <option key={name} value={name} />
-                ))}
-              </datalist>
-            ) : null}
             <button
               onClick={() => confirmDelegar(task)}
               disabled={!delegateTo.trim()}

@@ -703,6 +703,35 @@ export const text = {
       'Añade una sección extra, opcional, en el Arranque y el Cierre: ideas, cómo quieres sentirte, revisión del día anterior, hábitos, pérdidas de tiempo a evitar, gratitud y aprendizaje. Nada es obligatorio.',
   },
 
+  // Desplegable de persona (delegar / en espera) — Prioridad 1 "Personas".
+  personSelect: {
+    choose: 'Elige una persona',
+    groupArea: 'De esta área',
+    groupOthers: 'Otras personas',
+    notInList: (name: string) => `${name} (no está en Personas)`,
+    addOption: '+ Añadir persona',
+    newNamePlaceholder: 'Nombre de la persona',
+    addButton: 'Añadir',
+    addError: 'No se ha podido añadir. Revisa la conexión y vuelve a intentarlo.',
+  },
+
+  peopleManager: {
+    title: 'Personas',
+    subtitle: 'A quién delegas o de quién esperas algo. Asígnales áreas para que salgan primero al delegar una tarea de esa área.',
+    empty: 'Aún no hay nadie. Añade a la primera persona con quien colaboras.',
+    namePlaceholder: 'Nombre',
+    emailPlaceholder: 'Email (opcional)',
+    areasLabel: 'Áreas en las que colabora',
+    noAreas: 'Sin áreas',
+    addButton: 'Añadir persona',
+    saveError: 'No se ha guardado. Revisa el nombre y el email y vuelve a intentarlo.',
+    deleteConfirm: (name: string) => `¿Eliminar a ${name} de Personas? Sus tareas mantienen el nombre.`,
+    areaPeopleLabel: 'Personas que colaboran en esta área',
+    areaPeopleEmpty: 'Nadie asignado todavía.',
+    areaAddPlaceholder: 'Añadir persona a esta área…',
+    removeFromArea: (name: string) => `Quitar a ${name} de esta área`,
+  },
+
   habitsManager: {
     title: 'Hábitos',
     empty: 'Sin hábitos todavía.',

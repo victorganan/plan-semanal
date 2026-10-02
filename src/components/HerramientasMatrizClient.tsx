@@ -54,7 +54,6 @@ export function HerramientasMatrizClient({ initialTasks, projects, calendarConne
   return (
     <EisenhowerMatrix
       tasks={tasks}
-      projects={projects}
       calendarConnected={calendarConnected}
       onUpdate={updateTask}
       onDelete={deleteTask}

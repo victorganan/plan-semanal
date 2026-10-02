@@ -7,6 +7,7 @@ import { TimeSelect } from '@/components/TimeSelect';
 import { DurationPicker } from '@/components/DurationPicker';
 import { AddTaskInline } from '@/components/AddTaskInline';
 import { RecurrenceEditor } from '@/components/RecurrenceEditor';
+import { PersonSelect } from '@/components/PersonSelect';
 import { api } from '@/lib/api-client';
 import { PRIORITY_LABELS, RECURRENCE_LABELS, formatDurationMinutes, areaBgClass } from '@/types';
 import { describeRecurrence } from '@/lib/rrule-helpers';
@@ -264,13 +265,15 @@ export function TaskCard({
     if (text.trim() && text !== task.text) await onUpdate(task.id, { text: text.trim() });
   }
 
-  async function saveAssignedTo() {
-    const next = assignedTo.trim() || null;
+  async function saveAssignedTo(name: string) {
+    setAssignedTo(name);
+    const next = name.trim() || null;
     if (next !== (task.assignedTo ?? null)) await onUpdate(task.id, { assignedTo: next });
   }
 
-  async function saveWaitingOn() {
-    const next = waitingOn.trim() || null;
+  async function saveWaitingOn(name: string) {
+    setWaitingOn(name);
+    const next = name.trim() || null;
     if (next !== (task.waitingOn ?? null)) await onUpdate(task.id, { waitingOn: next });
   }
 
@@ -482,10 +485,7 @@ export function TaskCard({
   }
 
   const currentProject = projects.find((p) => p.id === task.projectId);
-  const collaboratorSuggestions = Array.from(
-    new Set((currentProject?.collaborators ?? projects.flatMap((p) => p.collaborators)).map((c) => c.name))
-  );
-  const assignedToListId = `assigned-to-${task.id}`;
+  const taskAreaId = task.areaId ?? currentProject?.areaId ?? null;
 
   // Delegadas y en espera (M3): dentro de gtdStatus=ESPERANDO, "Delegada" es
   // la que además tiene assignedTo (se ha pasado a otra persona); "En
@@ -845,33 +845,25 @@ export function TaskCard({
             </label>
             <label className="space-y-1">
               <span className="block text-xs text-base-muted">{t.taskCard.assignedTo}</span>
-              <input
+              <PersonSelect
                 value={assignedTo}
-                onChange={(e) => setAssignedTo(e.target.value)}
-                onBlur={saveAssignedTo}
-                placeholder={t.taskCard.assignedToPlaceholder}
-                list={assignedToListId}
-                className="w-full rounded-lg border border-base-border bg-base-bg px-2 py-1.5 text-sm"
+                onChange={saveAssignedTo}
+                areaId={taskAreaId}
+                emptyLabel={t.taskCard.assignedToPlaceholder}
+                ariaLabel={t.taskCard.assignedTo}
               />
-              {collaboratorSuggestions.length > 0 ? (
-                <datalist id={assignedToListId}>
-                  {collaboratorSuggestions.map((name) => (
-                    <option key={name} value={name} />
-                  ))}
-                </datalist>
-              ) : null}
             </label>
             {isEsperando ? (
               <label className="space-y-1">
                 <span className="block text-xs text-base-muted">
                   {delegated ? t.taskCard.delegatedToFieldLabel : t.taskCard.waitingOnFieldLabel}
                 </span>
-                <input
+                <PersonSelect
                   value={waitingOn}
-                  onChange={(e) => setWaitingOn(e.target.value)}
-                  onBlur={saveWaitingOn}
-                  placeholder={t.taskCard.assignedToPlaceholder}
-                  className="w-full rounded-lg border border-base-border bg-base-bg px-2 py-1.5 text-sm"
+                  onChange={saveWaitingOn}
+                  areaId={taskAreaId}
+                  emptyLabel={t.taskCard.assignedToPlaceholder}
+                  ariaLabel={delegated ? t.taskCard.delegatedToFieldLabel : t.taskCard.waitingOnFieldLabel}
                 />
               </label>
             ) : null}

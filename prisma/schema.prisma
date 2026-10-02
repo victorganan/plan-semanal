@@ -30,6 +30,7 @@ model User {
   areas             Area[]
   tags              Tag[]
   focusSessions     FocusSession[]
+  people            Person[]
 
   weeklyReminderDayOfWeek Int? // 0=lunes .. 6=domingo
   weeklyReminderTime      String? // "HH:MM"
@@ -195,6 +196,27 @@ model Area {
   tasks    Task[]
   projects Project[]
   recurringTemplates RecurringTaskTemplate[]
+  people   Person[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([userId, name])
+  @@index([userId])
+}
+
+// Personas a las que se delega o de las que se espera algo. Las tareas
+// siguen guardando el nombre en texto (Task.assignedTo / Task.waitingOn):
+// esta lista solo alimenta el desplegable; al renombrar una persona se
+// actualizan sus tareas.
+model Person {
+  id     String  @id @default(cuid())
+  userId String
+  name   String
+  email  String?
+
+  user  User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  areas Area[] // áreas en las que colabora (filtra el desplegable por el área de la tarea)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

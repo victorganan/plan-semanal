@@ -6,6 +6,9 @@ import { api, ApiError } from '@/lib/api-client';
 import { areaBgClass, AREA_PALETTE_SIZE } from '@/types';
 import type { Area, ProjectWithAreaAndCollaborators } from '@/types';
 import { text } from '@/i18n/es';
+import { PersonSelect } from '@/components/PersonSelect';
+import { updatePerson, usePeople } from '@/lib/use-people';
+import type { PersonDTO } from '@/lib/people';
 
 const STATUS_LABELS: Record<string, string> = text.tuEspacio.statusLabels;
 
@@ -137,6 +140,60 @@ function AreaBlockers({
           </li>
         ))}
       </ul>
+    </div>
+  );
+}
+
+// Personas que colaboran en el área (Prioridad 1 "Personas"): mismo dato
+// que en Ajustes → Personas, editable también desde aquí.
+function AreaPeople({ areaId }: { areaId: string }) {
+  const people = usePeople();
+  const inArea = people.filter((p) => p.areas.some((a) => a.id === areaId));
+  const [error, setError] = useState<string | null>(null);
+
+  async function setInArea(person: PersonDTO, on: boolean) {
+    const ids = person.areas.map((a) => a.id).filter((id) => id !== areaId);
+    try {
+      await updatePerson(person.id, { areaIds: on ? [...ids, areaId] : ids });
+      setError(null);
+    } catch {
+      setError(text.peopleManager.saveError);
+    }
+  }
+
+  return (
+    <div className="mt-3 border-t border-base-border pt-3">
+      <p className="mb-1.5 text-xs text-base-muted">{text.peopleManager.areaPeopleLabel}</p>
+      <div className="flex flex-wrap items-center gap-1.5">
+        {inArea.map((p) => (
+          <span key={p.id} className="flex items-center gap-1 rounded-full border border-base-border pl-3 text-xs">
+            {p.name}
+            <button
+              type="button"
+              onClick={() => setInArea(p, false)}
+              aria-label={text.peopleManager.removeFromArea(p.name)}
+              className="-my-2 flex h-11 w-11 items-center justify-center rounded-full text-base-muted hover:text-priority-high"
+            >
+              ×
+            </button>
+          </span>
+        ))}
+        {inArea.length === 0 ? <span className="text-xs text-base-muted">{text.peopleManager.areaPeopleEmpty}</span> : null}
+      </div>
+      <div className="mt-2 max-w-xs">
+        <PersonSelect
+          value=""
+          areaId={areaId}
+          excludeIds={inArea.map((p) => p.id)}
+          emptyLabel={text.peopleManager.areaAddPlaceholder}
+          ariaLabel={text.peopleManager.areaAddPlaceholder}
+          onChange={(name) => {
+            const person = people.find((p) => p.name === name);
+            if (person && !inArea.includes(person)) setInArea(person, true);
+          }}
+        />
+      </div>
+      {error ? <p className="mt-1 text-xs text-priority-high">{error}</p> : null}
     </div>
   );
 }
@@ -288,6 +345,7 @@ function AreaRow({
           }}
         />
       ) : null}
+      <AreaPeople areaId={area.id} />
     </div>
   );
 }
