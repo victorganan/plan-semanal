@@ -13,8 +13,8 @@ import { text } from '@/i18n/es';
 // - Escritorio (md+): columna izquierda de 200px, plegable a 56px solo con
 //   iconos. El estado se guarda en localStorage y lo aplica ThemeScript
 //   antes de pintar (html[data-nav="collapsed"]), sin parpadeo.
-// - Móvil: cabecera mínima + barra inferior fija Hoy · Semana · [+] ·
-//   Bandeja · Más ("Tareas" se añadirá cuando exista esa página).
+// - Móvil: cabecera mínima (con "Más") + barra inferior fija Hoy · Semana · [+] ·
+//   Tareas · Bandeja; "Más" en la cabecera.
 
 const NAV_COLLAPSED_KEY = 'nortvira.navCollapsed';
 
@@ -29,6 +29,7 @@ function Icon({ d, className }: { d: string; className?: string }) {
 const ICONS = {
   hoy: 'M12 3v2M12 19v2M5 12H3M21 12h-2M6.3 6.3 4.9 4.9M19.1 19.1l-1.4-1.4M6.3 17.7l-1.4 1.4M19.1 4.9l-1.4 1.4M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8Z',
   semana: 'M4 6a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v13a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6ZM4 10h16M8 2v4M16 2v4',
+  tareas: 'M9 6h11M9 12h11M9 18h11M4 6h.01M4 12h.01M4 18h.01',
   bandeja: 'M4 13h4l1.5 3h5L16 13h4M4 13l2.5-8h11L20 13v6a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1v-6Z',
   mas: 'M5 12h.01M12 12h.01M19 12h.01',
   plus: 'M12 5v14M5 12h14',
@@ -54,7 +55,7 @@ const MORE_ITEMS = [
   { href: '/ajustes', label: text.nav.ajustes },
 ];
 
-function MoreMenu({ placement, buttonClassName, children }: { placement: 'right' | 'up'; buttonClassName: string; children: React.ReactNode }) {
+function MoreMenu({ placement, buttonClassName, children }: { placement: 'right' | 'down'; buttonClassName: string; children: React.ReactNode }) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
   const pathname = usePathname();
@@ -93,7 +94,7 @@ function MoreMenu({ placement, buttonClassName, children }: { placement: 'right'
           role="menu"
           className={clsx(
             'absolute z-50 w-60 rounded-lg border border-base-border bg-base-bg py-1 shadow-lg',
-            placement === 'right' ? 'top-0 left-full ml-2' : 'bottom-full right-0 mb-2'
+            placement === 'right' ? 'top-0 left-full ml-2' : 'top-full right-0 mt-2'
           )}
         >
           <p className="px-3 pb-1 pt-2 text-[13px] font-semibold text-base-muted">{text.nav.ritualsGroupLabel}</p>
@@ -151,6 +152,7 @@ export function NavBar({
   const links = [
     { href: '/hoy', label: text.nav.hoy, icon: ICONS.hoy },
     { href: '/semana', label: text.nav.semana, icon: ICONS.semana },
+    { href: '/tareas', label: text.nav.tareas, icon: ICONS.tareas },
     { href: '/bandeja', label: text.nav.bandeja, icon: ICONS.bandeja, count },
   ];
 
@@ -231,12 +233,16 @@ export function NavBar({
         <Link href="/hoy" className="text-lg font-semibold tracking-tight">
           Nortvira
         </Link>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2">
           <ThemeToggle />
           {userImage ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img src={userImage} alt={userName ?? ''} className="h-8 w-8 rounded-full" />
           ) : null}
+          <MoreMenu placement="down" buttonClassName="flex min-h-[44px] items-center gap-1 rounded-full px-3 text-sm text-base-muted">
+            <Icon d={ICONS.mas} />
+            {text.nav.more}
+          </MoreMenu>
         </div>
       </header>
 
@@ -257,6 +263,7 @@ export function NavBar({
             <Icon d={ICONS.plus} className="h-6 w-6" />
           </button>
         </div>
+        <BottomLink href="/tareas" label={text.nav.tareas} icon={ICONS.tareas} active={isActive('/tareas')} />
         <BottomLink
           href="/bandeja"
           label={text.nav.bandeja}
@@ -265,10 +272,6 @@ export function NavBar({
           active={isActive('/bandeja')}
           count={count}
         />
-        <MoreMenu placement="up" buttonClassName="flex min-h-[56px] w-full flex-col items-center justify-center gap-0.5 text-[13px] text-base-muted">
-          <Icon d={ICONS.mas} />
-          {text.nav.more}
-        </MoreMenu>
       </nav>
     </>
   );

@@ -31,6 +31,7 @@ model User {
   tags              Tag[]
   focusSessions     FocusSession[]
   people            Person[]
+  savedViews        SavedView[]
 
   weeklyReminderDayOfWeek Int? // 0=lunes .. 6=domingo
   weeklyReminderTime      String? // "HH:MM"
@@ -507,4 +508,22 @@ model PushSubscription {
   createdAt DateTime @default(now())
 
   @@unique([userId, endpoint])
+}
+
+// Vistas guardadas de la página Tareas (filtros + orden + agrupación).
+// `config` se valida con listViewConfigSchema (src/lib/task-list.ts).
+model SavedView {
+  id     String @id @default(cuid())
+  userId String
+  name   String
+  config Json
+  order  Int    @default(0)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([userId, name])
+  @@index([userId])
 }

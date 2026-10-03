@@ -14,13 +14,30 @@ function isTypingTarget(el: EventTarget | null): boolean {
 const NAV_KEYS: Record<string, string> = {
   h: '/hoy',
   s: '/semana',
+  t: '/tareas',
   b: '/bandeja',
 };
+
+// Las filas de tarea consultan esto para no robar la segunda tecla de una
+// secuencia G (p.ej. G luego S con una tarea enfocada va a Semana, no marca
+// Las 3 del día).
+let goPending = false;
+export function isGoSequencePending() {
+  return goPending;
+}
 
 const SHORTCUT_ROWS: { keys: string; label: string }[] = [
   { keys: 'G luego H', label: 'Ir a Hoy' },
   { keys: 'G luego S', label: 'Ir a Semana' },
+  { keys: 'G luego T', label: 'Ir a Tareas' },
   { keys: 'G luego B', label: 'Ir a Bandeja' },
+  { keys: 'J / K', label: 'Tarea siguiente / anterior (Tareas, Hoy, Semana)' },
+  { keys: 'X', label: 'Completar la tarea enfocada' },
+  { keys: 'M luego 1 / 2 / 3 / D', label: 'Mover a hoy / mañana / lunes / elegir fecha' },
+  { keys: 'F', label: 'Empezar (modo foco)' },
+  { keys: 'Intro', label: 'Editar la tarea enfocada' },
+  { keys: 'S', label: 'Marcar o quitar de Las 3 del día' },
+  { keys: 'Espacio', label: 'Seleccionar la tarea (con la selección activa)' },
   { keys: 'I', label: 'Arrancar el día' },
   { keys: 'C', label: 'Cerrar el día' },
   { keys: 'R', label: 'Momento de reflexión' },
@@ -36,9 +53,9 @@ const SHORTCUT_ROWS: { keys: string; label: string }[] = [
 ];
 
 // Fase 2 de la auditoría UX (§3): atajos de teclado globales con ayuda en
-// "?". Se limita a navegación y a los 3 rituales (siempre accesibles
-// también desde "Más"); el modelo completo de foco por fila (J/K/X/M/F/S)
-// queda fuera de esta pasada.
+// "?": navegación y los 3 rituales (siempre accesibles también desde
+// "Más"). Los atajos por fila (J/K/X/M/F/S) viven en TaskCard y
+// useTaskRowNavigation (módulo Lista de tareas).
 export function GlobalShortcuts() {
   const router = useRouter();
   const [helpOpen, setHelpOpen] = useState(false);
@@ -50,6 +67,7 @@ export function GlobalShortcuts() {
   useEffect(() => {
     function clearGPending() {
       gPendingRef.current = false;
+      goPending = false;
       if (gTimeoutRef.current) clearTimeout(gTimeoutRef.current);
       gTimeoutRef.current = null;
     }
@@ -71,6 +89,7 @@ export function GlobalShortcuts() {
 
       if (key === 'g') {
         gPendingRef.current = true;
+        goPending = true;
         gTimeoutRef.current = setTimeout(clearGPending, 1500);
         return;
       }

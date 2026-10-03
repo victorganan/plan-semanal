@@ -7,6 +7,7 @@ import { useToast } from '@/components/Toast';
 import { useInboxCapture } from '@/components/InboxCaptureContext';
 import { InboxList } from '@/components/InboxList';
 import { FocusMode } from '@/components/FocusMode';
+import { SelectionProvider, SelectToggleButton } from '@/components/selection/SelectionContext';
 import type { Area, ProjectWithAreaAndCollaborators, Tag, TaskWithProject } from '@/types';
 import { text as t } from '@/i18n/es';
 
@@ -140,7 +141,16 @@ export function BandejaClient({ initialInbox, projects, areas, tags, calendarCon
       {focusTask ? (
         <FocusMode task={focusTask} onClose={() => setFocusTask(null)} onTaskDone={() => updateTask(focusTask.id, { done: true })} />
       ) : null}
-      <h1 className="text-2xl font-semibold">{t.nav.bandeja}</h1>
+      <SelectionProvider
+        getTask={(id) => inbox.find((task) => task.id === id)}
+        areas={areas}
+        onApplied={async () => setInbox(await api.get('/api/tasks/inbox'))}
+        className="space-y-6"
+      >
+      <div className="flex items-center justify-between gap-3">
+        <h1 className="text-2xl font-semibold">{t.nav.bandeja}</h1>
+        <SelectToggleButton />
+      </div>
       <InboxList
         tasks={inbox}
         projects={projects}
@@ -153,6 +163,7 @@ export function BandejaClient({ initialInbox, projects, areas, tags, calendarCon
         onStartFocus={startFocus}
         {...(calendarConnected ? { onCreateCalendarEvent: createCalendarEvent } : {})}
       />
+      </SelectionProvider>
     </div>
   );
 }

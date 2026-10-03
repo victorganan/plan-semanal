@@ -2,7 +2,8 @@ import { prisma } from '@/lib/prisma';
 import { getOrCreateWeek } from '@/lib/recurring';
 import { getTodoistToken } from '@/lib/todoist';
 import { hasCalendarAccess } from '@/lib/google-calendar';
-import { currentIsoWeek, todayDayOfWeek, dateForDayOfWeek, addWeeks } from '@/lib/week';
+import { currentIsoWeek, todayDayOfWeek, dateForDayOfWeek, addWeeks, localDateString } from '@/lib/week';
+import type { ListTask } from '@/lib/task-list';
 import { shouldWarnOverload, averageCompleted } from '@/lib/priority-overload';
 import { shouldShowPlanningNudge } from '@/lib/planning-nudge';
 import type { WeekFull, TaskWithProject } from '@/types';
@@ -170,4 +171,36 @@ export async function getAvoidTodaySuggestions(userId: string, limit = 10): Prom
     if (suggestions.length >= limit) break;
   }
   return suggestions;
+}
+
+// Página Tareas (módulo Lista de tareas): todas las tareas de nivel
+// superior pendientes, más las completadas de los últimos 60 días (para el
+// filtro "Completadas" sin cargar todo el histórico). Cada una lleva la
+// fecha de su día (dayDate), que no depende de la zona horaria.
+const COMPLETED_WINDOW_DAYS = 60;
+
+export async function getTaskListTasks(userId: string): Promise<ListTask[]> {
+  const since = new Date(Date.now() - COMPLETED_WINDOW_DAYS * 86400000);
+  const tasks = await prisma.task.findMany({
+    where: { userId, parentTaskId: null, OR: [{ done: false }, { updatedAt: { gte: since } }] },
+    orderBy: [{ order: 'asc' }, { createdAt: 'asc' }],
+    include: { ...INBOX_INCLUDE, day: { select: { dayOfWeek: true, week: { select: { isoWeek: true } } } } },
+  });
+  return tasks.map(({ day, ...t }) => ({
+    ...(t as TaskWithProject),
+    dayDate: day ? localDateString(dateForDayOfWeek(day.week.isoWeek, day.dayOfWeek)) : null,
+  }));
+}
+
+export async function getTaskListPageData(userId: string) {
+  const [tasks, projects, areas, tags, savedViews, todoistToken, calendarConnected] = await Promise.all([
+    getTaskListTasks(userId),
+    prisma.project.findMany({ where: { userId }, include: { area: true, collaborators: true }, orderBy: { createdAt: 'desc' } }),
+    prisma.area.findMany({ where: { userId }, orderBy: { order: 'asc' } }),
+    prisma.tag.findMany({ where: { userId }, orderBy: { name: 'asc' } }),
+    prisma.savedView.findMany({ where: { userId }, orderBy: [{ order: 'asc' }, { createdAt: 'asc' }] }),
+    getTodoistToken(userId),
+    hasCalendarAccess(userId),
+  ]);
+  return { tasks, projects, areas, tags, savedViews, todoistConnected: !!todoistToken, calendarConnected };
 }

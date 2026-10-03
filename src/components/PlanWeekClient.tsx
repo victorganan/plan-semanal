@@ -17,6 +17,8 @@ import { PriorityListSection } from '@/components/PriorityListSection';
 import { ProjectFocusPicker } from '@/components/ProjectFocusPicker';
 import { FloatingPanel } from '@/components/panels/FloatingPanel';
 import { EnergyPicker } from '@/components/EnergyPicker';
+import { SelectionProvider, SelectToggleButton } from '@/components/selection/SelectionContext';
+import { useTaskRowNavigation } from '@/components/useTaskRowNavigation';
 import { adjacentPanel, isPanelKey, readLastPanel, writeLastPanel, type PanelKey } from '@/lib/panels';
 import { PlanningWizard } from '@/components/PlanningWizard';
 import { DayCloseRitual } from '@/components/DayCloseRitual';
@@ -817,6 +819,18 @@ export function PlanWeekClient({
   // Hábitos, Estado, Llamadas y Acciones prioritarias salen del scroll
   // continuo de Semana (y de los bloques fijos de Hoy) y pasan a paneles
   // bajo demanda, con atajo de teclado y un solo panel abierto a la vez.
+  useTaskRowNavigation();
+
+  // Selección múltiple (módulo Lista de tareas): mismo componente que en
+  // Bandeja y Tareas; tras una acción en lote se recarga la semana.
+  function withSelection(node: React.ReactNode) {
+    return (
+      <SelectionProvider getTask={(id) => findTask(id)?.task} areas={areas} onApplied={hardRefresh}>
+        {node}
+      </SelectionProvider>
+    );
+  }
+
   const [openPanel, setOpenPanelState] = useState<PanelKey | null>(null);
   const mobilePanelTriggerRef = useRef<HTMLButtonElement | null>(null);
   // Se recuerda el último panel abierto (§3.3): el botón "Paneles" del
@@ -1043,7 +1057,7 @@ export function PlanWeekClient({
         : null;
     const yesterdayLearning = yesterdayDay?.learning ?? null;
 
-    return (
+    return withSelection(
       <div className="space-y-6">
         {focusTask ? (
           <FocusMode task={focusTask} onClose={() => setFocusTask(null)} onTaskDone={() => updateTask(focusTask.id, { done: true })} />
@@ -1057,6 +1071,7 @@ export function PlanWeekClient({
             {day?.dayGoal ? <p className="mt-0.5 text-[13px] text-base-muted">{day.dayGoal}</p> : null}
           </div>
           <div className="flex flex-wrap items-center gap-2">
+            <SelectToggleButton />
             {contextualRitual === 'reflection' ? (
               <button
                 onClick={() => setWizardOpen(true)}
@@ -1236,7 +1251,7 @@ export function PlanWeekClient({
   const weekdayTasks = week.tasks.filter((t) => t.kind === 'DAY_AREA' && t.dayId && weekdayIds.has(t.dayId));
   const weekLoad = summarizeLoad(weekdayTasks);
 
-  return (
+  return withSelection(
     <div className="space-y-6">
       {focusTask ? (
         <FocusMode task={focusTask} onClose={() => setFocusTask(null)} onTaskDone={() => updateTask(focusTask.id, { done: true })} />
@@ -1244,6 +1259,7 @@ export function PlanWeekClient({
       <div className="flex flex-wrap items-center justify-between gap-4">
         <h1 className="text-2xl font-semibold">{t.planWeekClient.weekTitle}</h1>
         <div className="flex flex-wrap items-center gap-2">
+          <SelectToggleButton />
           <button
             onClick={() => setWizardOpen(true)}
             className="rounded-full border border-accent px-3 py-1.5 text-sm font-medium text-accent hover:bg-accent/10"

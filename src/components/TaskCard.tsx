@@ -8,6 +8,9 @@ import { DurationPicker } from '@/components/DurationPicker';
 import { AddTaskInline } from '@/components/AddTaskInline';
 import { RecurrenceEditor } from '@/components/RecurrenceEditor';
 import { PersonSelect } from '@/components/PersonSelect';
+import { useSelection } from '@/components/selection/SelectionContext';
+import { isGoSequencePending } from '@/components/GlobalShortcuts';
+import { movePatchFor, quickMoveDate } from '@/lib/task-move';
 import { api } from '@/lib/api-client';
 import { PRIORITY_LABELS, RECURRENCE_LABELS, formatDurationMinutes, areaBgClass } from '@/types';
 import { describeRecurrence } from '@/lib/rrule-helpers';
@@ -97,6 +100,11 @@ export function TaskCard({
   onStartFocus,
 }: Props) {
   const [open, setOpen] = useState(false);
+  const selection = useSelection();
+  const selected = selection?.isSelected(task.id) ?? false;
+  // Atajo M (mover): tras pulsar M, la siguiente tecla elige destino.
+  const [moveArmed, setMoveArmed] = useState(false);
+  const moveArmedTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [text, setText] = useState(task.text);
   const [description, setDescription] = useState(task.description ?? '');
   const [assignedTo, setAssignedTo] = useState(task.assignedTo ?? '');
@@ -499,9 +507,68 @@ export function TaskCard({
     : null;
   const followUpOverdue = isEsperando && followUpOverdueDays !== null && followUpOverdueDays >= 0;
 
+  function disarmMove() {
+    setMoveArmed(false);
+    if (moveArmedTimer.current) clearTimeout(moveArmedTimer.current);
+    moveArmedTimer.current = null;
+  }
+
+  async function quickMove(dateStr: string) {
+    const patch = movePatchFor(task, dateStr);
+    if (patch) {
+      await onUpdate(task.id, patch);
+    } else {
+      // Sin área con la que colocarla en un día: se abre "Mover" con la fecha puesta.
+      setAssignDate(dateStr);
+      setAssignOpen(true);
+    }
+  }
+
+  // Atajos por fila (auditoría UX §3.4), solo con el foco en la propia fila
+  // (no en sus campos): X completar, Intro editar, F empezar, S Las 3 del
+  // día, M → 1/2/3/D mover, Espacio seleccionar (con la selección activa).
+  function onRowKeyDown(e: React.KeyboardEvent<HTMLDivElement>) {
+    if (e.target !== e.currentTarget || e.metaKey || e.ctrlKey || e.altKey || isGoSequencePending()) return;
+    const key = e.key.toLowerCase();
+    let handled = true;
+    if (moveArmed) {
+      disarmMove();
+      const dateStr = quickMoveDate(key);
+      if (dateStr) quickMove(dateStr);
+      else if (key === 'd') setAssignOpen(true);
+      else handled = key === 'escape';
+    } else if (key === 'x') {
+      toggleDone();
+    } else if (e.key === 'Enter') {
+      setOpen((v) => !v);
+    } else if (key === 'f' && onStartFocus && !task.done) {
+      onStartFocus(task.id);
+    } else if (key === 's' && task.kind === 'DAY_AREA') {
+      if (onToggleTop3) onToggleTop3(task.id, !task.isTop3);
+      else onUpdate(task.id, { isTop3: !task.isTop3 });
+    } else if (key === 'm' && !task.done) {
+      setMoveArmed(true);
+      moveArmedTimer.current = setTimeout(disarmMove, 2000);
+    } else if (e.key === ' ' && selection?.active) {
+      selection.toggle(task.id);
+    } else {
+      handled = false;
+    }
+    if (handled) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+  }
+
   return (
     <div
       id={`task-${task.id}`}
+      data-task-row
+      data-task-id={task.id}
+      tabIndex={0}
+      role="group"
+      aria-label={task.text}
+      onKeyDown={onRowKeyDown}
       draggable={task.kind === 'DAY_AREA' || dragEnabled}
       onDragStart={(e) => {
         // Si el gesto empieza sobre un control interactivo (botón, input...),
@@ -519,13 +586,25 @@ export function TaskCard({
         e.dataTransfer.effectAllowed = 'move';
       }}
       className={clsx(
-        'rounded-card border bg-base-surface transition',
+        'rounded-card border bg-base-surface transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent',
+        selected && 'ring-2 ring-accent/60',
         followUpOverdue ? 'border-priority-high bg-priority-high/5' : 'border-base-border',
         task.done && 'opacity-60',
         (task.kind === 'DAY_AREA' || dragEnabled) && 'cursor-grab active:cursor-grabbing'
       )}
     >
       <div className="flex items-start gap-2 px-3 py-2.5">
+        {selection?.active ? (
+          <label className="flex h-11 w-8 shrink-0 cursor-pointer items-center justify-center">
+            <input
+              type="checkbox"
+              checked={selected}
+              onChange={() => selection.toggle(task.id)}
+              aria-label={t.selection.checkboxAriaLabel(task.text)}
+              className="h-4 w-4 accent-current"
+            />
+          </label>
+        ) : null}
         <button
           onClick={toggleDone}
           disabled={busy}
@@ -659,6 +738,8 @@ export function TaskCard({
               </button>
             ) : null}
           </div>
+
+          {moveArmed ? <p className="mt-1 text-[13px] text-base-muted">{t.taskCard.moveShortcutHint}</p> : null}
 
           {!task.done && assignOpen ? (
             <div ref={assignRef} className="mt-1.5 space-y-1.5 rounded-lg border border-base-border p-2">
